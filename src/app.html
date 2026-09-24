@@ -889,8 +889,16 @@ __SOLVER_JS__
       solving = false;
       if (!msg.ok) { last = { item, req, sig, error: msg.error }; renderResults(); return; }
       const res = msg.result;
-      last = { item, req, sig, res, analysis: res.plan ? S.analyze(res.plan, req.owned.length) : null };
+      last = { item, req, sig, res, analysis: res.plan ? S.analyze(res.plan, req.owned.length) : null, alt: null };
       renderResults();
+      // price the other safety setting so the Exact / Safe switch can show both costs
+      const altModel = state.m === 'robust' ? 'exact' : 'robust';
+      const altReq = Object.assign({}, req, { model: altModel });
+      Solver.post({ type: 'solve', id: id + '-alt', req: altReq }, alt => {
+        if (id !== solveSeq || !last || last.sig !== sig || !alt.ok) return;
+        last.alt = { model: altModel, cost: alt.result.ok ? alt.result.cost : null };
+        renderTarget();
+      });
     });
   }
 
@@ -993,9 +1001,17 @@ __SOLVER_JS__
         ${isPerfect ? '' : `<div style="margin-top:8px"><button class="btn small ghost" type="button" data-action="target-reset">Reset to perfect</button></div>`}
       </details>
       <div class="safety">
-        <div class="nm">Rounding safety<small>${other ? `Formula: ${esc(S.models.find(m => m.key === state.m).label)}` : safe ? 'Only refines that are safe under every rounding variant' : 'Exact formula, cheapest plan'}</small></div>
+        <div class="nm">Rounding safety<small>${other ? `Formula: ${esc(S.models.find(m => m.key === state.m).label)}` : safetyCosts() || (safe ? 'Only refines that are safe under every rounding variant' : 'Exact formula, cheapest plan')}</small></div>
         <div class="seg ${safe ? 'safe' : 'accent'}"><button type="button" class="${!safe && !other ? 'on' : ''}" data-action="model" data-model="exact">Exact</button><button type="button" class="${safe ? 'on' : ''}" data-action="model" data-model="robust">Safe</button></div>
       </div>`;
+  }
+
+  function safetyCosts() {
+    if (!last || !last.res || !last.res.ok || !last.alt || last.alt.cost == null || last.item.key !== state.item) return '';
+    const cur = last.analysis.p1, alt = last.alt.cost;
+    const exact = state.m === 'robust' ? alt : cur, safe = state.m === 'robust' ? cur : alt;
+    const diff = safe - exact;
+    return `Exact ${fmt(exact)} · Safe ${fmt(safe)} base items${diff > 0 ? ` (+${fmt(diff)} for safety)` : diff === 0 ? ' (same plan)' : ''}`;
   }
 
   /* ================= rendering: owned ================= */
