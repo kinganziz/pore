@@ -602,7 +602,8 @@
   .info-body li { margin: 4px 0; }
   .info-body .formula { margin-bottom: 10px; }
   .info-body b { color: var(--text); }
-  .formula { padding: 12px 14px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; overflow-x: auto; white-space: nowrap; }
+  .formula { padding: 12px 14px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; line-height: 1.6; text-wrap: balance; }
+  .formula .nw { white-space: nowrap; }   /* wraps between terms on narrow phones instead of scrolling past the rounded corners */
   .cat-grid { display: grid; gap: 6px; }
   .cat-grid div { display: grid; gap: 2px; padding: 8px 10px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); font-size: 13px; }
   .cat-grid b { font-family: var(--display); }
@@ -722,7 +723,7 @@
       <p>Refining combines two copies of the same item. The <b>base</b> item goes up one level and gains stats from the <b>material</b> item. A "perfect" refine uses two identical items, so a perfect P10 normally eats 512 base items (1 → 2 → 4 → … → 512).</p>
       <p>PORE searches every other way to combine items. Because stat gains are rounded down and every refine adds at least +2, weaker materials often reach the very same stats. The planner keeps only the cheapest way to reach each stat combination at each level and builds up to your target, so the answer is the cheapest plan under the chosen formula.</p>
       <h3>Stat formula (per stat)</h3>
-      <div class="formula">new = floor( base + max(2, material × rate) )</div>
+      <div class="formula"><span class="nw">new = floor( base +</span> <span class="nw">max(2, material × rate) )</span></div>
       <p>The result is one level above the base. The material can be any level up to the base level. Each stat uses the rate of its category:</p>
       <div class="cat-grid" id="catGrid"></div>
       <p style="margin-top:8px">Stats not listed on the wiki's refining page (elemental damage, mana regeneration, node or monster encounter chance, critical evade) are assigned a category by best guess. They are marked with a dashed outline on the item card and you can change the category there.</p>
