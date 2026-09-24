@@ -1620,7 +1620,7 @@ __SOLVER_JS__
       case 'view': state.view = el.dataset.view; persist(); renderResults(); break;
       case 'reset-progress': saveJSON(doneKey(), []); renderResults(); toast('Progress reset'); break;
       case 'charm': { const k = el.dataset.key; state.ch[k] = ((state.ch[k] || 0) + 1) % 4; if (!state.ch[k]) delete state.ch[k]; haptic(); persist(); renderResults(); break; }
-      case 'icon-style': setIconStyle(iconStyle === 'modern' ? 'pixel' : 'modern'); toast(iconStyle === 'modern' ? 'Modern icons (work in progress: pixel art where not drawn yet)' : 'Pixel icons', null, 2600); break;
+      case 'icon-style': setIconStyle(iconStyle === 'modern' ? 'pixel' : 'modern'); toast(iconStyle === 'modern' ? 'Modern icons' : 'Pixel icons'); break;
       case 'share': share(); break;
       case 'copy-plan': copy(planText(), 'Plan copied'); break;
       case 'obs-open': {
