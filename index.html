@@ -69,6 +69,8 @@
   *::-webkit-scrollbar-track { background: transparent; }
   html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; overscroll-behavior-y: none; }
   body { overscroll-behavior-y: none; font-synthesis: none; }   /* Jersey 15 has one weight: no smeared fake bold */
+  /* Jersey 15 has small letters (x-height .41 em vs ~.5 for a regular sans): scale it up to normal size everywhere */
+  body { font-size-adjust: .5; }
   body {
     margin: 0;
     min-height: 100vh;
@@ -429,9 +431,9 @@
   @media (max-width: 700px) {
     /* equal flexible gutters keep the [op | chip] block centred; the batch line spans the gutters, so its
        length can no longer widen the chip column (which made some recipes look left-aligned) */
-    .recipe { display: grid; grid-template-columns: minmax(0, 1fr) 14px minmax(0, auto) minmax(0, 1fr); gap: 5px 6px; align-items: center; justify-items: start; }
+    .recipe { display: grid; grid-template-columns: minmax(0, 1fr) 18px minmax(0, auto) minmax(0, 1fr); gap: 5px 6px; align-items: center; justify-items: start; }
     .recipe .mult, .recipe .jit-meta { grid-column: 1 / -1; justify-self: center; text-align: center; }
-    .recipe .op, .recipe .op-blank { display: block; text-align: center; width: 14px; grid-column: 2; }
+    .recipe .op, .recipe .op-blank { display: block; text-align: center; width: 18px; grid-column: 2; }
     .recipe > .chip { grid-column: 3; }
     .step-main { gap: 10px; padding: 10px 8px 10px 10px; }
   }
@@ -762,7 +764,7 @@
   :root[data-skin="pixel"] .brand h1 { font-size: 16px; text-shadow: 3px 3px 0 var(--px-shadow); }
   :root[data-skin="pixel"] .hero-label { font-size: 8px; letter-spacing: .08em; line-height: 1.6; }
   :root[data-skin="pixel"] .hero-num { font-size: clamp(30px, 9vw, 40px); text-shadow: 4px 4px 0 var(--px-shadow); }
-  :root[data-skin="pixel"] .hero-num small { font-family: var(--font); font-size: 15px; text-shadow: none; white-space: nowrap; }
+  :root[data-skin="pixel"] .hero-num small { font-family: var(--font); font-size: 15px; text-shadow: none; white-space: nowrap; font-size-adjust: .5; }
   :root[data-skin="pixel"] .stat-row .val { font-size: 14px; }
   :root[data-skin="pixel"] .lvl-head .lv { font-size: 12px; }
   :root[data-skin="pixel"] .formula { font-family: var(--font); }
@@ -772,6 +774,7 @@
   :root[data-skin="pixel"] .ring circle { stroke-linecap: butt; }
   :root[data-skin="pixel"] .ring svg { filter: none !important; }
   :root[data-skin="pixel"] .search svg { z-index: 1; }
+  :root[data-skin="pixel"] :is(.brand h1, .empty h3, .fit-row .score, .hd-btn, .hero-label, .hero-num, .info-body h3, .item-head .name, .ladder-row .lv, .lvl-head .lv, .recipe .mult, .ring .lbl b, .row .badge b, .section-title h3, .sheet-head h2, .shop-row .qty, .stat-row .val, .step-label h2, .target-summary .big, .tile b, h1, h2, h3, table.ref .lv) { font-size-adjust: none; }   /* Press Start 2P spots keep their hand-set sizes */
   /* pixel-art diamond (logo and start screen) replaces the smooth one */
   .px-only { display: none; }
   :root[data-skin="pixel"] .px-only { display: block; }
