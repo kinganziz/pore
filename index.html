@@ -567,12 +567,6 @@
   .icon-only.on { border-color: var(--accent); background: rgba(139, 124, 255, .1); }
   .icon-only .pixel { width: 40px; height: 40px; }
   :root[data-icons="pixel"] .icon-only .pixel, :root[data-icons="pixelhd"] .icon-only .pixel { width: 48px; height: 48px; }
-  /* Pixel style: shown at 3x (72px), so each of the 24x24 art pixels is a visible 3-point block */
-  :root[data-icons="pixelhd"] .tile-item .pixel { width: 72px; height: 72px; margin: -8px 0 -6px; }
-  :root[data-icons="pixelhd"] .icon-grid { grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); }
-  :root[data-icons="pixelhd"] .icon-only .pixel { width: 72px; height: 72px; }
-  :root[data-icons="pixelhd"] .icon-frame.lg { width: 84px; height: 84px; }
-  :root[data-icons="pixelhd"] .icon-frame.lg .pixel { width: 72px; height: 72px; }
   /* Item picker tiles use opaque colours: on some Android GPUs, hundreds of semi-transparent tiles in the
      scrolling sheet were painted grey or half grey. Phones show the sheet full screen, so the blur behind it
      is invisible there and is dropped too. */
