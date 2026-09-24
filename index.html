@@ -612,8 +612,9 @@
   footer { position: relative; z-index: 1; text-align: center; color: var(--soft); font-size: 12px; padding: 10px 16px calc(24px + var(--safe-b)); }
   footer a { color: var(--muted); }
 
-  .toast { position: fixed; left: 50%; bottom: calc(24px + var(--safe-b)); transform: translateX(-50%) translateY(20px); z-index: 60; padding: 10px 16px; border-radius: 999px; background: var(--text); color: var(--bg); font-weight: 600; font-size: 13px; box-shadow: var(--shadow); opacity: 0; transition: opacity .25s, transform .3s var(--ease); pointer-events: none; max-width: calc(100% - 32px); text-align: center; }
-  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(.94); z-index: 60; padding: 10px 16px; border-radius: 999px; background: var(--text); color: var(--bg); font-weight: 600; font-size: 13px; box-shadow: var(--shadow); opacity: 0; transition: opacity .25s, transform .3s var(--ease); pointer-events: none; max-width: calc(100% - 32px); text-align: center; }
+  /* messages sit in the middle of the screen, where they never cover the bottom buttons */
+  .toast.show { opacity: 1; transform: translate(-50%, -50%); }
   .toast.tappable { pointer-events: auto; cursor: pointer; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; }
   .fx { position: fixed; inset: 0; z-index: 40; pointer-events: none; }
 
@@ -644,7 +645,7 @@
   /* =====================================================================================
      Pixel game theme: an option (gamepad button in the header); the modern design above is the default.
      Follows the DLM pixel theme: "Cartridge" palette, Pixelify Sans body + Press Start 2P display,
-     notched corners from one-sided box-shadows, hard 3-4px drop shadows, buttons that press onto their
+     rounded corners like the modern theme, hard 3-4px drop shadows, buttons that press onto their
      shadow, a 2x2 dither. Frames only on real containers; rows, headers, tabs and segments stay flat.
      ===================================================================================== */
   :root[data-skin="pixel"] {
@@ -655,12 +656,13 @@
     --accent: #ff6b6b; --accent-2: #ff6b6b; --on-accent: #0b0b1e;
     --gold: #ffd042; --gold-ink: #0b0b1e;
     --good: #5be07a; --warn: #ffd042; --bad: #ff5c5c; --info: #7ab8ff;
-    --line: color-mix(in srgb, var(--text) 34%, var(--bg));
-    --line-2: color-mix(in srgb, var(--text) 62%, var(--bg));
+    --line: #3a3a86;          /* indigo outlines that belong to the palette (grey looked off) */
+    --line-2: #5a5ab4;
     --px-shadow: color-mix(in srgb, var(--bg) 55%, black);
     --px-raised: 4px 4px 0 0 var(--px-shadow);
     --px-w: 3px;
-    --shadow: none; --r: 0px; --r-sm: 0px;
+    --px-btn: 3px 3px 0 0 var(--px-shadow);
+    --shadow: none;
     --font: "Tiny5", "Pixelify Sans", "Segoe UI", system-ui, sans-serif;   /* Tiny5 is loaded for digits only */
     --display: "Press Start 2P", "Tiny5", "Pixelify Sans", monospace;
     --ease: steps(3, end);
@@ -673,7 +675,11 @@
     --accent: #e0474f; --accent-2: #e0474f; --on-accent: #fff;
     --gold: #f0b400; --gold-ink: #1b1b33;
     --good: #1f9a45; --warn: #b87800; --bad: #d23434; --info: #2f6fd0;
-    --px-shadow: color-mix(in srgb, var(--text) 30%, var(--bg));
+    --line: #b9a980; --line-2: #9a8a62;
+    --px-shadow: color-mix(in srgb, var(--text) 22%, var(--bg));
+  }
+  @media (max-width: 719px) {   /* phones: thinner outlines and shadows */
+    :root[data-skin="pixel"] { --px-w: 2px; --px-raised: 3px 3px 0 0 var(--px-shadow); --px-btn: 2px 2px 0 0 var(--px-shadow); }
   }
   :root[data-skin="pixel"] body {
     font-family: var(--font);
@@ -681,24 +687,19 @@
   }
   :root[data-skin="pixel"] img, :root[data-skin="pixel"] canvas { image-rendering: pixelated; }
   :root[data-skin="pixel"] .glow, :root[data-skin="pixel"] .hero::before { display: none; }
-  :root[data-skin="pixel"] *, :root[data-skin="pixel"] *::before, :root[data-skin="pixel"] *::after { border-radius: 0 !important; }
   :root[data-skin="pixel"] *::-webkit-scrollbar-thumb { background: var(--line); }
   :root[data-skin="pixel"] :is(.card, .topbar, .sheet-backdrop) { backdrop-filter: none; -webkit-backdrop-filter: none; }
   :root[data-skin="pixel"] .topbar { background: var(--bg-2); border-bottom: var(--px-w) solid var(--line); }
   :root[data-skin="pixel"] *:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
-  /* ---- notched frames (one-sided shadows leave the four corner pixels empty) on real containers only ---- */
+  /* ---- frames with hard pixel drop shadows on real containers only (rounded, like the modern theme) ---- */
   :root[data-skin="pixel"] :is(.card, .hero, .toast, .tile-item, .icon-only, .charm-chip) {
-    border-color: transparent !important; animation: none;
-    box-shadow:
-      calc(-1 * var(--px-w)) 0 0 0 var(--line), var(--px-w) 0 0 0 var(--line),
-      0 calc(-1 * var(--px-w)) 0 0 var(--line), 0 var(--px-w) 0 0 var(--line),
-      var(--px-raised) !important;
+    border: var(--px-w) solid var(--line) !important; animation: none;
+    box-shadow: var(--px-raised) !important;
   }
-  :root[data-skin="pixel"] :is(.tile-item, .icon-only, .charm-chip) { --px-w: 2px; --px-raised: 3px 3px 0 0 var(--px-shadow); }
-  :root[data-skin="pixel"] :is(.card, .hero) { margin: var(--px-w); }
-  :root[data-skin="pixel"] .hero { --line: var(--gold); }
-  :root[data-skin="pixel"] :is(.tile-item, .icon-only, .charm-chip, .row).on { --line: var(--gold); background: var(--tile-on); }
+  :root[data-skin="pixel"] :is(.tile-item, .icon-only, .charm-chip) { --px-w: 2px; --px-raised: var(--px-btn); }
+  :root[data-skin="pixel"] .hero { border-color: var(--gold) !important; }
+  :root[data-skin="pixel"] :is(.tile-item, .icon-only, .charm-chip, .row).on { border-color: var(--gold) !important; background: var(--tile-on); }
   :root[data-skin="pixel"] .sheet { border: 0; border-top: var(--px-w) solid var(--line); box-shadow: none; }
   @media (min-width: 720px) { :root[data-skin="pixel"] .sheet { border: var(--px-w) solid var(--line); box-shadow: 6px 6px 0 0 var(--px-shadow); } }
 
@@ -714,14 +715,14 @@
 
   /* ---- buttons: 3px border, hard shadow, press onto the shadow ---- */
   :root[data-skin="pixel"] :is(.btn, .icon-btn, .chip-btn, .example, .mini, .filter, .row) {
-    border: var(--px-w) solid var(--line) !important; box-shadow: 3px 3px 0 0 var(--px-shadow) !important; transition: none;
+    border: var(--px-w) solid var(--line) !important; box-shadow: var(--px-btn) !important; transition: none;
   }
   :root[data-skin="pixel"] :is(.filter, .mini, .chip-btn, .example) { border-width: 2px !important; }
   :root[data-skin="pixel"] :is(.btn, .icon-btn, .chip-btn, .example, .mini, .filter, .row, .tile-item, .icon-only, .charm-chip):active:not(:disabled) {
-    transform: translate(3px, 3px) !important; box-shadow: none !important;
+    transform: translate(2px, 2px) !important; box-shadow: none !important;
   }
   :root[data-skin="pixel"] :is(.search input, .cat-select select, .stepper, input[type="number"]) {
-    border: var(--px-w) solid var(--line) !important; box-shadow: inset 3px 3px 0 0 var(--px-shadow) !important;
+    border: var(--px-w) solid var(--line) !important; box-shadow: inset 2px 2px 0 0 var(--px-shadow) !important;
   }
   :root[data-skin="pixel"] :is(.btn.primary, .chip-btn.on, .seg.accent button.on, .step-num, .logo, .hd-btn[aria-pressed="true"], .skin-btn[aria-pressed="true"], .toast.tappable, .filter.on) {
     background: var(--accent) !important; color: var(--on-accent) !important; border-color: var(--accent) !important;
@@ -729,7 +730,7 @@
   :root[data-skin="pixel"] .seg button.on { background: var(--text); color: var(--bg); }
   :root[data-skin="pixel"] .seg.safe button.on { background: var(--good) !important; color: var(--bg); }
   :root[data-skin="pixel"] :is(.chip-btn.on.gold, .chip.perfect b) { background: var(--gold) !important; color: var(--gold-ink) !important; border-color: var(--gold) !important; }
-  :root[data-skin="pixel"] .step-num, :root[data-skin="pixel"] .logo { box-shadow: 3px 3px 0 0 var(--px-shadow) !important; }
+  :root[data-skin="pixel"] .step-num, :root[data-skin="pixel"] .logo { box-shadow: var(--px-btn) !important; }
   :root[data-skin="pixel"] :is(.pill, .chip, .lvl-head .facts span) { border: 2px solid var(--line); }
 
   /* ---- type: Press Start 2P for titles, eyebrows and big numbers; Pixelify Sans for reading ---- */
