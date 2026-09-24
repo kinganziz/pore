@@ -945,6 +945,13 @@
   .cmp-foot { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
   .lvl-all { margin-top: 2px; }
   .lvl-all.on { color: var(--good); border-color: color-mix(in srgb, var(--good) 45%, var(--line)); }
+  /* ---------- first-run walkthrough ---------- */
+  .coach { position: fixed; inset: 0; z-index: 90; }
+  .coach-hole { position: fixed; border-radius: 18px; box-shadow: 0 0 0 9999px rgba(4, 6, 14, .72); pointer-events: none; animation: fade .25s both; }
+  .coach-bubble { position: fixed; left: 16px; right: 16px; max-width: 420px; margin: 0 auto; display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 16px; background: var(--bg-2); border: 1px solid var(--line-2); box-shadow: 0 16px 40px rgba(0, 0, 0, .45); animation: rise .35s var(--ease) both; }
+  .coach-bubble img { width: 52px; height: auto; flex: 0 0 auto; }
+  .coach-bubble p { margin: 2px 0 8px; font-size: 15px; line-height: 1.45; }
+  :root[data-skin="pixel"] .coach-bubble { border: 2px solid var(--line); border-radius: 12px; box-shadow: var(--px-raised); }
 </style>
 </head>
 <body>
@@ -1053,6 +1060,7 @@
         <button class="btn small" type="button" data-action="backup-load">Restore</button>
         <button class="btn small ghost" type="button" data-action="backup-copy">Copy code</button>
         <button class="btn small ghost" type="button" data-action="backup-paste">Paste code</button>
+        <button class="btn small ghost" type="button" data-action="intro-replay" style="grid-column: 1 / -1">Replay the intro</button>
       </div><input type="file" id="backupFile" accept=".json,application/json" hidden></div>
       <p>Refining combines two copies of the same item. The <b>base</b> item goes up one level and gains stats from the <b>material</b> item. A "perfect" refine uses two identical items, so a perfect P10 normally eats 512 base items (1 → 2 → 4 → … → 512).</p>
       <p>PORE searches every other way to combine items. Because stat gains are rounded down and every refine adds at least +2, weaker materials often reach the very same stats. The planner keeps only the cheapest way to reach each stat combination at each level and builds up to your target, so the answer is the cheapest plan under the chosen formula.</p>
@@ -1134,7 +1142,7 @@ __SOLVER_JS__
   const STAT_NAMES = Array.from(new Set(ITEM_DB.statNames.concat(Object.keys(STAT_META)))).sort();
   const AFF_LABEL = a => a ? a.split('_').map(w => w[0] + w.slice(1).toLowerCase()).join(' + ') : '';
   const EXAMPLES = ['Wooden Sword', 'Soldier Sword', 'Platinum Dagger', 'Purpurite Sword'];
-  const STORAGE = { state: 'pore.state.v3', badges: 'pore.badges.v3', recent: 'pore.recent.v1', theme: 'pore.theme', done: 'pore.done.', obs: 'pore.observations.v1', icons: 'pore.iconstyle.v2', skin: 'pore.skin', font: 'pore.font', projects: 'pore.projects.v1', cstock: 'pore.charmstock.v1', community: 'pore.community.v1' };
+  const STORAGE = { state: 'pore.state.v3', badges: 'pore.badges.v3', recent: 'pore.recent.v1', theme: 'pore.theme', done: 'pore.done.', obs: 'pore.observations.v1', icons: 'pore.iconstyle.v2', skin: 'pore.skin', font: 'pore.font', projects: 'pore.projects.v1', cstock: 'pore.charmstock.v1', community: 'pore.community.v1', intro: 'pore.intro.v1' };
   const CHARM_ITEMS = 'Rabbits Foot ×2 · Lucky Egg ×3 · Wishbone ×3 · Clover ×4 · Starfish ×4 · Horseshoe ×5 · Lucky Rose ×6';
   const REPO_URL = 'https://github.com/kinganziz/pore';
   const MODEL_KEYS = new Set(S.models.map(m => m.key));
@@ -1964,6 +1972,7 @@ __SOLVER_JS__
           <div class="examples">${ex}</div>
           ${tipHTML()}
         </div>`;
+      maybeIntro();
       return;
     }
     if (solving && !(last && last.res)) {
@@ -2178,6 +2187,7 @@ __SOLVER_JS__
       ${labHTML(item, obs)}`);
 
     if (!ui.guideSheet.hidden) renderGuide();
+    if (newPlan && !introSeen('guide')) maybeIntro();
     // Back/Forward to a plan: return to where the page was once its results are on screen
     if (pendingScroll != null && last) { const y = pendingScroll; pendingScroll = null; jumpTo(y); }
     // animations
@@ -2722,6 +2732,36 @@ __SOLVER_JS__
     toast('Image saved');
   }
 
+  /* ================= first-run walkthrough ================= */
+  // Two one-time spotlights from anz: "pick an item" on the start screen, "tap here to be guided" on the first plan.
+  function introSeen(k) { const f = loadJSON(STORAGE.intro, {}); return !!(f && f[k]); }
+  function markIntro(k) { const f = loadJSON(STORAGE.intro, {}) || {}; f[k] = 1; saveJSON(STORAGE.intro, f); }
+  function coach(target, html, key) {
+    if (!target || document.querySelector('.coach')) return;
+    const r0 = target.getBoundingClientRect();
+    if (r0.top < 70 || r0.bottom > innerHeight - 20) target.scrollIntoView({ block: 'center', behavior: 'instant' });
+    const r = target.getBoundingClientRect();
+    if (r.width === 0 || r.bottom < 0 || r.top > innerHeight) return;
+    const pad = 8, box = document.createElement('div');
+    box.className = 'coach';
+    box.innerHTML = `<div class="coach-hole" style="left:${r.left - pad}px;top:${r.top - pad}px;width:${r.width + pad * 2}px;height:${r.height + pad * 2}px"></div>` +
+      `<div class="coach-bubble" style="${r.top > innerHeight / 2 ? `bottom:${innerHeight - r.top + pad + 12}px` : `top:${r.bottom + pad + 12}px`}">` +
+      `<img src="icons/app/anz.png?v=3" alt="" width="124" height="128"><div><b class="tip-name">anz</b><p>${html}</p>` +
+      `<button class="btn small primary" type="button">Got it</button></div></div>`;
+    const done = () => { markIntro(key); box.remove(); };
+    box.addEventListener('click', done);
+    document.body.appendChild(box);
+  }
+  function maybeIntro() {
+    // people who already use PORE skip it (the help page can replay it)
+    if (!introSeen('pick') && (recent.length || projects.length) && !introSeen('replay')) { markIntro('pick'); markIntro('guide'); return; }
+    if (!state.item && !introSeen('pick')) {
+      setTimeout(() => coach(document.querySelector('.pick-trigger'), "Hi, I'm anz! Pick the item you want to refine here, and I'll find the cheapest way to max it.", 'pick'), 900);
+    } else if (state.item && introSeen('pick') && !introSeen('guide') && last && last.res) {
+      setTimeout(() => { const b = document.querySelector('.guide-cta'); if (b) coach(b, "Here's your plan. Tap this and I'll walk you through every refine, one step at a time. Your progress is saved as you go.", 'guide'); }, 1800);
+    }
+  }
+
   function pickItem(key) {
     state.item = key;
     state.t = {}; state.o = []; state.stock = 0; state.k = {};
@@ -2938,6 +2978,7 @@ __SOLVER_JS__
         break;
       }
       case 'backup-save': saveBackupFile(); break;
+      case 'intro-replay': saveJSON(STORAGE.intro, { replay: 1 }); closeInfo(); toast('Intro reset: anz will show you around again'); setTimeout(() => { if (!state.item) maybeIntro(); }, 600); break;
       case 'backup-load': document.getElementById('backupFile').click(); break;
       case 'backup-copy': copy(btoa(unescape(encodeURIComponent(JSON.stringify(backupData())))), 'Backup code copied: keep it somewhere safe'); break;
       case 'backup-paste': {
