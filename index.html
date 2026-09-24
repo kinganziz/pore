@@ -2379,6 +2379,7 @@ function createSolver() {
     closePicker({ keepHistory: true });   // the picker stays in history: Back returns to it
     pushScreen({}, location.pathname + location.search + '#s=');
     pendingScroll = null;
+    jumpTo(0);   // a new plan starts at the top; the reveal then glides down to the results
     renderAll();
     revealResults = true;
     scheduleSolve(0);
