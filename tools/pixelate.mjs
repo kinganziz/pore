@@ -78,7 +78,11 @@ function pixelate(svg) {
   const inkIdx = palette.reduce((best, c, i) => (lum(c) < 0.16 && (best < 0 || lum(c) < lum(palette[best])) ? i : best), -1);
   if (inkIdx < 0) palette.push([20, 20, 30]);
   const INK = inkIdx < 0 ? palette.length - 1 : inkIdx;
-  const isInk = i => i === INK || lum(palette[i]) < 0.2;       // the drawing's outlines (black, dark brown, ...)
+  // Outline ink = dark colours the drawing uses as strokes. A dark *fill* (the shadowed side of a black
+  // cloak) is fabric, not outline: it still gets an outline around it instead of melting into the edge.
+  const strokeInk = new Set();
+  for (const m of svg.matchAll(/stroke="(#[0-9a-fA-F]{3,6})"/g)) { const c = hexToRgb(m[1]); if (lum(c) < 0.3) strokeInk.add(toHex(c)); }
+  const isInk = i => i === INK || (lum(palette[i]) < 0.2 && (strokeInk.size === 0 || strokeInk.has(toHex(palette[i]))));
   const isShine = i => lum(palette[i]) > 0.9;
 
   const px = SUB * GRID;
