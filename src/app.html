@@ -704,7 +704,7 @@
       <h3>Data</h3>
       <p>Items and stats come from the <a href="https://wiki.pixel-odyssey.app/" target="_blank" rel="noopener">official Pixel Odyssey wiki</a>; the icons are PORE's own drawings, in a modern and a pixel style (switch with the ✦ button) (fetched <span class="dataDate"></span>). Refining rules follow the wiki's <a href="https://wiki.pixel-odyssey.app/Mechanics/Refining" target="_blank" rel="noopener">Refining</a> page and the formula the community verified in-game.</p>
       <h3>App</h3>
-      <p>Pull-to-refresh is turned off so scrolling never reloads the page by accident. Your item, targets, charms and progress are saved on this device. New versions announce themselves with a "New version ready" message; you can also reload here.</p>
+      <p>Pull-to-refresh is turned off so scrolling never reloads the page by accident. Your item, targets, charms and progress are saved on this device. New versions announce themselves with a "New version ready" message. To refresh, tap the PORE logo on the start screen, or use the button here.</p>
       <div class="btn-row"><button class="btn small" type="button" data-action="reload">Reload app</button><button class="btn small ghost" type="button" data-action="check-update">Check for update</button></div>
     </div>
   </div>
@@ -1057,6 +1057,8 @@ __SOLVER_JS__
     const item = resolveItem();
     ui.itemHint.textContent = item ? '' : `${ITEMS.length} items from the wiki`;
     document.body.classList.toggle('has-item', !!item);
+    const brandLink = document.querySelector('a.brand');
+    if (brandLink) brandLink.setAttribute('aria-label', item ? 'PORE home: choose another item' : 'Refresh PORE');
     if (!item) {
       ui.itemBody.innerHTML = `
         <button class="pick-trigger" type="button" data-action="open-picker">
@@ -1568,7 +1570,13 @@ __SOLVER_JS__
   }
 
   function goHome() {
-    if (!state.item) { window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' }); return; }
+    if (!state.item) {
+      // already home: first tap scrolls to the top, a tap at the top reloads the app
+      if (window.scrollY > 40) { window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' }); return; }
+      toast('Refreshing…');
+      setTimeout(() => location.reload(), 150);
+      return;
+    }
     state.item = null; state.t = {}; state.o = []; state.stock = 0; state.k = {};
     last = null; lastSig = null; lastHeroValue = 0; openObsForm = null; solveSeq++;
     closeSheets();
