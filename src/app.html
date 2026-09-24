@@ -818,14 +818,22 @@
   :root[data-skin="pixel"] .splash-in b { font-size: 16px; text-shadow: 3px 3px 0 var(--px-shadow); }
   :root[data-skin="pixel"] .splash-bar i { animation-timing-function: steps(6, end); }
   @media (prefers-reduced-motion: reduce) { .splash-gem, .splash-bar i { animation: none; } }
-  /* ---------- helper bubble (start screen) ---------- */
-  .tip { display: flex; align-items: flex-end; gap: 10px; margin: 22px auto 0; max-width: 340px; text-align: left; background: none; border: 0; padding: 0; color: inherit; cursor: pointer; }
-  .tip-avatar { width: 52px; height: auto; aspect-ratio: 124 / 128; flex: 0 0 auto; pointer-events: none; -webkit-user-drag: none; filter: drop-shadow(0 3px 4px rgba(0, 0, 0, .35)); }   /* anz's own custom avatar, background removed */
-  .tip-text { position: relative; flex: 1 1 auto; min-width: 0; padding: 9px 12px; border-radius: 14px 14px 14px 4px; background: var(--surface-2); border: 1px solid var(--line); font-size: 13px; line-height: 1.35; color: var(--muted); }
-  .tip-text small { display: block; margin-top: 3px; text-align: right; color: var(--soft); font-size: 11px; }
-  .tip.pop .tip-text { animation: tip-pop .25s var(--ease); }
-  @keyframes tip-pop { from { transform: scale(.96); opacity: .6; } to { transform: none; opacity: 1; } }
-  :root[data-skin="pixel"] .tip-text { border: 2px solid var(--line); border-radius: 12px 12px 12px 2px; box-shadow: var(--px-btn); }
+  /* ---------- helper dialogue (start screen): anz speaking, RPG style ---------- */
+  .tip { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; max-width: 380px; margin: 24px auto 0; padding: 9px 30px 9px 9px;
+    text-align: left; color: var(--text); background: var(--surface-2); border: 1px solid var(--line-2); border-radius: 16px; cursor: pointer; }
+  .tip-portrait { flex: 0 0 auto; width: 52px; height: 52px; border-radius: 11px; background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--accent) 35%, transparent), transparent 70%), var(--surface-3); display: grid; place-items: end center; overflow: hidden; }
+  .tip-avatar { width: 48px; height: auto; aspect-ratio: 124 / 128; margin-bottom: -4px; pointer-events: none; -webkit-user-drag: none; }   /* anz's own custom avatar */
+  .tip-body { display: grid; gap: 3px; min-width: 0; }
+  .tip-name { font-family: var(--display); font-size: 13px; color: var(--accent); letter-spacing: .5px; }
+  .tip-line { font-size: 14px; line-height: 1.35; color: var(--text); }
+  .tip-next { position: absolute; right: 12px; bottom: 9px; font-size: 10px; color: var(--accent); animation: tip-blink 1s steps(2, start) infinite; }
+  @keyframes tip-blink { to { visibility: hidden; } }
+  .tip.pop .tip-line { animation: tip-pop .25s var(--ease); }
+  @keyframes tip-pop { from { opacity: .3; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+  :root[data-skin="pixel"] .tip { border: 2px solid var(--line); border-radius: 12px; box-shadow: var(--px-btn); }
+  :root[data-skin="pixel"] .tip-portrait { border-radius: 8px; image-rendering: auto; }
+  :root[data-skin="pixel"] .tip-name { font-size: 10px; font-size-adjust: none; }
+  @media (prefers-reduced-motion: reduce) { .tip-next { animation: none; } }
   .credit { color: var(--muted); }
 </style>
 </head>
@@ -2048,8 +2056,11 @@ __SOLVER_JS__
   ];
   let tipIndex = Math.floor(Math.random() * TIPS.length);
   function tipHTML() {
-    return `<button class="tip" type="button" data-action="next-tip" title="Next tip"><img class="tip-avatar" src="icons/app/anz.png?v=3" alt="anz" width="52" height="54" draggable="false">` +
-      `<span class="tip-text"><span data-tip>${esc(TIPS[tipIndex])}</span><small>— anz</small></span></button>`;
+    // an RPG dialogue box: the speaker's portrait inside, a name tag, the line, and a blinking "next" marker
+    return `<button class="tip" type="button" data-action="next-tip" title="Next tip">` +
+      `<span class="tip-portrait"><img class="tip-avatar" src="icons/app/anz.png?v=3" alt="" width="124" height="128" draggable="false"></span>` +
+      `<span class="tip-body"><b class="tip-name">anz</b><span class="tip-line" data-tip>${esc(TIPS[tipIndex])}</span></span>` +
+      `<span class="tip-next" aria-hidden="true">▼</span></button>`;
   }
 
   function pickItem(key) {
