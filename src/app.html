@@ -927,6 +927,11 @@
   .cstock-grid input { width: 100%; text-align: center; }
   .shop-row.short .what small b { color: var(--bad); }
   .rec-none { font-size: 12px; color: var(--muted); }
+  .need-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+  .need-row input { width: 90px; }
+  .need-select { min-width: 0; max-width: 150px; height: 34px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--surface-2); color: var(--text); padding: 0 8px; }
+  .need-stat { font-weight: 600; }
+  .need-hint { display: block; margin-top: 6px; color: var(--muted); font-size: 12px; }
 </style>
 </head>
 <body>
@@ -1624,6 +1629,15 @@ __SOLVER_JS__
         <span class="big">P${state.L}</span>
         <span class="stats">${isPerfect ? 'perfect' : 'at least'} ${target.map((t, i) => t == null ? `<s>${item.stats[i].short}</s>` : `${t} ${item.stats[i].short}`).join(' · ')}</span>
       </div>
+      <details class="detail need">
+        <summary>Need a stat, not a level?</summary>
+        <div class="need-row">
+          ${single ? `<span class="need-stat">${esc(item.stats[0].name)}</span>` : `<select class="need-select" data-need-stat aria-label="Stat">${item.stats.map((st, i) => `<option value="${i}">${esc(st.name)}</option>`).join('')}</select>`}
+          <input class="num small" type="number" inputmode="numeric" min="1" step="1" placeholder="e.g. ${item.chain[Math.min(10, state.L)][0]}" data-need-val aria-label="At least">
+          <button class="btn small primary" type="button" data-action="need-find">Find</button>
+        </div>
+        <small class="need-hint">PORE picks the lowest level that can reach it and plans the cheapest way there (other stats ignored).</small>
+      </details>
       <details class="detail" ${isPerfect ? '' : 'open'}>
         <summary>${isPerfect ? 'Fine-tune target stats (accept less than perfect)' : 'Target stats'}</summary>
         <div class="target-rows">${rows}</div>
@@ -2754,6 +2768,22 @@ __SOLVER_JS__
       case 'obs-cancel': openObsForm = null; renderResults(); break;
       case 'guide-open': upsertProject({}); openGuide(); break;
       case 'project-open': openProject(el.dataset.id); break;
+      case 'need-find': {
+        const item = resolveItem(); if (!item) break;
+        const box = el.closest('.need');
+        const i = item.stats.length === 1 ? 0 : Number((box.querySelector('[data-need-stat]') || {}).value || 0);
+        const want = Math.round(Number((box.querySelector('[data-need-val]') || {}).value));
+        if (!(want > 0)) { toast('Enter the value you need'); break; }
+        let L = 2; while (L <= 10 && item.chain[L][i] < want) L++;
+        const st = item.stats[i];
+        if (L > 10) { toast(`Even P10 reaches at most ${item.chain[10][i]} ${st.short}`); break; }
+        state.L = L; state.t = {};
+        item.stats.forEach((x, k) => { state.t[x.name] = k === i ? want : 'skip'; });
+        if (item.stats.length === 1 && want === item.chain[L][0]) state.t = {};
+        haptic(); revealResults = true; afterChange();
+        toast(`P${L} is the first level that reaches ${want} ${st.short}`);
+        break;
+      }
       case 'backup-save': saveBackupFile(); break;
       case 'backup-load': document.getElementById('backupFile').click(); break;
       case 'backup-copy': copy(btoa(unescape(encodeURIComponent(JSON.stringify(backupData())))), 'Backup code copied: keep it somewhere safe'); break;
