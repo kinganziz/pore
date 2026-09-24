@@ -841,6 +841,7 @@
   .verdict { margin: -4px 12px 10px; padding: 4px 10px; border-radius: 8px; font-size: 12px; text-align: center; }
   .verdict.ok { color: var(--good); background: color-mix(in srgb, var(--good) 12%, transparent); }
   .verdict.diff { color: var(--info); background: color-mix(in srgb, var(--info) 12%, transparent); }
+  .verdict.risk { color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); }
   .record { display: grid; gap: 10px; margin: 4px 0 12px; }
   .rec-line { display: grid; grid-template-columns: minmax(0, 1fr) 42px; grid-template-areas: "label num" "bar bar" "meta meta"; gap: 4px 10px; align-items: center; }
   .rec-label { grid-area: label; font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -963,7 +964,7 @@
       <h3>Items you already have</h3>
       <p>Owned items are used for free wherever they fit, and their quantity is respected exactly for small inventories. With very large inventories PORE caps the search and slots the leftovers in greedily. The plan is then marked "approximate": still valid, possibly a little more expensive than the true optimum.</p>
       <h3>Labels</h3>
-      <p><b>P4</b> means a level-4 item with perfect stats. <b>L4</b> means a level-4 item whose stats are below perfect. Every chip shows the exact stats the item must have, so you can check your inventory against it.</p>
+      <p><b>P4</b> means a level-4 item with perfect stats. <b>L4</b> means a level-4 item whose stats are below perfect. Every chip shows the exact stats the item must have, so you can check your inventory against it. <b>⚠ test this</b> marks a refine that sits on a rounding boundary: the plausible formula variants disagree there, so the game could give ±1. Test those first and record the result with the pencil.</p>
       <h3>Data</h3>
       <p>Items and stats come from the <a href="https://wiki.pixel-odyssey.app/" target="_blank" rel="noopener">official Pixel Odyssey wiki</a>; the icons are PORE's own drawings, as pixel art or smooth HD drawings (switch with the HD button) (fetched <span class="dataDate"></span>). Refining rules follow the wiki's <a href="https://wiki.pixel-odyssey.app/Mechanics/Refining" target="_blank" rel="noopener">Refining</a> page and the formula the community verified in-game.</p>
       <p class="credit">Made by <b>anz</b>, a Pixel Odyssey player. Say hi if you meet in town.</p>
@@ -2066,6 +2067,23 @@ function createSolver() {
       ? `<div class="verdict ok">✓ matched in-game</div>`
       : `<div class="verdict diff">≠ game gave ${o.actual.map((v, i) => `${v} ${item.stats[i].short}`).join(' · ')}</div>`;
   }
+  // a refine is worth testing in-game when the formula variants disagree on its result (a rounding boundary)
+  const riskCache = new Map();
+  const RISK_MODELS = ['v1f64', 'v1f32', 'dec64', 'dec32', 'main64', 'main32'];
+  function isRisky(item, st) {
+    const key = `${item.key}|${st.base.s.join(',')}|${st.mat.s.join(',')}`;
+    if (riskCache.has(key)) return riskCache.get(key);
+    const rates = item.stats.map(x => rateOf(x.cat));
+    let risky = false;
+    try {
+      // only the plausible explanations of the ±1 quirk (float precision, wiki percentages, one penalty for
+      // every stat) count; round-up / round-to-nearest are different formulas and disagree almost everywhere
+      const exact = S.predict('exact', st.base.s, st.mat.s, rates);
+      risky = RISK_MODELS.some(k => !sameVec(S.predict(k, st.base.s, st.mat.s, rates), exact));
+    } catch (e) { risky = false; }
+    riskCache.set(key, risky);
+    return risky;
+  }
   function recordHTML(item, obs) {
     const here = recordStats(obs), all = recordStats(observations);
     const line = (label, r) => {
@@ -2163,7 +2181,7 @@ function createSolver() {
       const isDone = done.has(id);
       if (isDone) doneCount++;
       const observed = obsKeys.has(obsKey(item.key, st.base.L, st.base.s, st.mat.L, st.mat.s));
-      const verdict = observed ? verdictHTML(item, st) : '';
+      const verdict = observed ? verdictHTML(item, st) : isRisky(item, st) ? `<div class="verdict risk" title="The formula variants give different results for this refine">⚠ test this: could land ±1 in-game</div>` : '';
       return `<div class="step ${isDone ? 'done' : ''} ${observed ? 'observed' : ''}" data-step-card="${esc(id)}">
           <label class="step-main">
             <input type="checkbox" data-field="step" data-step="${esc(id)}" ${isDone ? 'checked' : ''}>
