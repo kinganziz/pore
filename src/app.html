@@ -869,6 +869,18 @@
   .guide-nav { display: flex; justify-content: space-between; margin-top: 18px; }
   .guide-sheet .verdict { margin: 10px 0 0; }
   :root[data-skin="pixel"] .talk { border: 2px solid var(--line); border-radius: 12px; box-shadow: var(--px-btn); }
+  .g-recipe { display: grid; gap: 8px; margin-top: 14px; padding: 12px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); }
+  .g-recipe > div:not(.g-count) { display: grid; grid-template-columns: 64px minmax(0, 1fr); align-items: center; gap: 8px; }
+  .g-recipe .chip { justify-self: start; }
+  .g-lab { color: var(--muted); font-size: 13px; text-align: right; }
+  .g-count { margin-top: 2px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); text-align: center; }
+  .g-count b { color: var(--text); }
+  .g-how { margin-top: 12px; padding: 12px; border-radius: 14px; background: color-mix(in srgb, var(--accent) 8%, var(--surface)); border: 1px solid var(--line); font-size: 14px; }
+  .g-how > b { display: block; margin-bottom: 4px; font-family: var(--display); }
+  .g-how p { margin: 4px 0 0; color: var(--muted); line-height: 1.45; }
+  .g-how p b { color: var(--text); }
+  .g-how .charm-chips { margin-top: 10px; }
+  :root[data-skin="pixel"] .g-recipe, :root[data-skin="pixel"] .g-how { border: 2px solid var(--line); border-radius: 12px; }
 </style>
 </head>
 <body>
@@ -1626,6 +1638,9 @@ __SOLVER_JS__
     return fmt(n);
   }
   function factorClass(n) { const len = compactFactor(n).length; return len <= 3 ? '' : len <= 5 ? 'mid' : 'long'; }
+  function charmPickerHTML() {
+    return `<div class="charm-chips">${CHARMS.map(c => { const n = state.ch[c.key] || 0; return `<button type="button" class="charm-chip ${n ? 'on' : ''}" data-action="charm" data-key="${c.key}" title="${esc(c.desc || c.name)}">${iconSVG(c.key)}<span class="cn">${esc(c.name)}</span><b>×${c.factor}</b>${n > 1 ? `<i>${n}×</i>` : ''}</button>`; }).join('')}<div class="charm-total ${cfMax() > 0 ? 'on' : ''}" aria-live="polite" title="${cfMax() > 0 ? '×' + fmt(cfMax()) + ' per refine action' : 'No charms equipped'}">${cfMax() > 0 ? `<small>total</small><b class="${factorClass(cfMax())}">×${compactFactor(cfMax())}</b><small>per action</small>` : '<small>total</small><b>—</b><small>none yet</small>'}</div></div>`;
+  }
   function charmProduct() { let f = 1, any = false; for (const c of CHARMS) { const n = state.ch[c.key] || 0; if (n > 0) { any = true; f *= Math.pow(c.factor, n); } } return any ? f : 0; }
   // effective max charm factor per action: typed value wins, otherwise the product of equipped charms (0 = unlimited)
   function cfMax() { return state.cf > 0 ? state.cf : charmProduct(); }
@@ -1890,7 +1905,7 @@ __SOLVER_JS__
             <div class="nm">Charms per refine action<small>Tap to equip, tap again to stack. Factors multiply.</small></div>
             ${cfMax() > 0 ? '<button class="mini" type="button" data-action="charm-clear">Clear</button>' : ''}
           </div>
-          <div class="charm-chips">${CHARMS.map(c => { const n = state.ch[c.key] || 0; return `<button type="button" class="charm-chip ${n ? 'on' : ''}" data-action="charm" data-key="${c.key}" title="${esc(c.desc || c.name)}">${iconSVG(c.key)}<span class="cn">${esc(c.name)}</span><b>×${c.factor}</b>${n > 1 ? `<i>${n}×</i>` : ''}</button>`; }).join('')}<div class="charm-total ${cfMax() > 0 ? 'on' : ''}" aria-live="polite" title="${cfMax() > 0 ? '×' + fmt(cfMax()) + ' per refine action' : 'No charms equipped'}">${cfMax() > 0 ? `<small>total</small><b class="${factorClass(cfMax())}">×${compactFactor(cfMax())}</b><small>per action</small>` : '<small>total</small><b>—</b><small>none yet</small>'}</div></div>
+          ${charmPickerHTML()}
         </div>
         <div class="progress"><span id="progressText">${doneCount}/${totalSteps} done</span><div class="track"><div class="fill" id="progressFill" style="width:${totalSteps ? (doneCount / totalSteps) * 100 : 0}%"></div></div>${doneCount ? `<button class="mini" type="button" data-action="reset-progress">reset</button>` : ''}</div>
         <div class="note" style="margin:0 0 4px">${state.view === 'jit' ? `One branch at a time: make the two ingredients, refine them, move on. Keeps your inventory small, but it means <b>${actionsView} refine actions</b> and charms are spent per action, so Batches (${actionsBatch} actions) needs far fewer charms.` : `Each card is one recipe: <b>base</b> + material → result, grouped so you can multi-refine the whole batch in one action. <b>${actionsBatch} refine actions</b> in total${cfMax() > 0 ? ` with batches split to fit a ×${compactFactor(cfMax())} charm factor` : '. A batch of N items needs a charm factor of N × 100 ÷ base success; pick your charms above to split batches automatically'}.`} Tap to tick off what you have crafted; use the pencil if the game gave you a different result. P = perfect stats, L = below perfect; every chip shows the exact stats to look for.</div>
@@ -2209,6 +2224,7 @@ __SOLVER_JS__
       body = anzSays(`Let's take your <b>${esc(item.name)}</b> to <b>P${state.L}</b>. First, gather <b>${fmt(toCollect)}</b> base items (P1 ${esc(item.name)})` +
         `${stock ? `; you already have ${fmt(stock)}` : ''}${owned ? `, plus the ${owned} refined cop${owned === 1 ? 'y' : 'ies'} you own` : ''}. ` +
         `After that it's ${n} refine step${n === 1 ? '' : 's'} and about ${fmtGold(a.gold)} gold. I'll tell you exactly what to combine.`) +
+        `<div class="g-how"><b>Which charms do you use?</b><p>Tap to equip, tap again to stack. I'll use them to tell you how many items to refine at once.</p>${charmPickerHTML()}</div>` +
         `<div class="guide-actions"><button class="btn primary block" type="button" data-action="guide-next">I have them, let's go</button></div>`;
     } else if (guide.i >= n) {
       const root = last.res.plan.nodes[last.res.plan.root];
@@ -2217,29 +2233,57 @@ __SOLVER_JS__
         `<div class="guide-actions"><button class="btn primary block" type="button" data-action="close-guide">Close</button>` +
         `<button class="btn small ghost" type="button" data-action="guide-back">Back</button></div>`;
     } else {
-      const st = steps[guide.i], id = stepId(st), isDone = done.has(id);
+      const st = steps[guide.i], id = stepId(st), isDone = done.has(id), n = st.count;
       const risky = !obsForItem(item.key, item.stats.length).some(o => obsKey(o.item, o.baseL, o.base, o.matL, o.mat) === obsKey(item.key, st.base.L, st.base.s, st.mat.L, st.mat.s)) && isRisky(item, st);
-      const line = `${guide.i === n - 1 ? 'Last one! ' : ''}Take <b>${st.count}×</b> ${chipHTML(st.base, item, 'base')} and refine ${st.count > 1 ? 'each' : 'it'} with ${chipHTML(st.mat, item)} as material. ` +
-        `You'll get ${chipHTML(st.result, item, 'result')}.` +
+      const rName = nodeName(st.result, item), bName = nodeName(st.base, item), mName = nodeName(st.mat, item);
+      const uses = sameNode(st.base, st.mat) ? `${n * 2} × ${bName}` : `${n} × ${bName} and ${n} × ${mName}`;
+      const say = `${guide.i === steps.length - 1 ? 'Last one! ' : ''}Next, make <b>${n} × ${rName}</b>.` +
         (risky ? `<span class="talk-warn">⚠ Watch this one: the game could give one point more or less. Tell me what you got.</span>` : '');
-      const facts = `<div class="guide-facts"><span>${batchMeta(st.L, st.count)}</span>` +
-        `<span>${S.SUCCESS[st.L]}% base success · ${fmtGold(S.GOLD[st.L] * st.count)} gold</span></div>`;
+      const recipe = `<div class="g-recipe">` +
+        `<div><span class="g-lab">Refine</span>${chipHTML(st.base, item, 'base')}</div>` +
+        `<div><span class="g-lab">with</span>${chipHTML(st.mat, item)}</div>` +
+        `<div><span class="g-lab">to get</span>${chipHTML(st.result, item, 'result')}</div>` +
+        `<div class="g-count">Do it <b>${n}×</b>: uses ${uses}, makes ${n} × ${rName}</div></div>`;
       const inputs = item.stats.map((x, k) => `<label>${x.short}<input class="num small" type="number" inputmode="numeric" min="1" step="1" value="${st.result.s[k]}" data-guide-input="${k}"></label>`).join('');
       const other = guide.other ? `<div class="guide-other"><div class="obs-title">What did the game give you?</div><div class="obs-inputs">${inputs}</div>` +
         `<div class="btn-row"><button class="btn small primary" type="button" data-action="guide-save">Save &amp; re-plan</button><button class="btn small ghost" type="button" data-action="guide-other">Cancel</button></div></div>` : '';
-      body = anzSays(line) + facts + verdictHTML(item, st) +
+      body = anzSays(say) + recipe + guideHowTo(st.L, n) + verdictHTML(item, st) +
         `<div class="guide-actions">` +
         (isDone
-          ? `<button class="btn block" type="button" data-action="guide-skip">Already done ✓ · next step</button><button class="btn small ghost" type="button" data-action="guide-undo">Not done yet</button>`
-          : `<button class="btn primary block" type="button" data-action="guide-done">Done ✓</button>` +
-            `<button class="btn good block" type="button" data-action="guide-match">Done, and it matched exactly</button>` +
-            `<button class="btn small" type="button" data-action="guide-other">The game gave something else</button>`) +
+          ? `<button class="btn primary block" type="button" data-action="guide-skip">Already done ✓ · next step</button><button class="btn small ghost" type="button" data-action="guide-undo">Not done yet</button>`
+          : `<button class="btn primary block" type="button" data-action="guide-match">✓ Done, I got ${n} × ${rName}</button>` +
+            `<button class="btn small" type="button" data-action="guide-other">I got something else</button>`) +
         `</div>${other}` +
         `<div class="guide-nav"><button class="btn small ghost" type="button" data-action="guide-back">← Back</button><button class="btn small ghost" type="button" data-action="guide-skip">Skip →</button></div>`;
     }
     ui.guideBody.innerHTML = head + body;
   }
   function guideStep() { const steps = guideSteps(); return steps[guide.i]; }
+  function nodeName(nd, item) { return `${isPerfectNode(nd, item.chain) ? 'P' : 'L'}${nd.L}`; }
+  function sameNode(x, y) { return x.L === y.L && x.k === y.k && sameVec(x.s, y.s); }
+  function guideHowTo(L, n) {
+    const p = S.SUCCESS[L], cf = cfMax(), one = batchCharm(L, 1);
+    const lines = [];
+    if (cf > 0) {
+      const per = perAction(L, cf);
+      if (per < 1) {
+        lines.push(`Your charms add up to <b>×${compactFactor(cf)}</b>, but one item here needs <b>×${one}</b> for 100%. Add a charm, or refine without and accept ${p}%.`);
+      } else if (per >= n) {
+        lines.push(`Refine all <b>${n}</b> at once with your charms (×${compactFactor(cf)}): 100% success.`);
+      } else {
+        const k = Math.ceil(n / per), rest = n - (k - 1) * per;
+        lines.push(`Refine <b>${per} at a time</b> with your charms (×${compactFactor(cf)}): <b>${k} rounds</b>${rest < per ? ` (the last one with ${rest})` : ''}, 100% each.`);
+      }
+    } else if (p >= 100) {
+      lines.push(`Success is 100% here, so single refines need no charm.`);
+      if (n > 1) lines.push(`To do several in one go, equip charms: <b>×N</b> covers <b>N items</b> at once (all ${n} need ×${n}). Pick your charms on the first page and I'll split it for you.`);
+    } else {
+      lines.push(`Base success here is only <b>${p}%</b>. For 100%, one item needs a <b>×${one}</b> charm${n > 1 ? `; ${n} at once need ×${batchCharm(L, n)}` : ''}.`);
+      lines.push(`Pick your charms on the first page and I'll split it into rounds for you.`);
+    }
+    lines.push(`Fee: ${fmtGold(S.GOLD[L])} gold per refine (${fmtGold(S.GOLD[L] * n)} in total).`);
+    return `<div class="g-how"><b>In the game</b>${lines.map(x => `<p>${x}</p>`).join('')}</div>`;
+  }
 
   function pickItem(key) {
     state.item = key;
@@ -2414,7 +2458,7 @@ __SOLVER_JS__
         guide.i++; guide.other = false;
         if (guide.i >= guideSteps().length) burst();
         renderGuide();
-        toast(act === 'guide-match' ? 'Recorded: matched ✓' : 'Nice! Next step');
+        toast('Nice! Next step');
         break;
       }
       case 'guide-save': {
