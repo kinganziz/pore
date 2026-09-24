@@ -2162,7 +2162,7 @@ function createSolver() {
         revealResults = false;
         if (!matchMedia('(min-width: 980px)').matches) {
           const hero = document.querySelector('.hero');
-          if (hero) setTimeout(() => hero.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }), 120);
+          if (hero) setTimeout(() => hero.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: hero.offsetHeight < innerHeight - 90 ? 'center' : 'start' }), 120);   // centred when it fits below the top bar
         }
       }
       if (openObsForm) { const f = document.querySelector('[data-obs-form]'); if (f) { const inp = f.querySelector('input'); if (inp) inp.focus(); } }
