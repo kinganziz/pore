@@ -2,7 +2,7 @@
 const VERSION = '__VERSION__';
 const SHELL = 'pore-shell-' + VERSION;
 const ICONS = 'pore-icons-v1';
-const SHELL_FILES = ['./', './index.html', './manifest.webmanifest', './icons/app/icon-192.png', './icons/app/icon-512.png', './icons/app/maskable-512.png'];
+const SHELL_FILES = ['./', './index.html', './manifest.webmanifest', './icons/sprite.svg', './icons/app/icon-192.png', './icons/app/icon-512.png', './icons/app/maskable-512.png'];
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(SHELL).then(cache => cache.addAll(SHELL_FILES)).then(() => self.skipWaiting()));
@@ -34,7 +34,7 @@ self.addEventListener('fetch', event => {
   // App shell: network first (so deploys show up), fall back to the cached copy when offline.
   event.respondWith(
     fetch(req).then(res => {
-      if (res.ok && (url.pathname.endsWith('/') || url.pathname.endsWith('.html') || url.pathname.endsWith('.webmanifest') || url.pathname.includes('/icons/app/'))) {
+      if (res.ok && (url.pathname.endsWith('/') || url.pathname.endsWith('.html') || url.pathname.endsWith('.webmanifest') || url.pathname.endsWith('/icons/sprite.svg') || url.pathname.includes('/icons/app/'))) {
         const copy = res.clone();
         caches.open(SHELL).then(cache => cache.put(req, copy));
       }

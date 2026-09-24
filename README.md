@@ -65,7 +65,8 @@ python tools/build.py          # rebuild index.html after editing src/
 node tools/test_solver.mjs     # run the solver tests
 ```
 
-The app can switch between the embedded pixel PNG icons and the SVG files (button in the top bar).
+The app renders icons from `icons/svg/` (pixel-exact SVG twins of the wiki's PNGs; the PNG data stays
+in `data/items.json` only as the generator's input and is stripped from `index.html`).
 Charms (with their success multipliers) are read from the wiki too and drive the automatic batch
 splitting in the crafting guide.
 
