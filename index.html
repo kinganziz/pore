@@ -317,8 +317,8 @@
   .progress .track { flex: 1; height: 8px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
   .progress .fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--good), var(--accent)); transition: width .5s var(--ease); }
   .lvl-group { margin-top: 14px; }
-  .lvl-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 4px; position: sticky; top: 62px; z-index: 2; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
-  @media (min-width: 980px) { .lvl-head { position: static; background: transparent; backdrop-filter: none; } }
+  .lvl-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 -16px; padding: 10px 16px; position: sticky; top: 62px; z-index: 2; background: color-mix(in srgb, var(--bg) 94%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  @media (min-width: 980px) { .lvl-head { position: static; background: var(--surface); backdrop-filter: none; border-radius: 12px; margin: 0; padding: 8px 12px; border: 1px solid var(--line); } }
   .lvl-head .lv { font-family: var(--display); font-weight: 700; font-size: 15px; }
   .lvl-head .facts { display: flex; gap: 6px; flex-wrap: wrap; font-size: 11px; color: var(--muted); }
   .lvl-head .facts span { padding: 3px 8px; border-radius: 999px; background: var(--surface-2); }
