@@ -13,6 +13,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="PORE">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%238b7cff'/%3E%3Cstop offset='1' stop-color='%23d16dff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M8 4h16l6 8-14 17L2 12z' fill='url(%23g)'/%3E%3Cpath d='M8 4l4 8 4-8 4 8 4-8M2 12h28M12 12l4 17 4-17' stroke='%23ffffff' stroke-opacity='.55' stroke-width='1.4' fill='none'/%3E%3C/svg%3E">
+<script>
+  // apply the saved look before the first paint
+  (function () {
+    var d = document.documentElement, g = function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } };
+    var t = g('pore.theme') || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    d.setAttribute('data-theme', t);
+    d.setAttribute('data-skin', g('pore.skin') === 'pixel' ? 'pixel' : 'modern');
+    d.setAttribute('data-font', g('pore.font') === 'vt323' ? 'vt323' : 'jersey');
+  })();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jersey+15&family=VT323&family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -792,9 +802,24 @@
   /* reading font option (help page): VT323 instead of Jersey 15; font-size-adjust scales it to the same size */
   :root[data-font="vt323"], :root[data-font="vt323"][data-skin="pixel"] { --font: "VT323", ui-monospace, monospace; }
   :root[data-font="vt323"][data-skin="pixel"] { --display: "Press Start 2P", "VT323", monospace; }
+  /* ---------- start-up splash: shown until fonts and icons are ready (max 5 s) ---------- */
+  #splash { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: var(--bg); transition: opacity .35s ease, visibility .35s; }
+  #splash.done { opacity: 0; visibility: hidden; pointer-events: none; }
+  .splash-in { display: grid; justify-items: center; gap: 12px; color: var(--text); }
+  .splash-gem { width: 90px; height: 69px; image-rendering: pixelated; animation: splash-bob 1.2s steps(4, end) infinite alternate; }
+  @keyframes splash-bob { from { transform: translateY(0); } to { transform: translateY(-8px); } }
+  .splash-in b { font-family: var(--display); font-size: 22px; letter-spacing: 2px; }
+  .splash-in small { color: var(--muted); font-size: 13px; }
+  .splash-bar { width: 140px; height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+  .splash-bar i { display: block; height: 100%; width: 40%; border-radius: inherit; background: var(--accent); animation: splash-run 1s ease-in-out infinite; }
+  @keyframes splash-run { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+  :root[data-skin="pixel"] .splash-in b { font-size: 16px; text-shadow: 3px 3px 0 var(--px-shadow); }
+  :root[data-skin="pixel"] .splash-bar i { animation-timing-function: steps(6, end); }
+  @media (prefers-reduced-motion: reduce) { .splash-gem, .splash-bar i { animation: none; } }
 </style>
 </head>
 <body>
+<div id="splash" role="status" aria-label="Loading PORE"><div class="splash-in"><svg class="splash-gem" viewBox="0 0 15 12" shape-rendering="crispEdges"><path fill="#0b0b1e" d="M0 4h1v1h-1zM1 3h1v1h-1zM1 5h1v1h-1zM10 0h1v1h-1zM10 8h1v1h-1zM11 1h1v1h-1zM11 7h1v1h-1zM12 2h1v1h-1zM12 6h1v1h-1zM13 3h1v1h-1zM13 5h1v1h-1zM14 4h1v1h-1zM2 2h1v1h-1zM2 6h1v1h-1zM3 1h1v1h-1zM3 7h1v1h-1zM4 0h1v1h-1zM4 8h1v1h-1zM5 0h1v1h-1zM5 9h1v1h-1zM6 0h1v1h-1zM6 10h1v1h-1zM7 0h1v1h-1zM7 11h1v1h-1zM8 0h1v1h-1zM8 10h1v1h-1zM9 0h1v1h-1zM9 9h1v1h-1z"/><path fill="#9fe3ff" d="M2 3h1v1h-1zM2 5h1v1h-1zM3 2h1v1h-1zM3 3h1v1h-1zM3 5h1v1h-1zM3 6h1v1h-1zM4 1h1v1h-1zM4 2h1v1h-1zM4 3h1v1h-1zM4 5h1v1h-1zM4 6h1v1h-1zM4 7h1v1h-1zM5 1h1v1h-1zM5 3h1v1h-1zM5 5h1v1h-1zM5 6h1v1h-1zM5 7h1v1h-1zM5 8h1v1h-1zM6 5h1v1h-1zM6 6h1v1h-1zM6 7h1v1h-1zM6 8h1v1h-1zM6 9h1v1h-1z"/><path fill="#e6fbff" d="M6 1h1v1h-1zM6 3h1v1h-1zM7 10h1v1h-1zM7 1h1v1h-1zM7 2h1v1h-1zM7 3h1v1h-1zM7 5h1v1h-1zM7 6h1v1h-1zM7 7h1v1h-1zM7 8h1v1h-1zM7 9h1v1h-1zM8 1h1v1h-1zM8 2h1v1h-1zM8 3h1v1h-1z"/><path fill="#5cc3ff" d="M10 1h1v1h-1zM10 2h1v1h-1zM10 3h1v1h-1zM11 2h1v1h-1zM11 3h1v1h-1zM12 3h1v1h-1zM9 1h1v1h-1zM9 2h1v1h-1zM9 3h1v1h-1z"/><path fill="#ffffff" d="M5 2h1v1h-1zM6 2h1v1h-1z"/><path fill="#3aa0f0" d="M1 4h1v1h-1zM10 4h1v1h-1zM11 4h1v1h-1zM12 4h1v1h-1zM13 4h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM5 4h1v1h-1zM6 4h1v1h-1zM7 4h1v1h-1zM8 4h1v1h-1zM9 4h1v1h-1z"/><path fill="#2a74cc" d="M10 5h1v1h-1zM10 6h1v1h-1zM10 7h1v1h-1zM11 5h1v1h-1zM11 6h1v1h-1zM12 5h1v1h-1zM8 5h1v1h-1zM8 6h1v1h-1zM8 7h1v1h-1zM8 8h1v1h-1zM8 9h1v1h-1zM9 5h1v1h-1zM9 6h1v1h-1zM9 7h1v1h-1zM9 8h1v1h-1z"/></svg><b>PORE</b><span class="splash-bar"><i></i></span><small>Loading items…</small></div></div>
 <div class="glow glow-a"></div>
 <div class="glow glow-b"></div>
 
@@ -2315,6 +2340,19 @@ __SOLVER_JS__
     try { history.replaceState(navEntry({ idx: navIdx, y: st0 ? st0.y || 0 : 0 }), '', location.href); } catch (e) { /* ignore */ }
     renderAll();
     if (state.item) { pendingScroll = st0 ? st0.y || 0 : null; scheduleSolve(0); }
+    // start-up splash: wait for the fonts and the icon file so the first screen appears complete
+    (function hideSplash() {
+      const splash = document.getElementById('splash');
+      if (!splash) return;
+      const sprite = ICON_STYLES[iconStyle].sprite;
+      const icons = sprite ? fetch(`icons/${sprite}.svg?v=${ICONS_V}`).then(r => r.text()).catch(() => {}) : Promise.resolve();
+      const fonts = document.fonts && document.fonts.ready ? document.fonts.ready.catch(() => {}) : Promise.resolve();
+      const timeout = new Promise(r => setTimeout(r, 5000));
+      Promise.race([Promise.all([icons, fonts]), timeout]).then(() => {
+        splash.classList.add('done');
+        setTimeout(() => splash.remove(), 400);
+      });
+    })();
     const idle = window.requestIdleCallback || (fn => setTimeout(fn, 1200));
     idle(() => computeBadges());
     window.PORE = { version: '2.0.0', hasWorker: Solver.hasWorker, items: ITEMS.length };
