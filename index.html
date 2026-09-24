@@ -488,6 +488,11 @@
     background: var(--bg-2); border: 1px solid var(--line-2); border-bottom: 0; border-radius: 24px 24px 0 0;
     box-shadow: var(--shadow); animation: slide .38s var(--ease) both; padding-bottom: var(--safe-b);
   }
+  @media (max-width: 719px) {
+    .sheet-backdrop { align-items: stretch; }
+    .sheet { height: 100vh; height: 100dvh; max-height: none; border-radius: 0; border: 0; padding-top: env(safe-area-inset-top, 0px); }
+    .sheet-head { padding-top: 12px; }
+  }
   @keyframes slide { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
   @media (min-width: 720px) {
     .sheet-backdrop { align-items: center; padding: 20px; }
@@ -612,7 +617,6 @@
 
 <div class="sheet-backdrop" id="pickerSheet" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="pickerTitle">
-    <div class="grabber"></div>
     <div class="sheet-head">
       <h2 id="pickerTitle">Choose an item</h2>
       <button class="icon-btn" type="button" data-action="close-picker" aria-label="Close">
@@ -631,7 +635,6 @@
 
 <div class="sheet-backdrop" id="infoSheet" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="infoTitle">
-    <div class="grabber"></div>
     <div class="sheet-head">
       <h2 id="infoTitle">How PORE works</h2>
       <button class="icon-btn" type="button" data-action="close-info" aria-label="Close">
