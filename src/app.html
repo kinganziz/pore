@@ -311,7 +311,7 @@
   .example:active { transform: scale(.96); }
 
   .hero {
-    scroll-margin-top: 74px;
+    scroll-margin-top: calc(var(--topbar-h, 62px) + 12px);
     position: relative; overflow: hidden; padding: 20px;
     background: linear-gradient(var(--surface), var(--surface)) padding-box,
                 linear-gradient(135deg, rgba(139, 124, 255, .7), rgba(209, 109, 255, .15), rgba(55, 211, 154, .5)) border-box;
@@ -404,7 +404,7 @@
   .progress .track { flex: 1; height: 8px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
   .progress .fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--good), var(--accent)); transition: width .5s var(--ease); }
   .lvl-group { margin-top: 14px; }
-  .lvl-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 -16px; padding: 10px 16px; position: sticky; top: 62px; z-index: 2; background: color-mix(in srgb, var(--bg) 94%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .lvl-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 -16px; padding: 10px 16px; position: sticky; top: var(--topbar-h, 62px); z-index: 2; background: color-mix(in srgb, var(--bg) 94%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
   @media (min-width: 980px) { .lvl-head { position: static; background: var(--surface); backdrop-filter: none; border-radius: 12px; margin: 0; padding: 8px 12px; border: 1px solid var(--line); } }
   .lvl-head { flex-direction: column; justify-content: center; text-align: center; gap: 6px; }
   .lvl-head .facts { justify-content: center; }
@@ -429,9 +429,12 @@
   .recipe .op { color: var(--soft); font-weight: 700; }
   .recipe .op-blank { display: none; }
   @media (max-width: 700px) {
-    .recipe { display: grid; grid-template-columns: 14px minmax(0, auto); justify-content: center; gap: 5px 6px; align-items: center; justify-items: start; }
+    /* equal flexible gutters keep the [op | chip] block centred; the batch line spans the gutters, so its
+       length can no longer widen the chip column (which made some recipes look left-aligned) */
+    .recipe { display: grid; grid-template-columns: minmax(0, 1fr) 14px minmax(0, auto) minmax(0, 1fr); gap: 5px 6px; align-items: center; justify-items: start; }
     .recipe .mult, .recipe .jit-meta { grid-column: 1 / -1; justify-self: center; text-align: center; }
-    .recipe .op, .recipe .op-blank { display: block; text-align: center; width: 14px; }
+    .recipe .op, .recipe .op-blank { display: block; text-align: center; width: 14px; grid-column: 2; }
+    .recipe > .chip { grid-column: 3; }
     .step-main { gap: 10px; padding: 10px 8px 10px 10px; }
   }
   .recipe .jit-meta { flex-basis: 100%; font-size: 11px; color: var(--soft); }
@@ -1306,10 +1309,16 @@ __SOLVER_JS__
     syncHdButton();
   }
   // The pixel game theme is an option (gamepad button); the modern design is the default.
+  // pinned level headers sit exactly under the top bar, whatever its height (theme, fonts, phone width)
+  function syncTopbar() {
+    const topbar = document.querySelector('.topbar');
+    if (topbar) document.documentElement.style.setProperty('--topbar-h', Math.round(topbar.getBoundingClientRect().height) + 'px');
+  }
   let skin = 'modern';
   function setSkin(next) {
     skin = next === 'pixel' ? 'pixel' : 'modern';
     document.documentElement.setAttribute('data-skin', skin);
+    syncTopbar();
     const b = document.querySelector('[data-action="skin"]');
     if (b) b.setAttribute('aria-pressed', String(skin === 'pixel'));
     try { localStorage.setItem(STORAGE.skin, skin); } catch (e) { /* ignore */ }
@@ -2277,6 +2286,8 @@ __SOLVER_JS__
     const date = (ITEM_DB.fetched || '').slice(0, 10);
     ui.dataDate.textContent = `data ${date}`;
     document.querySelectorAll('.dataDate').forEach(el => el.textContent = date);
+    syncTopbar();
+    if (window.ResizeObserver) new ResizeObserver(syncTopbar).observe(document.querySelector('.topbar'));
     restore();
     try { history.scrollRestoration = 'manual'; } catch (e) { /* ignore */ }
     const st0 = history.state && history.state.pore ? history.state : null;
