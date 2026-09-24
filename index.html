@@ -932,6 +932,17 @@
   .need-select { min-width: 0; max-width: 150px; height: 34px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--surface-2); color: var(--text); padding: 0 8px; }
   .need-stat { font-weight: 600; }
   .need-hint { display: block; margin-top: 6px; color: var(--muted); font-size: 12px; }
+  /* ---------- compare ---------- */
+  .compare .section-title { display: flex; align-items: center; justify-content: space-between; }
+  .cmp-row { display: grid; grid-template-columns: 92px minmax(0, 1fr) minmax(0, 1fr); gap: 8px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 13px; align-items: center; }
+  .cmp-row > span { min-width: 0; overflow-wrap: anywhere; }
+  .cmp-row .win { color: var(--good); font-weight: 700; }
+  .cmp-lab { color: var(--muted); font-size: 12px; }
+  .cmp-head { border-top: 0; }
+  .cmp-head span { display: grid; justify-items: start; gap: 4px; }
+  .cmp-head .pixel { width: 36px; height: 36px; }
+  .cmp-pick { display: grid; justify-items: start; gap: 4px; background: none; border: 0; padding: 0; color: inherit; text-align: left; cursor: pointer; }
+  .cmp-foot { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 </style>
 </head>
 <body>
@@ -2018,6 +2029,7 @@ function createSolver() {
       ${sameFormulaHTML(item)}
       <div class="item-actions">
         <button class="btn small" type="button" data-action="open-picker">Change item</button>
+        ${item.key !== 'custom' ? `<button class="btn small ghost" type="button" data-action="compare-pick">Compare</button>` : ''}
         <button class="btn small ${currentProject() ? 'starred' : 'ghost'}" type="button" data-action="project-toggle" title="Keep this item in My projects on the start screen">${currentProject() ? '★ In my projects' : '☆ Add to my projects'}</button>
         ${item.page ? `<a class="btn small ghost" href="https://wiki.pixel-odyssey.app/Items/${encodeURIComponent(item.page)}" target="_blank" rel="noopener">Wiki ↗</a>` : `<button class="btn small ghost" type="button" data-action="edit-custom">Edit stats</button>`}
       </div>`;
@@ -2503,7 +2515,7 @@ function createSolver() {
       refRows.push(`<tr class="${L === state.L ? 'on' : ''}"><td class="lv">P${L}</td><td>${item.chain[L].map((v, i) => `<span class="nb">${v}&nbsp;${item.stats[i].short}</span>`).join(' · ')}</td><td class="r">${fmt(Math.pow(2, L - 1))}</td><td class="r"><b>${lad ? (lad.cost == null ? '–' : fmt(lad.cost)) : 1}</b></td></tr>`);
     }
 
-    patchHTML(ui.resultsBody, `
+    patchHTML(ui.resultsBody, `${compareKey ? compareHTML() : ''}
       <div class="card hero">
         <div class="hero-top">
           <span class="hero-label">Cheapest path · ${esc(item.name)} → P${state.L}</span>
@@ -2725,6 +2737,7 @@ function createSolver() {
     if (ui.pickerSheet.hidden) return;
     if (!(opts && (opts.fromHistory || opts.keepHistory)) && sheetOnTop('picker')) { history.back(); return; }
     picker.scroll = ui.pickerBody.scrollTop;
+    if (!(opts && opts.keepHistory)) compareMode = false;
     ui.pickerSheet.hidden = true; document.body.classList.remove('locked');
     if (sheetOpener && sheetOpener.focus && document.contains(sheetOpener)) sheetOpener.focus();
     sheetOpener = null;
@@ -3021,6 +3034,42 @@ function createSolver() {
     toast('Backup saved');
   }
 
+  /* ================= compare two items ================= */
+  let compareKey = null, compareMode = false;
+  function itemFacts(it) {
+    const list = Object.entries(it.stats).map(([name, value]) => ({ name, value, meta: metaFor(name) }));
+    const rates = list.map(x => rateOf(x.meta.cat));
+    const chain = S.perfectChain(list.map(x => x.value), rates, 10, S.makeCtx('exact', [], list.length));
+    return { it, list, chain, cost: badges[it.key] };
+  }
+  function compareHTML() {
+    const cur = state.item && state.item !== 'custom' ? ITEM_BY_KEY.get(state.item) : null;
+    const other = compareKey ? ITEM_BY_KEY.get(compareKey) : null;
+    if (!cur || !other) return '';
+    const A = itemFacts(cur), B = itemFacts(other);
+    const statsTxt = (F, L) => F.list.map((x, i) => `${F.chain[L][i]} ${x.meta.short}`).join(' · ');
+    const costTxt = F => F.cost != null ? `${fmt(F.cost)} <small>of 512</small>` : '–';
+    const save = F => F.cost != null ? `${Math.round((512 - F.cost) / 512 * 100)}%` : '–';
+    const per = F => F.cost ? F.list.map((x, i) => `${(F.chain[10][i] / F.cost).toFixed(2)} ${x.meta.short}`).join(' · ') : '–';
+    const cats = F => F.list.map(x => `${x.meta.short} ${CATS[x.meta.cat].pct}`).join(' · ');
+    const better = (a, b) => (a == null || b == null ? ['', ''] : a < b ? ['win', ''] : b < a ? ['', 'win'] : ['', '']);
+    const [wa, wb] = better(A.cost, B.cost);
+    const row = (label, a, b, ca = '', cb = '') => `<div class="cmp-row"><span class="cmp-lab">${label}</span><span class="${ca}">${a}</span><span class="${cb}">${b}</span></div>`;
+    return `<div class="card compare" id="compareCard">
+      <div class="section-title"><h3>Compare</h3><button class="mini" type="button" data-action="compare-close">close</button></div>
+      <div class="cmp-row cmp-head"><span></span>
+        <span>${iconSVG(A.it.key)}<b>${esc(A.it.name)}</b></span>
+        <span><button class="cmp-pick" type="button" data-action="pick" data-key="${B.it.key}" title="Plan ${esc(B.it.name)}">${iconSVG(B.it.key)}<b>${esc(B.it.name)}</b></button></span></div>
+      ${row('Base (P1)', statsTxt(A, 1), statsTxt(B, 1))}
+      ${row('Perfect P10', statsTxt(A, 10), statsTxt(B, 10))}
+      ${row('Cheapest P10', costTxt(A), costTxt(B), wa, wb)}
+      ${row('Saved', save(A), save(B))}
+      ${row('P10 stat per base item', per(A), per(B))}
+      ${row('Refine rates', cats(A), cats(B))}
+      <div class="cmp-foot"><button class="btn small" type="button" data-action="compare-pick">Compare with another</button><button class="btn small ghost" type="button" data-action="pick" data-key="${B.it.key}">Plan ${esc(B.it.name)}</button></div>
+    </div>`;
+  }
+
   function pickItem(key) {
     state.item = key;
     state.t = {}; state.o = []; state.stock = 0; state.k = {};
@@ -3159,7 +3208,18 @@ function createSolver() {
       case 'filter': picker.type = el.dataset.type; renderFilters(); renderPickerList(); break;
       case 'sort': picker.sort = el.dataset.sort; renderPickerList(); break;
       case 'picker-view': picker.view = ['grid', 'icons'].includes(el.dataset.view) ? el.dataset.view : 'list'; try { localStorage.setItem('pore.pickerview', picker.view); } catch (e2) { /* ignore */ } renderPickerList(); break;
-      case 'pick': haptic(); pickItem(el.dataset.key); break;
+      case 'pick':
+        haptic();
+        if (compareMode) {
+          compareMode = false;
+          if (el.dataset.key === state.item) { toast('Pick a different item to compare'); compareMode = true; break; }
+          compareKey = el.dataset.key; closePicker(); renderResults();
+          setTimeout(() => { const c = document.getElementById('compareCard'); if (c) c.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }); }, 350);
+          break;
+        }
+        compareKey = null; pickItem(el.dataset.key); break;
+      case 'compare-pick': compareMode = true; openPicker(); toast('Pick an item to compare with'); break;
+      case 'compare-close': compareKey = null; renderResults(); break;
       case 'use-custom': {
         const c = readCustomForm();
         if (!c.stats.length) { toast('Enter at least one stat'); return; }
