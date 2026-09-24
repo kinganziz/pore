@@ -821,8 +821,8 @@
   /* ---------- helper dialogue (start screen): anz speaking, RPG style ---------- */
   .tip { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; max-width: 380px; margin: 24px auto 0; padding: 9px 30px 9px 9px;
     text-align: left; color: var(--text); background: var(--surface-2); border: 1px solid var(--line-2); border-radius: 16px; cursor: pointer; }
-  .tip-portrait { flex: 0 0 auto; width: 52px; height: 52px; border-radius: 11px; background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--accent) 35%, transparent), transparent 70%), var(--surface-3); display: grid; place-items: end center; overflow: hidden; }
-  .tip-avatar { width: 48px; height: auto; aspect-ratio: 124 / 128; margin-bottom: -4px; pointer-events: none; -webkit-user-drag: none; }   /* anz's own custom avatar */
+  .tip-portrait { flex: 0 0 auto; width: 52px; height: 52px; display: grid; place-items: end center; }   /* the transparent avatar stands on its own */
+  .tip-avatar { width: 50px; height: auto; aspect-ratio: 124 / 128; pointer-events: none; -webkit-user-drag: none; }   /* anz's own custom avatar */
   .tip-body { display: grid; gap: 3px; min-width: 0; }
   .tip-name { font-family: var(--display); font-size: 13px; color: var(--accent); letter-spacing: .5px; }
   .tip-line { font-size: 14px; line-height: 1.35; color: var(--text); }
@@ -831,7 +831,7 @@
   .tip.pop .tip-line { animation: tip-pop .25s var(--ease); }
   @keyframes tip-pop { from { opacity: .3; transform: translateY(3px); } to { opacity: 1; transform: none; } }
   :root[data-skin="pixel"] .tip { border: 2px solid var(--line); border-radius: 12px; box-shadow: var(--px-btn); }
-  :root[data-skin="pixel"] .tip-portrait { border-radius: 8px; image-rendering: auto; }
+
   :root[data-skin="pixel"] .tip-name { font-size: 10px; font-size-adjust: none; }
   @media (prefers-reduced-motion: reduce) { .tip-next { animation: none; } }
   .credit { color: var(--muted); }
@@ -2173,17 +2173,31 @@ function createSolver() {
     riskCache.set(key, risky);
     return risky;
   }
-  // recipes whose base is the same item (same level and stats): one pile feeds several recipes
+  // One pile, several recipes: an item (same level and stats) used as base or material by more than one
+  // recipe. The tag says how many of it the whole plan needs and how many go into this recipe.
   function sharedBases(steps) {
     const key = nd => `${nd.k}|${nd.L}|${nd.s.join(',')}`;
-    const count = new Map();
-    steps.forEach(st => { const k = key(st.base); count.set(k, (count.get(k) || 0) + 1); });
-    const letters = new Map();
-    steps.forEach(st => { const k = key(st.base); if (count.get(k) > 1 && !letters.has(k)) letters.set(k, String.fromCharCode(65 + letters.size % 26)); });
-    return st => { const k = key(st.base); return letters.has(k) ? { letter: letters.get(k), n: count.get(k) } : null; };
+    const piles = new Map();   // key -> { total, recipes }
+    steps.forEach(st => {
+      const seen = new Set();
+      for (const nd of [st.base, st.mat]) {
+        const k = key(nd);
+        if (!piles.has(k)) piles.set(k, { total: 0, recipes: 0 });
+        piles.get(k).total += st.count;
+        if (!seen.has(k)) { piles.get(k).recipes++; seen.add(k); }
+      }
+    });
+    return st => {
+      const k = key(st.base), pile = piles.get(k);
+      if (!pile || pile.recipes < 2) return null;
+      const here = st.count * (key(st.mat) === k ? 2 : 1);
+      return { node: st.base, total: pile.total, here, others: pile.recipes - 1 };
+    };
   }
-  function sharedTagHTML(info) {
-    return info ? `<div class="verdict shared" title="The same base item is used in ${info.n} recipes of this plan: take them from one pile">🔗 shared base ${info.letter} · used in ${info.n} recipes</div>` : '';
+  function sharedTagHTML(info, item) {
+    if (!info) return '';
+    const name = `${isPerfectNode(info.node, item.chain) ? 'P' : 'L'}${info.node.L} ${info.node.s.map((v, i) => `${v} ${item.stats[i].short}`).join(' · ')}`;
+    return `<div class="verdict shared" title="This item is needed by ${info.others + 1} recipes: keep enough of it for all of them">🔗 ${esc(name)}: need ${fmt(info.total)} in total, ${fmt(info.here)} for this recipe, ${fmt(info.total - info.here)} for ${info.others} other recipe${info.others === 1 ? '' : 's'}</div>`;
   }
   function recordHTML(item, obs) {
     const here = recordStats(obs), all = recordStats(observations);
@@ -2294,7 +2308,7 @@ function createSolver() {
             <span class="recipe"><span class="mult">×${st.count}</span><span class="op op-blank"></span>${chipHTML(st.base, item, 'base')}<span class="op">+</span>${chipHTML(st.mat, item)}<span class="op">→</span>${chipHTML(st.result, item, 'result', observed)}${extra || ''}</span>
             <button class="obs-btn" type="button" data-action="obs-open" data-step="${esc(id)}" title="Record the in-game result of this refine" aria-label="Record the in-game result"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17z"/><path d="M13.5 6.5l3 3"/></svg></button>
           </label>
-          ${sharedTagHTML(sharedOf(st))}${verdict}
+          ${sharedTagHTML(sharedOf(st), item)}${verdict}
           ${openObsForm === id ? obsFormHTML(id, st, item) : ''}
         </div>`;
     };
@@ -2733,7 +2747,7 @@ function createSolver() {
       const inputs = item.stats.map((x, k) => `<label>${x.short}<input class="num small" type="number" inputmode="numeric" min="1" step="1" value="${st.result.s[k]}" data-guide-input="${k}"></label>`).join('');
       const other = guide.other ? `<div class="guide-other"><div class="obs-title">What did the game give you?</div><div class="obs-inputs">${inputs}</div>` +
         `<div class="btn-row"><button class="btn small primary" type="button" data-action="guide-save">Save &amp; re-plan</button><button class="btn small ghost" type="button" data-action="guide-other">Cancel</button></div></div>` : '';
-      body = anzSays(say) + recipe + sharedTagHTML(sharedBases(a.steps)(st)) + guideHowTo(st.L, n) + verdictHTML(item, st) +
+      body = anzSays(say) + recipe + sharedTagHTML(sharedBases(a.steps)(st), item) + guideHowTo(st.L, n) + verdictHTML(item, st) +
         `<div class="guide-actions">` +
         (isDone
           ? `<button class="btn primary block" type="button" data-action="guide-skip">Already done ✓ · next step</button><button class="btn small ghost" type="button" data-action="guide-undo">Not done yet</button>`
