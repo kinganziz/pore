@@ -820,7 +820,7 @@
   @media (prefers-reduced-motion: reduce) { .splash-gem, .splash-bar i { animation: none; } }
   /* ---------- helper bubble (start screen) ---------- */
   .tip { display: flex; align-items: flex-end; gap: 10px; margin: 22px auto 0; max-width: 340px; text-align: left; background: none; border: 0; padding: 0; color: inherit; cursor: pointer; }
-  .tip-avatar { width: 52px; height: auto; aspect-ratio: 114 / 122; flex: 0 0 auto; pointer-events: none; -webkit-user-drag: none; filter: drop-shadow(0 3px 4px rgba(0, 0, 0, .35)); }   /* anz's own custom avatar, background removed */
+  .tip-avatar { width: 52px; height: auto; aspect-ratio: 124 / 128; flex: 0 0 auto; pointer-events: none; -webkit-user-drag: none; filter: drop-shadow(0 3px 4px rgba(0, 0, 0, .35)); }   /* anz's own custom avatar, background removed */
   .tip-text { position: relative; flex: 1 1 auto; min-width: 0; padding: 9px 12px; border-radius: 14px 14px 14px 4px; background: var(--surface-2); border: 1px solid var(--line); font-size: 13px; line-height: 1.35; color: var(--muted); }
   .tip-text small { display: block; margin-top: 3px; text-align: right; color: var(--soft); font-size: 11px; }
   .tip.pop .tip-text { animation: tip-pop .25s var(--ease); }
@@ -2048,7 +2048,7 @@ __SOLVER_JS__
   ];
   let tipIndex = Math.floor(Math.random() * TIPS.length);
   function tipHTML() {
-    return `<button class="tip" type="button" data-action="next-tip" title="Next tip"><img class="tip-avatar" src="icons/app/anz.png?v=2" alt="anz" width="52" height="56" draggable="false">` +
+    return `<button class="tip" type="button" data-action="next-tip" title="Next tip"><img class="tip-avatar" src="icons/app/anz.png?v=3" alt="anz" width="52" height="54" draggable="false">` +
       `<span class="tip-text"><span data-tip>${esc(TIPS[tipIndex])}</span><small>— anz</small></span></button>`;
   }
 
