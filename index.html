@@ -574,7 +574,7 @@
       <ul>
         <li><b>Base items (P1)</b>: unrefined copies you must collect. This is what PORE minimises.</li>
         <li><b>Gold</b>: the sum of refining fees from the wiki table (250 gold at level 2 up to 3,000 gold at level 10).</li>
-        <li><b>Charm factor</b>: how much the base success chance must be multiplied to reach 100% at that level. Charms stack multiplicatively, so a ×20 at level 7 could be a ×4 Clover with a ×5 Horseshoe.</li>
+        <li><b>Charm factor</b>: how much the base success chance must be multiplied to reach 100%. Charms stack multiplicatively, so a ×20 could be a ×4 Clover with a ×5 Horseshoe. Multi-refining divides the chance by the number of items in the batch (success = base × charm ÷ items), so a batch of N needs N times the factor, but only one set of charms per action.</li>
       </ul>
       <h3>Items you already have</h3>
       <p>Owned items are used for free wherever they fit, and their quantity is respected exactly for small inventories. With very large inventories PORE caps the search and slots the leftovers in greedily. The plan is then marked "approximate": still valid, possibly a little more expensive than the true optimum.</p>
@@ -1454,6 +1454,19 @@ function createSolver() {
   function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); }
   function loadDone() { return new Set(loadJSON(doneKey(), [])); }
   function charmFactor(L) { const p = S.SUCCESS[L]; return p >= 100 ? 1 : Math.ceil(100 / p - 1e-9); }
+  // Multi-refine rule (verified in-game): success = base% x charm factor / items in the batch.
+  function batchCharm(L, n) { return Math.max(1, Math.ceil(n * 100 / S.SUCCESS[L] - 1e-9)); }
+  function perAction(L, factor) { return Math.floor(factor * S.SUCCESS[L] / 100 + 1e-9); }
+  function batchMeta(L, n) {
+    const whole = batchCharm(L, n);
+    let txt = n > 1 ? `batch of ${n}: ×${whole} charm for 100%` : `×${whole} charm for 100%`;
+    if (n > 1) {
+      const p6 = perAction(L, 6), p30 = perAction(L, 30);
+      if (p6 >= 1 && p6 < n) txt += ` · ×6 covers ${p6} per action`;
+      if (p30 >= 1 && p30 < n && p30 > p6) txt += `, ×30 covers ${p30}`;
+    }
+    return `<span class="jit-meta">${txt}</span>`;
+  }
 
   function obsFormHTML(id, step, item) {
     const inputs = item.stats.map((st, i) => `<label>${st.short}<input class="num small" type="number" inputmode="numeric" min="1" step="1" value="${step.result.s[i]}" data-obs-input="${i}"></label>`).join('');
@@ -1551,18 +1564,18 @@ function createSolver() {
         const base = stepId(st);
         const n = (seen.get(base) || 0) + 1; seen.set(base, n);
         const cf = charmFactor(st.L);
-        const extra = `<span class="jit-meta">L${st.L} · ${fmt(S.GOLD[st.L])}g · ${S.SUCCESS[st.L]}%${cf > 1 ? ` · ×${cf} charm` : ''}</span>`;
+        const extra = `<span class="jit-meta">L${st.L} · ${fmt(S.GOLD[st.L])}g · ${S.SUCCESS[st.L]}% · ${st.count > 1 ? `batch of ${st.count}: ` : ''}×${batchCharm(st.L, st.count)} charm for 100%</span>`;
         return stepCard(st, `jit:${base}#${n}`, extra);
       }).join('')}</div>`;
     } else guide = levels.map(L => {
       const steps = groups.get(L);
       const n = steps.reduce((x, st) => x + st.count, 0);
       const cf = charmFactor(L);
-      const cards = steps.map(st => stepCard(st, stepId(st))).join('');
+      const cards = steps.map(st => stepCard(st, stepId(st), batchMeta(st.L, st.count))).join('');
       return `<div class="lvl-group">
         <div class="lvl-head">
           <span class="lv">Level ${L}</span>
-          <div class="facts"><span>${n} refine${n > 1 ? 's' : ''}</span><span>${fmt(S.GOLD[L])} gold each</span><span>${S.SUCCESS[L]}% base success</span>${cf > 1 ? `<span class="charm">×${cf} charm for 100%</span>` : ''}</div>
+          <div class="facts"><span>${n} refine${n > 1 ? 's' : ''}</span><span>${fmt(S.GOLD[L])} gold each</span><span>${S.SUCCESS[L]}% base success</span><span class="charm">×${cf} charm per item</span></div>
         </div>
         <div class="steps">${cards}</div>
       </div>`;
@@ -1630,7 +1643,7 @@ function createSolver() {
           </div>
         </div>
         <div class="progress"><span id="progressText">${doneCount}/${totalSteps} done</span><div class="track"><div class="fill" id="progressFill" style="width:${totalSteps ? (doneCount / totalSteps) * 100 : 0}%"></div></div>${doneCount ? `<button class="mini" type="button" data-action="reset-progress">reset</button>` : ''}</div>
-        <div class="note" style="margin:0 0 4px">${state.view === 'jit' ? `One branch at a time: make the two ingredients, refine them, move on. Keeps your inventory small, but it means <b>${totalSteps} refine actions</b> and charms are spent per action, so Batches (${a.steps.length} actions) needs far fewer charms.` : `Each card is one recipe: <b>base</b> + material → result, grouped so you can multi-refine the whole batch in one action. <b>${a.steps.length} refine actions</b> in total, which keeps charm use low.`} Tap to tick off what you have crafted; use the pencil if the game gave you a different result. P = perfect stats, L = below perfect; every chip shows the exact stats to look for.</div>
+        <div class="note" style="margin:0 0 4px">${state.view === 'jit' ? `One branch at a time: make the two ingredients, refine them, move on. Keeps your inventory small, but it means <b>${totalSteps} refine actions</b> and charms are spent per action, so Batches (${a.steps.length} actions) needs far fewer charms.` : `Each card is one recipe: <b>base</b> + material → result, grouped so you can multi-refine the whole batch in one action. <b>${a.steps.length} refine actions</b> in total. A batch of N items needs a charm factor of N × 100 ÷ base success, so split a batch if you lack charms.`} Tap to tick off what you have crafted; use the pencil if the game gave you a different result. P = perfect stats, L = below perfect; every chip shows the exact stats to look for.</div>
         ${guide}
       </div>
 
