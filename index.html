@@ -338,6 +338,7 @@
   .recipe { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; min-width: 0; }
   .recipe .mult { font-family: var(--display); font-weight: 800; font-size: 15px; padding: 2px 8px; border-radius: 8px; background: var(--surface-3); }
   .recipe .op { color: var(--soft); font-weight: 700; }
+  .recipe .jit-meta { flex-basis: 100%; font-size: 11px; color: var(--soft); }
   .obs-btn { width: 32px; height: 32px; border-radius: 9px; border: 1px solid var(--line); background: transparent; color: var(--muted); display: grid; place-items: center; }
   .obs-btn:hover { color: var(--info); border-color: var(--info); }
   .obs-btn svg { width: 15px; height: 15px; }
@@ -1118,7 +1119,7 @@ function createSolver() {
     state.o = Array.isArray(s.o) ? s.o.filter(o => o && o.L >= 2 && o.L <= 10).map(o => ({ L: Number(o.L), s: o.s && typeof o.s === 'object' ? o.s : {}, q: Math.max(1, Math.min(999, Number(o.q) || 1)) })).slice(0, 12) : [];
     state.k = s.k && typeof s.k === 'object' ? s.k : {};
     state.stock = Math.max(0, Math.min(99999, Number(s.s) || 0));
-    state.view = s.v === 'down' ? 'down' : 'up';
+    state.view = s.v === 'down' || s.v === 'jit' ? s.v : 'up';
     state.m = typeof s.m === 'string' && MODEL_KEYS.has(s.m) ? s.m : 'exact';
     if (Array.isArray(s.ob) && state.item) {
       const item = resolveItem();
@@ -1434,6 +1435,20 @@ function createSolver() {
     const stats = nd.s.map((v, i) => `${v} ${item.stats[i].short}`).join(' · ');
     return `<span class="chip ${perfect ? 'perfect' : ''} ${nd.k === 1 ? 'owned' : ''} ${cls || ''}"><b>${perfect ? 'P' : 'L'}${nd.L}</b><span>${stats}</span>${nd.k === 1 ? '<i>yours</i>' : ''}${observed ? '<i class="obs">observed</i>' : ''}</span>`;
   }
+  function jitSequence(plan) {
+    const nodes = plan.nodes;
+    const seq = [];
+    (function visit(id) {
+      const nd = nodes[id];
+      if (nd.k !== 2) return;
+      visit(nd.b);
+      visit(nd.m);
+      const st = { id: id, L: nd.L, count: 1, result: nd, base: nodes[nd.b], mat: nodes[nd.m] };
+      const prev = seq[seq.length - 1];
+      if (prev && prev.id === id) prev.count++; else seq.push(st);
+    })(plan.root);
+    return seq;
+  }
   function stepId(st) { return `${st.L}|${st.result.s.join(',')}|${st.base.k}${st.base.L}:${st.base.s.join(',')}|${st.mat.k}${st.mat.L}:${st.mat.s.join(',')}`; }
   function doneKey() { return STORAGE.done + hashStr(last.sig); }
   function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); }
@@ -1511,27 +1526,39 @@ function createSolver() {
     for (const st of a.steps) { if (!groups.has(st.L)) groups.set(st.L, []); groups.get(st.L).push(st); }
     const levels = Array.from(groups.keys()).sort((x, y) => state.view === 'down' ? y - x : x - y);
     let doneCount = 0;
-    const totalSteps = a.steps.length;
-    const guide = levels.map(L => {
-      const steps = groups.get(L);
-      const n = steps.reduce((x, st) => x + st.count, 0);
-      const cf = charmFactor(L);
-      const cards = steps.map(st => {
-        const id = stepId(st);
-        stepIndex.set(id, st);
-        const isDone = done.has(id);
-        if (isDone) doneCount++;
-        const observed = obsKeys.has(obsKey(item.key, st.base.L, st.base.s, st.mat.L, st.mat.s));
-        return `<div class="step ${isDone ? 'done' : ''} ${observed ? 'observed' : ''}" data-step-card="${esc(id)}">
+    let totalSteps = a.steps.length;
+    const stepCard = (st, id, extra) => {
+      stepIndex.set(id, st);
+      const isDone = done.has(id);
+      if (isDone) doneCount++;
+      const observed = obsKeys.has(obsKey(item.key, st.base.L, st.base.s, st.mat.L, st.mat.s));
+      return `<div class="step ${isDone ? 'done' : ''} ${observed ? 'observed' : ''}" data-step-card="${esc(id)}">
           <label class="step-main">
             <input type="checkbox" data-field="step" data-step="${esc(id)}" ${isDone ? 'checked' : ''}>
             <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
-            <span class="recipe"><span class="mult">×${st.count}</span>${chipHTML(st.base, item, 'base')}<span class="op">+</span>${chipHTML(st.mat, item)}<span class="op">→</span>${chipHTML(st.result, item, 'result', observed)}</span>
+            <span class="recipe"><span class="mult">×${st.count}</span>${chipHTML(st.base, item, 'base')}<span class="op">+</span>${chipHTML(st.mat, item)}<span class="op">→</span>${chipHTML(st.result, item, 'result', observed)}${extra || ''}</span>
             <button class="obs-btn" type="button" data-action="obs-open" data-step="${esc(id)}" title="Got a different result in-game? Record it" aria-label="Record actual result"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17z"/><path d="M13.5 6.5l3 3"/></svg></button>
           </label>
           ${openObsForm === id ? obsFormHTML(id, st, item) : ''}
         </div>`;
-      }).join('');
+    };
+    let guide;
+    if (state.view === 'jit') {
+      const seq = jitSequence(res.plan);
+      totalSteps = seq.length;
+      const seen = new Map();
+      guide = `<div class="steps" style="margin-top:12px">${seq.map(st => {
+        const base = stepId(st);
+        const n = (seen.get(base) || 0) + 1; seen.set(base, n);
+        const cf = charmFactor(st.L);
+        const extra = `<span class="jit-meta">L${st.L} · ${fmt(S.GOLD[st.L])}g · ${S.SUCCESS[st.L]}%${cf > 1 ? ` · ×${cf} charm` : ''}</span>`;
+        return stepCard(st, `jit:${base}#${n}`, extra);
+      }).join('')}</div>`;
+    } else guide = levels.map(L => {
+      const steps = groups.get(L);
+      const n = steps.reduce((x, st) => x + st.count, 0);
+      const cf = charmFactor(L);
+      const cards = steps.map(st => stepCard(st, stepId(st))).join('');
       return `<div class="lvl-group">
         <div class="lvl-head">
           <span class="lv">Level ${L}</span>
@@ -1599,11 +1626,11 @@ function createSolver() {
       <div class="card" id="guideCard">
         <div class="section-title"><h3>Crafting guide</h3>
           <div class="right">
-            <div class="seg"><button type="button" class="${state.view === 'up' ? 'on' : ''}" data-action="view" data-view="up">Bottom-up</button><button type="button" class="${state.view === 'down' ? 'on' : ''}" data-action="view" data-view="down">Top-down</button></div>
+            <div class="seg"><button type="button" class="${state.view === 'up' ? 'on' : ''}" data-action="view" data-view="up">Batches</button><button type="button" class="${state.view === 'down' ? 'on' : ''}" data-action="view" data-view="down">Top-down</button><button type="button" class="${state.view === 'jit' ? 'on' : ''}" data-action="view" data-view="jit">Just-in-time</button></div>
           </div>
         </div>
         <div class="progress"><span id="progressText">${doneCount}/${totalSteps} done</span><div class="track"><div class="fill" id="progressFill" style="width:${totalSteps ? (doneCount / totalSteps) * 100 : 0}%"></div></div>${doneCount ? `<button class="mini" type="button" data-action="reset-progress">reset</button>` : ''}</div>
-        <div class="note" style="margin:0 0 4px">Each card is one recipe: <b>base</b> + material → result. Tap to tick off what you have crafted; use the pencil if the game gave you a different result. P = perfect stats, L = below perfect; every chip shows the exact stats to look for.</div>
+        <div class="note" style="margin:0 0 4px">${state.view === 'jit' ? `One branch at a time: make the two ingredients, refine them, move on. Keeps your inventory small, but it means <b>${totalSteps} refine actions</b> and charms are spent per action, so Batches (${a.steps.length} actions) needs far fewer charms.` : `Each card is one recipe: <b>base</b> + material → result, grouped so you can multi-refine the whole batch in one action. <b>${a.steps.length} refine actions</b> in total, which keeps charm use low.`} Tap to tick off what you have crafted; use the pencil if the game gave you a different result. P = perfect stats, L = below perfect; every chip shows the exact stats to look for.</div>
         ${guide}
       </div>
 
@@ -1811,10 +1838,16 @@ function createSolver() {
     lines.push(`PORE plan — ${item.name} → P${state.L} (${res.plan.nodes[res.plan.root].s.map((v, i) => `${v} ${item.stats[i].short}`).join(', ')})`);
     lines.push(`Base items: ${a.p1} (standard ${res.standard}) — save ${res.standard - a.p1} (${Math.round((res.standard - a.p1) / res.standard * 100)}%) · ${a.refines} refines · ${fmt(a.gold)} gold${state.m !== 'exact' ? ` · formula: ${(S.models.find(m => m.key === state.m) || {}).label}` : ''}`);
     const lbl = nd => `${isPerfectNode(nd, item.chain) ? 'P' : 'L'}${nd.L} (${nd.s.map((v, i) => `${v} ${item.stats[i].short}`).join(', ')})${nd.k === 1 ? ' [owned]' : ''}`;
-    let cur = null;
-    for (const st of a.steps) {
-      if (st.L !== cur) { cur = st.L; lines.push(`\nLevel ${cur} · ${fmt(S.GOLD[cur])} gold each · ${S.SUCCESS[cur]}% base success`); }
-      lines.push(`  ×${st.count}  ${lbl(st.base)} + ${lbl(st.mat)} → ${lbl(st.result)}`);
+    if (state.view === 'jit') {
+      lines.push('\nJust-in-time order (one branch at a time):');
+      for (const st of jitSequence(res.plan)) lines.push(`  ×${st.count}  ${lbl(st.base)} + ${lbl(st.mat)} → ${lbl(st.result)}   [L${st.L}, ${fmt(S.GOLD[st.L])} gold each]`);
+    } else {
+      let cur = null;
+      const ordered = state.view === 'down' ? a.steps.slice().sort((x, y) => y.L - x.L) : a.steps;
+      for (const st of ordered) {
+        if (st.L !== cur) { cur = st.L; lines.push(`\nLevel ${cur} · ${fmt(S.GOLD[cur])} gold each · ${S.SUCCESS[cur]}% base success`); }
+        lines.push(`  ×${st.count}  ${lbl(st.base)} + ${lbl(st.mat)} → ${lbl(st.result)}`);
+      }
     }
     lines.push(`\n${location.href}`);
     return lines.join('\n');
