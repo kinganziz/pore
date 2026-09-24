@@ -25,6 +25,9 @@ def main() -> None:
         if template.count(placeholder) != 1:
             raise SystemExit(f"expected exactly one {placeholder} in {SRC}")
     data = json.loads(DATA.read_text(encoding="utf-8"))
+    badges = ROOT / "data" / "badges.json"
+    if badges.exists():  # precomputed cheapest-P10 costs (node tools/badges.mjs)
+        data["badges"] = json.loads(badges.read_text(encoding="utf-8"))
     solver = SOLVER.read_text(encoding="utf-8")
     if "</script" in solver.lower():
         raise SystemExit("solver.js must not contain '</script'")

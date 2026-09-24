@@ -744,7 +744,7 @@ __SOLVER_JS__
     if (location.hash !== hash) { try { history.replaceState(null, '', location.pathname + location.search + hash); } catch (e) { /* ignore */ } }
   }
   function restore() {
-    badges = loadJSON(STORAGE.badges, {});
+    badges = Object.assign({}, ITEM_DB.badges || {}, loadJSON(STORAGE.badges, {}));
     recent = loadJSON(STORAGE.recent, []);
     observations = loadJSON(STORAGE.obs, []).filter(o => o && o.item && Array.isArray(o.base) && Array.isArray(o.actual));
     let done = false;
