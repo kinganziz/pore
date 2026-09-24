@@ -59,10 +59,15 @@ tools/test_solver.mjs  solver regression tests (reference values + brute-force c
 ## Working on it
 
 ```bash
-python tools/fetch_wiki.py     # refresh item data + icons from the wiki (needs network)
+python tools/fetch_wiki.py     # refresh item + charm data and icons from the wiki (needs network)
+python tools/make_svg.py       # regenerate icons/svg/*.svg (vector twins of the pixel icons; needs Pillow)
 python tools/build.py          # rebuild index.html after editing src/
 node tools/test_solver.mjs     # run the solver tests
 ```
+
+The app can switch between the embedded pixel PNG icons and the SVG files (button in the top bar).
+Charms (with their success multipliers) are read from the wiki too and drive the automatic batch
+splitting in the crafting guide.
 
 Edit `src/app.html` / `src/solver.js`, rebuild, commit `index.html` together with the sources.
 

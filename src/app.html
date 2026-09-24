@@ -81,6 +81,7 @@
   .glow-a { top: -140px; left: -120px; width: 420px; height: 420px; background: radial-gradient(circle, rgba(139, 124, 255, .55), transparent 65%); }
   .glow-b { top: 30vh; right: -160px; width: 460px; height: 460px; background: radial-gradient(circle, rgba(209, 109, 255, .35), transparent 65%); }
   :root[data-theme="light"] .glow { opacity: .35; }
+  :root[data-icons="svg"] .pixel { image-rendering: auto; }
 
   /* ---------- top bar ---------- */
   .topbar {
@@ -314,7 +315,16 @@
 
   /* guide */
   .progress { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); margin-bottom: 12px; }
-  .charm-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); margin-bottom: 12px; }
+  .charm-box { border-radius: 12px; background: var(--surface); border: 1px solid var(--line); margin-bottom: 12px; }
+  .charm-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; }
+  .charm-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 0 12px 12px; }
+  .charm-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 6px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-2); font-size: 12px; font-weight: 600; transition: transform .12s, background .2s, border-color .2s; }
+  .charm-chip:active { transform: scale(.95); }
+  .charm-chip img { width: 20px; height: 20px; }
+  .charm-chip b { color: var(--gold); }
+  .charm-chip i { font-style: normal; font-size: 11px; padding: 0 6px; border-radius: 999px; background: var(--gold); color: var(--gold-ink); font-weight: 800; }
+  .charm-chip.on { border-color: rgba(246, 196, 83, .6); background: rgba(246, 196, 83, .12); }
+  .charm-total { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--muted); }
   .charm-row .nm { font-weight: 600; font-size: 14px; }
   .charm-row .nm small { display: block; color: var(--muted); font-weight: 500; font-size: 12px; }
   .progress .track { flex: 1; height: 8px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
@@ -500,6 +510,9 @@
     <button class="icon-btn" id="themeBtn" type="button" aria-label="Toggle light or dark theme" title="Theme">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
     </button>
+    <button class="icon-btn" type="button" data-action="icons" aria-label="Switch between pixel and vector icons" title="Pixel / vector icons">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><path d="M13 16.5l3.5-3.5 3.5 3.5-3.5 3.5z"/></svg>
+    </button>
     <button class="icon-btn" id="infoBtn" type="button" aria-label="How PORE works" title="How it works">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17h.01"/></svg>
     </button>
@@ -604,6 +617,7 @@ __SOLVER_JS__
   const S = createSolver();
   const ITEMS = ITEM_DB.items.map(it => Object.assign({ key: 'i' + it.id }, it));
   const ITEM_BY_KEY = new Map(ITEMS.map(it => [it.key, it]));
+  const CHARMS = (ITEM_DB.charms || []).map(c => Object.assign({ key: 'c' + c.id }, c));
   const TYPES = [['WEAPON', 'Weapons', 'Weapon'], ['HELMET', 'Helmets', 'Helmet'], ['CHEST', 'Chest', 'Chest'], ['LEGGEAR', 'Leg gear', 'Leg gear'],
     ['SHOES', 'Shoes', 'Shoes'], ['SHIELD', 'Shields', 'Shield'], ['RING', 'Rings', 'Ring'], ['AMULET', 'Amulets', 'Amulet'],
     ['NECKLACE', 'Necklaces', 'Necklace'], ['TOOL', 'Tools', 'Tool']];
@@ -631,12 +645,13 @@ __SOLVER_JS__
   const STAT_NAMES = Array.from(new Set(ITEM_DB.statNames.concat(Object.keys(STAT_META)))).sort();
   const AFF_LABEL = a => a ? a.split('_').map(w => w[0] + w.slice(1).toLowerCase()).join(' + ') : '';
   const EXAMPLES = ['Wooden Sword', 'Soldier Sword', 'Platinum Dagger', 'Purpurite Sword'];
-  const STORAGE = { state: 'pore.state.v3', badges: 'pore.badges.v3', recent: 'pore.recent.v1', theme: 'pore.theme', done: 'pore.done.', obs: 'pore.observations.v1' };
+  const STORAGE = { state: 'pore.state.v3', badges: 'pore.badges.v3', recent: 'pore.recent.v1', theme: 'pore.theme', done: 'pore.done.', obs: 'pore.observations.v1', icons: 'pore.icons' };
   const CHARM_ITEMS = 'Rabbits Foot ×2 · Lucky Egg ×3 · Wishbone ×3 · Clover ×4 · Starfish ×4 · Horseshoe ×5 · Lucky Rose ×6';
   const MODEL_KEYS = new Set(S.models.map(m => m.key));
 
   /* ================= state ================= */
-  const state = { item: null, custom: null, L: 10, t: {}, o: [], k: {}, stock: 0, view: 'up', m: 'exact', cf: 0 };
+  const state = { item: null, custom: null, L: 10, t: {}, o: [], k: {}, stock: 0, view: 'up', m: 'exact', cf: 0, ch: {} };
+  let iconMode = 'png';
   const ui = {};
   ['itemBody', 'itemHint', 'targetCard', 'targetBody', 'targetHint', 'ownedCard', 'ownedBody', 'resultsBody', 'pickerSheet', 'pickerBody', 'filters', 'searchInput', 'infoSheet', 'toast', 'fx', 'themeBtn', 'infoBtn', 'catGrid', 'dataDate']
     .forEach(id => ui[id] = document.getElementById(id));
@@ -677,6 +692,7 @@ __SOLVER_JS__
     if (state.view !== 'up') s.v = state.view;
     if (state.m !== 'exact') s.m = state.m;
     if (state.cf > 0) s.cf = state.cf;
+    if (Object.keys(state.ch).length) s.ch = state.ch;
     if (forShare && state.item) {
       const ob = observations.filter(o => o.item === state.item).map(o => [o.baseL, o.base, o.matL, o.mat, o.actual]);
       if (ob.length) s.ob = ob;
@@ -696,6 +712,8 @@ __SOLVER_JS__
     state.view = s.v === 'down' || s.v === 'jit' ? s.v : 'up';
     state.m = typeof s.m === 'string' && MODEL_KEYS.has(s.m) ? s.m : 'exact';
     state.cf = Math.max(0, Math.min(100000, Math.round(Number(s.cf) || 0)));
+    state.ch = {};
+    if (s.ch && typeof s.ch === 'object') for (const c of CHARMS) { const n = Math.round(Number(s.ch[c.key]) || 0); if (n > 0) state.ch[c.key] = Math.min(9, n); }
     if (Array.isArray(s.ob) && state.item) {
       const item = resolveItem();
       for (const row of s.ob) {
@@ -869,8 +887,16 @@ __SOLVER_JS__
   }
 
   /* ================= rendering: item ================= */
+  function iconSrc(icon, key) { return iconMode === 'svg' && key ? `icons/svg/${key}.svg` : icon.src; }
+  function setIconMode(mode) {
+    iconMode = mode === 'svg' ? 'svg' : 'png';
+    document.documentElement.setAttribute('data-icons', iconMode);
+    try { localStorage.setItem(STORAGE.icons, iconMode); } catch (e) { /* ignore */ }
+    renderItem(); renderResults();
+    if (!ui.pickerSheet.hidden && picker.type !== 'CUSTOM') renderPickerList();
+  }
   function iconHTML(item, cls) {
-    if (item.icon) return `<div class="icon-frame ${cls || ''}"><img class="pixel" src="${item.icon.src}" width="${item.icon.w}" height="${item.icon.h}" alt=""></div>`;
+    if (item.icon) return `<div class="icon-frame ${cls || ''}"><img class="pixel" src="${iconSrc(item.icon, item.key)}" width="${item.icon.w}" height="${item.icon.h}" alt=""></div>`;
     return `<div class="icon-frame ${cls || ''}" style="font-size:22px">✦</div>`;
   }
   function renderItem() {
@@ -1032,18 +1058,23 @@ __SOLVER_JS__
   // Multi-refine rule (verified in-game): success = base% x charm factor / items in the batch.
   function batchCharm(L, n) { return Math.max(1, Math.ceil(n * 100 / S.SUCCESS[L] - 1e-9)); }
   function perAction(L, factor) { return Math.floor(factor * S.SUCCESS[L] / 100 + 1e-9); }
+  function charmProduct() { let f = 1, any = false; for (const c of CHARMS) { const n = state.ch[c.key] || 0; if (n > 0) { any = true; f *= Math.pow(c.factor, n); } } return any ? f : 0; }
+  // effective max charm factor per action: typed value wins, otherwise the product of equipped charms (0 = unlimited)
+  function cfMax() { return state.cf > 0 ? state.cf : charmProduct(); }
   // number of refine actions a card needs under the user's max charm factor (0 = unlimited)
   function actionsFor(L, n) {
-    if (!(state.cf > 0)) return 1;
-    const per = perAction(L, state.cf);
+    const cf = cfMax();
+    if (!(cf > 0)) return 1;
+    const per = perAction(L, cf);
     return per >= 1 ? Math.ceil(n / per) : n;
   }
   function batchMeta(L, n) {
     const whole = batchCharm(L, n);
     let txt;
-    if (state.cf > 0) {
-      const per = perAction(L, state.cf);
-      if (per < 1) txt = `<b style="color:var(--bad)">needs ×${batchCharm(L, 1)} per item, above your ×${state.cf} max</b>`;
+    const cf = cfMax();
+    if (cf > 0) {
+      const per = perAction(L, cf);
+      if (per < 1) txt = `<b style="color:var(--bad)">needs ×${batchCharm(L, 1)} per item, above your ×${cf} max</b>`;
       else if (per >= n) txt = `1 action · ×${whole} charm for 100%`;
       else {
         const k = Math.ceil(n / per), rest = n - (k - 1) * per;
@@ -1072,7 +1103,7 @@ __SOLVER_JS__
   function renderResults() {
     const item = last ? last.item : resolveItem();
     if (!item) {
-      const ex = EXAMPLES.map(n => ITEMS.find(it => it.name === n)).filter(Boolean).map(it => `<button class="example" type="button" data-action="pick" data-key="${it.key}"><img class="pixel" src="${it.icon.src}" alt="">${esc(it.name)}</button>`).join('');
+      const ex = EXAMPLES.map(n => ITEMS.find(it => it.name === n)).filter(Boolean).map(it => `<button class="example" type="button" data-action="pick" data-key="${it.key}"><img class="pixel" src="${iconSrc(it.icon, it.key)}" alt="">${esc(it.name)}</button>`).join('');
       ui.resultsBody.innerHTML = `
         <div class="card empty">
           <div class="glyph">💎</div>
@@ -1237,12 +1268,15 @@ __SOLVER_JS__
             <div class="seg"><button type="button" class="${state.view === 'up' ? 'on' : ''}" data-action="view" data-view="up">Batches</button><button type="button" class="${state.view === 'down' ? 'on' : ''}" data-action="view" data-view="down">Top-down</button><button type="button" class="${state.view === 'jit' ? 'on' : ''}" data-action="view" data-view="jit">Just-in-time</button></div>
           </div>
         </div>
-        <div class="charm-row">
-          <div class="nm">Max charm factor per action<small>Multiply the charms you can equip at once, e.g. Clover ×4 and Horseshoe ×5 = 20. Leave empty for no limit.</small></div>
-          <input class="num" type="number" inputmode="numeric" min="1" step="1" placeholder="∞" value="${state.cf > 0 ? state.cf : ''}" data-field="charmmax" aria-label="Maximum charm factor per refine action">
+        <div class="charm-box">
+          <div class="charm-row">
+            <div class="nm">Charms per refine action<small>Tap the charms you equip at once; the factors multiply. Type a number to override.</small></div>
+            <input class="num" type="number" inputmode="numeric" min="1" step="1" placeholder="${charmProduct() > 0 ? '×' + charmProduct() : '∞'}" value="${state.cf > 0 ? state.cf : ''}" data-field="charmmax" aria-label="Maximum charm factor per refine action">
+          </div>
+          <div class="charm-chips">${CHARMS.map(c => { const n = state.ch[c.key] || 0; return `<button type="button" class="charm-chip ${n ? 'on' : ''}" data-action="charm" data-key="${c.key}" title="${esc(c.desc || c.name)}"><img class="pixel" src="${iconSrc(c.icon, c.key)}" alt="">${esc(c.name)}<b>×${c.factor}</b>${n > 1 ? `<i>${n}</i>` : ''}</button>`; }).join('')}<span class="charm-total">${cfMax() > 0 ? `= ×${cfMax()} per action` : 'no limit'}</span></div>
         </div>
         <div class="progress"><span id="progressText">${doneCount}/${totalSteps} done</span><div class="track"><div class="fill" id="progressFill" style="width:${totalSteps ? (doneCount / totalSteps) * 100 : 0}%"></div></div>${doneCount ? `<button class="mini" type="button" data-action="reset-progress">reset</button>` : ''}</div>
-        <div class="note" style="margin:0 0 4px">${state.view === 'jit' ? `One branch at a time: make the two ingredients, refine them, move on. Keeps your inventory small, but it means <b>${actionsView} refine actions</b> and charms are spent per action, so Batches (${actionsBatch} actions) needs far fewer charms.` : `Each card is one recipe: <b>base</b> + material → result, grouped so you can multi-refine the whole batch in one action. <b>${actionsBatch} refine actions</b> in total${state.cf > 0 ? ` with batches split to fit a ×${state.cf} charm factor` : '. A batch of N items needs a charm factor of N × 100 ÷ base success; enter your max charm factor below to split batches automatically'}.`} Tap to tick off what you have crafted; use the pencil if the game gave you a different result. P = perfect stats, L = below perfect; every chip shows the exact stats to look for.</div>
+        <div class="note" style="margin:0 0 4px">${state.view === 'jit' ? `One branch at a time: make the two ingredients, refine them, move on. Keeps your inventory small, but it means <b>${actionsView} refine actions</b> and charms are spent per action, so Batches (${actionsBatch} actions) needs far fewer charms.` : `Each card is one recipe: <b>base</b> + material → result, grouped so you can multi-refine the whole batch in one action. <b>${actionsBatch} refine actions</b> in total${cfMax() > 0 ? ` with batches split to fit a ×${cfMax()} charm factor` : '. A batch of N items needs a charm factor of N × 100 ÷ base success; enter your max charm factor below to split batches automatically'}.`} Tap to tick off what you have crafted; use the pencil if the game gave you a different result. P = perfect stats, L = below perfect; every chip shows the exact stats to look for.</div>
         ${guide}
       </div>
 
@@ -1375,7 +1409,7 @@ __SOLVER_JS__
     if (picker.sort === 'cost') list = list.slice().sort((x, y) => (badges[x.key] == null ? 1e9 : badges[x.key]) - (badges[y.key] == null ? 1e9 : badges[y.key]) || x.name.localeCompare(y.name));
     else list = list.slice().sort((x, y) => x.name.localeCompare(y.name));
     const row = it => `<button class="row ${state.item === it.key ? 'on' : ''}" type="button" data-action="pick" data-key="${it.key}">
-        <div class="icon-frame sm"><img class="pixel" src="${it.icon.src}" alt="" loading="lazy"></div>
+        <div class="icon-frame sm"><img class="pixel" src="${iconSrc(it.icon, it.key)}" alt="" loading="lazy"></div>
         <div style="min-width:0"><div class="nm">${esc(it.name)}</div><div class="st">${esc(TYPE_SINGULAR[it.type])}${it.affinity ? ' · ' + esc(AFF_LABEL(it.affinity)) : ''} · ${statsLine(it)}</div></div>
         <div class="badge">${badges[it.key] != null ? `<b class="${badges[it.key] <= 160 ? 'hot' : ''}">${fmt(badges[it.key])}</b>P10 cost` : `<b>·</b>`}</div>
       </button>`;
@@ -1530,6 +1564,8 @@ __SOLVER_JS__
       case 'owned-qty': { const o = state.o[Number(el.dataset.idx)]; if (!o) return; o.q = Math.max(1, Math.min(999, o.q + Number(el.dataset.delta))); haptic(); afterChange(); break; }
       case 'view': state.view = el.dataset.view; persist(); renderResults(); break;
       case 'reset-progress': saveJSON(doneKey(), []); renderResults(); toast('Progress reset'); break;
+      case 'charm': { const k = el.dataset.key; state.ch[k] = ((state.ch[k] || 0) + 1) % 4; if (!state.ch[k]) delete state.ch[k]; haptic(); persist(); renderResults(); break; }
+      case 'icons': setIconMode(iconMode === 'png' ? 'svg' : 'png'); toast(iconMode === 'svg' ? 'Vector icons' : 'Pixel icons'); break;
       case 'share': share(); break;
       case 'copy-plan': copy(planText(), 'Plan copied'); break;
       case 'obs-open': {
@@ -1652,6 +1688,8 @@ __SOLVER_JS__
     try { theme = localStorage.getItem(STORAGE.theme); } catch (e) { /* ignore */ }
     if (!theme) theme = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
     setTheme(theme);
+    try { iconMode = localStorage.getItem(STORAGE.icons) === 'svg' ? 'svg' : 'png'; } catch (e) { /* ignore */ }
+    document.documentElement.setAttribute('data-icons', iconMode);
     ui.catGrid.innerHTML = Object.values(CATS).map(c => `<div><span>${c.label} <b>${c.pct}</b></span><small>${c.who}</small></div>`).join('');
     const date = (ITEM_DB.fetched || '').slice(0, 10);
     ui.dataDate.textContent = `data ${date}`;

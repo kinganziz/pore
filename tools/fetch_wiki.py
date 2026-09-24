@@ -134,6 +134,32 @@ def main() -> None:
     type_order = {t: i for i, t in enumerate(EQUIP_TYPES)}
     items.sort(key=lambda it: (type_order[it["type"]], it["name"].lower()))
 
+    # Charms: any item page with a numeric "charm" factor (success-chance multipliers for refining).
+    charms = []
+    for path, meta in index.items():
+        if not (path.startswith("Items/") and path.endswith(".md") and meta):
+            continue
+        fm = meta.get("frontmatter") or {}
+        factor = fm.get("charm")
+        if not isinstance(factor, (int, float)) or factor <= 0:
+            continue
+        image = re.sub(r"^\[\[|\]\]$", "", str(fm.get("image") or ""))
+        media_path = media.get(image)
+        if not media_path:
+            skipped.append(f"{fm.get('name')} (charm, no icon {image})")
+            continue
+        png = fetch(ACCESS_URL + urllib.parse.quote(media_path), ICON_DIR / media_path.split("/", 1)[1], offline)
+        width, height = png_size(png)
+        charms.append({
+            "id": fm.get("id"),
+            "name": fm["name"],
+            "factor": int(factor),
+            "desc": (fm.get("description") or "").strip(),
+            "page": path[len("Items/"):-len(".md")],
+            "icon": {"w": width, "h": height, "src": "data:image/png;base64," + base64.b64encode(png).decode("ascii")},
+        })
+    charms.sort(key=lambda c: (c["factor"], c["name"]))
+
     stat_names = sorted({name for it in items for name in it["stats"]})
     payload = {
         "source": WIKI_URL,
@@ -141,6 +167,7 @@ def main() -> None:
         "count": len(items),
         "statNames": stat_names,
         "items": items,
+        "charms": charms,
     }
     OUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     OUT_FILE.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")

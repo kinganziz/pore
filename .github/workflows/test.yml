@@ -13,7 +13,9 @@ jobs:
         with:
           node-version: 22
       - run: node tools/test_solver.mjs
-      - name: index.html is up to date with src/ and data/
+      - run: pip install pillow
+      - name: index.html and icons/svg are up to date with src/ and data/
         run: |
           python3 tools/build.py
-          git diff --exit-code -- index.html
+          python3 tools/make_svg.py
+          git diff --exit-code -- index.html icons/svg
