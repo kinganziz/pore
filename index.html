@@ -136,6 +136,9 @@
   .icon-btn:active { transform: scale(.93); }
   .icon-btn svg { width: 18px; height: 18px; }
   .ico-moon { display: none; }
+  .ico-pixel { display: none; }
+  :root[data-icons="pixel"] .ico-pixel { display: block; }
+  :root[data-icons="pixel"] .ico-modern { display: none; }
   :root[data-theme="light"] .ico-moon { display: block; }
   :root[data-theme="light"] .ico-sun { display: none; }
 
@@ -613,6 +616,10 @@
       <svg class="ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
       <svg class="ico-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
     </button>
+    <button class="icon-btn" type="button" data-action="icon-style" aria-label="Switch between modern and pixel icons" title="Modern / pixel icons">
+      <svg class="ico-modern" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 5.6L20 11l-5.4 2.4L12 19l-2.6-5.6L4 11l5.4-2.4z"/></svg>
+      <svg class="ico-pixel" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="5" height="5"/><rect x="10" y="4" width="5" height="5" opacity=".55"/><rect x="4" y="10" width="5" height="5" opacity=".55"/><rect x="10" y="10" width="5" height="5"/><rect x="16" y="16" width="4" height="4"/></svg>
+    </button>
     <button class="icon-btn" id="infoBtn" type="button" aria-label="How PORE works" title="How it works">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17h.01"/></svg>
     </button>
@@ -695,7 +702,7 @@
       <h3>Labels</h3>
       <p><b>P4</b> means a level-4 item with perfect stats. <b>L4</b> means a level-4 item whose stats are below perfect. Every chip shows the exact stats the item must have, so you can check your inventory against it.</p>
       <h3>Data</h3>
-      <p>Items and stats come from the <a href="https://wiki.pixel-odyssey.app/" target="_blank" rel="noopener">official Pixel Odyssey wiki</a>; the icons are PORE's own drawings (fetched <span class="dataDate"></span>). Refining rules follow the wiki's <a href="https://wiki.pixel-odyssey.app/Mechanics/Refining" target="_blank" rel="noopener">Refining</a> page and the formula the community verified in-game.</p>
+      <p>Items and stats come from the <a href="https://wiki.pixel-odyssey.app/" target="_blank" rel="noopener">official Pixel Odyssey wiki</a>; the icons are PORE's own drawings, in a modern and a pixel style (switch with the ✦ button) (fetched <span class="dataDate"></span>). Refining rules follow the wiki's <a href="https://wiki.pixel-odyssey.app/Mechanics/Refining" target="_blank" rel="noopener">Refining</a> page and the formula the community verified in-game.</p>
       <h3>App</h3>
       <p>Pull-to-refresh is turned off so scrolling never reloads the page by accident. Your item, targets, charms and progress are saved on this device. New versions announce themselves with a "New version ready" message; you can also reload here.</p>
       <div class="btn-row"><button class="btn small" type="button" data-action="reload">Reload app</button><button class="btn small ghost" type="button" data-action="check-update">Check for update</button></div>
@@ -1180,7 +1187,7 @@ function createSolver() {
   const STAT_NAMES = Array.from(new Set(ITEM_DB.statNames.concat(Object.keys(STAT_META)))).sort();
   const AFF_LABEL = a => a ? a.split('_').map(w => w[0] + w.slice(1).toLowerCase()).join(' + ') : '';
   const EXAMPLES = ['Wooden Sword', 'Soldier Sword', 'Platinum Dagger', 'Purpurite Sword'];
-  const STORAGE = { state: 'pore.state.v3', badges: 'pore.badges.v3', recent: 'pore.recent.v1', theme: 'pore.theme', done: 'pore.done.', obs: 'pore.observations.v1' };
+  const STORAGE = { state: 'pore.state.v3', badges: 'pore.badges.v3', recent: 'pore.recent.v1', theme: 'pore.theme', done: 'pore.done.', obs: 'pore.observations.v1', icons: 'pore.iconstyle.v2' };
   const CHARM_ITEMS = 'Rabbits Foot ×2 · Lucky Egg ×3 · Wishbone ×3 · Clover ×4 · Starfish ×4 · Horseshoe ×5 · Lucky Rose ×6';
   const REPO_URL = 'https://github.com/kinganziz/pore';
   const MODEL_KEYS = new Set(S.models.map(m => m.key));
@@ -1462,8 +1469,16 @@ function createSolver() {
   }
 
   /* ================= rendering: item ================= */
-  // all icons are PORE's own drawings, bundled in one sprite (icons/sprite.svg, cached by the service worker)
-  function iconSVG(key, cls) { return `<svg class="pixel ${cls || ''}" aria-hidden="true"><use href="icons/sprite.svg#${key}"/></svg>`; }
+  // All icons are PORE's own drawings: 'modern' (icons/sprite.svg) or the pixel-art rendering of the same art (icons/sprite-pixel.svg).
+  let iconStyle = 'modern';
+  function iconSVG(key, cls) { return `<svg class="pixel ${cls || ''}" aria-hidden="true"><use href="icons/${iconStyle === 'pixel' ? 'sprite-pixel' : 'sprite'}.svg#${key}"/></svg>`; }
+  function setIconStyle(style) {
+    iconStyle = style === 'pixel' ? 'pixel' : 'modern';
+    document.documentElement.setAttribute('data-icons', iconStyle);
+    try { localStorage.setItem(STORAGE.icons, iconStyle); } catch (e) { /* ignore */ }
+    renderItem(); renderResults();
+    if (!ui.pickerSheet.hidden) { renderFilters(); if (picker.type !== 'CUSTOM') renderPickerList(); }
+  }
   function iconHTML(item, cls) {
     if (item.key && item.key !== 'custom') return `<div class="icon-frame ${cls || ''}">${iconSVG(item.key)}</div>`;
     return `<div class="icon-frame ${cls || ''}" style="font-size:22px">✦</div>`;
@@ -2007,7 +2022,7 @@ function createSolver() {
     if (sheetOpener && sheetOpener.focus && document.contains(sheetOpener)) sheetOpener.focus();
     sheetOpener = null;
   }
-  // one representative item per category, drawn from PORE's icon sprite
+  // one representative item per category, drawn from PORE's icon sprite (follows the modern/pixel switch)
   const TYPE_ICON = { WEAPON: 'Iron Sword', HELMET: 'Soldier Helmet', CHEST: 'Silver Chestplate', LEGGEAR: 'Gold Greaves', SHOES: 'Gold Boots',
     SHIELD: 'Soldier Shield', RING: 'Fire Gold Ring', AMULET: 'Sun Demon Amulet', NECKLACE: "Liora's Necklace", TOOL: 'Lantern' };
   const FILTER_GLYPH = {
@@ -2163,6 +2178,7 @@ function createSolver() {
     const act = el.dataset.action;
     switch (act) {
       case 'home': e.preventDefault(); goHome(); break;
+      case 'icon-style': setIconStyle(iconStyle === 'pixel' ? 'modern' : 'pixel'); toast(iconStyle === 'pixel' ? 'Pixel icons' : 'Modern icons'); break;
       case 'reload': location.reload(); break;
       case 'check-update': {
         if (!swReg) { toast('Reloading'); location.reload(); break; }
@@ -2362,6 +2378,8 @@ function createSolver() {
     try { theme = localStorage.getItem(STORAGE.theme); } catch (e) { /* ignore */ }
     if (!theme) theme = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
     setTheme(theme);
+    try { iconStyle = localStorage.getItem(STORAGE.icons) === 'pixel' ? 'pixel' : 'modern'; } catch (e) { /* ignore */ }
+    document.documentElement.setAttribute('data-icons', iconStyle);
     ui.catGrid.innerHTML = Object.values(CATS).map(c => `<div><span>${c.label} <b>${c.pct}</b></span><small>${c.who}</small></div>`).join('');
     const date = (ITEM_DB.fetched || '').slice(0, 10);
     ui.dataDate.textContent = `data ${date}`;
