@@ -155,6 +155,7 @@
     backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
     animation: rise .5s var(--ease) both;
   }
+  #resultsBody:not(.fresh) > .card { animation: none; }
   @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
   .step-label { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
   .step-label h2 { font-family: var(--display); font-size: 17px; }
@@ -376,9 +377,12 @@
   .charm-chip b { position: absolute; top: 4px; right: 5px; font-size: 10px; color: var(--gold); }
   .charm-chip i { position: absolute; top: 4px; left: 5px; font-style: normal; font-size: 10px; min-width: 16px; padding: 0 4px; border-radius: 999px; background: var(--gold); color: var(--gold-ink); font-weight: 800; }
   .charm-chip.on { border-color: rgba(246, 196, 83, .6); background: rgba(246, 196, 83, .12); }
-  .charm-total { display: grid; place-content: center; text-align: center; gap: 2px; min-width: 0; border-radius: 12px; border: 1px dashed var(--line-2); padding: 6px 4px; }
-  .charm-total b { font-family: var(--display); font-size: 16px; }
-  .charm-total small { font-size: 10px; color: var(--muted); font-weight: 600; }
+  .charm-total { display: grid; place-content: center; justify-items: center; text-align: center; gap: 1px; min-width: 0; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); padding: 6px 4px; }
+  .charm-total b { font-family: var(--display); font-size: 18px; line-height: 1.1; color: var(--muted); }
+  .charm-total small { font-size: 9.5px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+  .charm-total.on { border-color: rgba(246, 196, 83, .55); background: linear-gradient(160deg, rgba(246, 196, 83, .22), rgba(246, 196, 83, .06)); }
+  .charm-total.on b { color: var(--gold); }
+  .charm-box .charm-row { padding-bottom: 8px; }
   .charm-row .nm { font-weight: 600; font-size: 14px; }
   .charm-row .nm small { display: block; color: var(--muted); font-weight: 500; font-size: 12px; }
   .progress .track { flex: 1; height: 8px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
@@ -407,8 +411,8 @@
   .recipe .op { color: var(--soft); font-weight: 700; }
   .recipe .op-blank { display: none; }
   @media (max-width: 700px) {
-    .recipe { display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 5px 6px; align-items: center; justify-items: start; }
-    .recipe .mult, .recipe .jit-meta { grid-column: 1 / -1; }
+    .recipe { display: grid; grid-template-columns: 14px minmax(0, auto); justify-content: center; gap: 5px 6px; align-items: center; justify-items: start; }
+    .recipe .mult, .recipe .jit-meta { grid-column: 1 / -1; justify-self: center; text-align: center; }
     .recipe .op, .recipe .op-blank { display: block; text-align: center; width: 14px; }
     .step-main { gap: 10px; padding: 10px 8px 10px 10px; }
   }
@@ -975,6 +979,35 @@ __SOLVER_JS__
     });
   }
 
+  /* ================= DOM patching ================= */
+  // Update `el` to match `html` by patching only what differs, so unchanged icons and cards never flash.
+  function patchHTML(el, html) {
+    const tpl = document.createElement('div');
+    tpl.innerHTML = html;
+    morphChildren(el, tpl);
+  }
+  function morphChildren(from, to) {
+    const fc = Array.from(from.childNodes), tc = Array.from(to.childNodes);
+    for (let i = 0; i < tc.length; i++) {
+      if (i >= fc.length) from.appendChild(tc[i]);
+      else morphNode(fc[i], tc[i]);
+    }
+    for (let i = tc.length; i < fc.length; i++) fc[i].remove();
+  }
+  function morphNode(from, to) {
+    if (from.nodeType !== to.nodeType || from.nodeName !== to.nodeName) { from.replaceWith(to); return; }
+    if (from.nodeType === 3 || from.nodeType === 8) { if (from.nodeValue !== to.nodeValue) from.nodeValue = to.nodeValue; return; }
+    if (from.nodeType !== 1) return;
+    for (const a of Array.from(from.attributes)) if (!to.hasAttribute(a.name)) from.removeAttribute(a.name);
+    for (const a of Array.from(to.attributes)) if (from.getAttribute(a.name) !== a.value) from.setAttribute(a.name, a.value);
+    if (from.tagName === 'INPUT') {
+      if (from.checked !== to.checked) from.checked = to.checked;
+      if (document.activeElement !== from && from.value !== to.value) from.value = to.value;
+    }
+    if (from.tagName === 'DETAILS') return;          // keep the user's open/closed state
+    morphChildren(from, to);
+  }
+
   /* ================= rendering: item ================= */
   // all icons come from one sprite (icons/sprite.svg, one request, cached by the service worker)
   let iconStyle = 'pixel';        // 'pixel' = the game's sprites, 'modern' = hand-drawn set (falls back to pixel where not drawn yet)
@@ -1244,6 +1277,11 @@ __SOLVER_JS__
     const goldStd = S.standardGold(state.L);
     const ringOffset = 264 * (1 - Math.max(0, Math.min(1, saved / standard)));
     const newPlan = last.sig !== lastSig;
+    const hadPlan = lastSig !== null;
+    const prevHero = lastHeroValue;
+    lastSig = last.sig;
+    lastHeroValue = cost;
+    ui.resultsBody.classList.toggle('fresh', newPlan);
 
     // ladder
     const ladder = res.ladder.map(r => {
@@ -1322,7 +1360,7 @@ __SOLVER_JS__
       refRows.push(`<tr class="${L === state.L ? 'on' : ''}"><td class="lv">P${L}</td><td>${item.chain[L].map((v, i) => `<span class="nb">${v}&nbsp;${item.stats[i].short}</span>`).join(' · ')}</td><td class="r">${fmt(Math.pow(2, L - 1))}</td><td class="r"><b>${lad ? (lad.cost == null ? '–' : fmt(lad.cost)) : 1}</b></td></tr>`);
     }
 
-    ui.resultsBody.innerHTML = `
+    patchHTML(ui.resultsBody, `
       <div class="card hero">
         <div class="hero-top">
           <span class="hero-label">Cheapest path · ${esc(item.name)} → P${state.L}</span>
@@ -1341,7 +1379,7 @@ __SOLVER_JS__
             </div>
           </div>
           <div class="ring" aria-label="${pct}% saved">
-            <svg viewBox="0 0 100 100"><defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#37d39a"/><stop offset="1" stop-color="#8b7cff"/></linearGradient></defs><circle class="disc" cx="50" cy="50" r="37"/><circle class="track" cx="50" cy="50" r="42"/><circle class="arc" id="ringArc" cx="50" cy="50" r="42"/></svg>
+            <svg viewBox="0 0 100 100"><defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#37d39a"/><stop offset="1" stop-color="#8b7cff"/></linearGradient></defs><circle class="disc" cx="50" cy="50" r="37"/><circle class="track" cx="50" cy="50" r="42"/><circle class="arc" id="ringArc" cx="50" cy="50" r="42" style="stroke-dashoffset:${ringOffset.toFixed(1)}"/></svg>
             <div class="lbl"><b>${pct}%</b><small>saved</small></div>
           </div>
         </div>
@@ -1368,10 +1406,10 @@ __SOLVER_JS__
         <div class="seg seg-full"><button type="button" class="${state.view === 'up' ? 'on' : ''}" data-action="view" data-view="up">Batches</button><button type="button" class="${state.view === 'down' ? 'on' : ''}" data-action="view" data-view="down">Top-down</button><button type="button" class="${state.view === 'jit' ? 'on' : ''}" data-action="view" data-view="jit">Just-in-time</button></div>
         <div class="charm-box">
           <div class="charm-row">
-            <div class="nm">Charms per refine action<small>Tap the charms you equip at once; the factors multiply. Type a number to override.</small></div>
-            <input class="num" type="number" inputmode="numeric" min="1" step="1" placeholder="${charmProduct() > 0 ? '×' + charmProduct() : '∞'}" value="${state.cf > 0 ? state.cf : ''}" data-field="charmmax" aria-label="Maximum charm factor per refine action">
+            <div class="nm">Charms per refine action<small>Tap to equip, tap again to stack. Factors multiply.</small></div>
+            ${cfMax() > 0 ? '<button class="mini" type="button" data-action="charm-clear">Clear</button>' : ''}
           </div>
-          <div class="charm-chips">${CHARMS.map(c => { const n = state.ch[c.key] || 0; return `<button type="button" class="charm-chip ${n ? 'on' : ''}" data-action="charm" data-key="${c.key}" title="${esc(c.desc || c.name)}">${iconSVG(c.key)}<span class="cn">${esc(c.name)}</span><b>×${c.factor}</b>${n > 1 ? `<i>×${n}</i>` : ''}</button>`; }).join('')}<span class="charm-total">${cfMax() > 0 ? `<b>×${fmt(cfMax())}</b><small>per action</small>` : '<b>∞</b><small>no limit</small>'}</span></div>
+          <div class="charm-chips">${CHARMS.map(c => { const n = state.ch[c.key] || 0; return `<button type="button" class="charm-chip ${n ? 'on' : ''}" data-action="charm" data-key="${c.key}" title="${esc(c.desc || c.name)}">${iconSVG(c.key)}<span class="cn">${esc(c.name)}</span><b>×${c.factor}</b>${n > 1 ? `<i>×${n}</i>` : ''}</button>`; }).join('')}<div class="charm-total ${cfMax() > 0 ? 'on' : ''}" aria-live="polite">${cfMax() > 0 ? `<small>total</small><b>×${fmt(cfMax())}</b><small>per action</small>` : '<small>total</small><b>—</b><small>none yet</small>'}</div></div>
         </div>
         <div class="progress"><span id="progressText">${doneCount}/${totalSteps} done</span><div class="track"><div class="fill" id="progressFill" style="width:${totalSteps ? (doneCount / totalSteps) * 100 : 0}%"></div></div>${doneCount ? `<button class="mini" type="button" data-action="reset-progress">reset</button>` : ''}</div>
         <div class="note" style="margin:0 0 4px">${state.view === 'jit' ? `One branch at a time: make the two ingredients, refine them, move on. Keeps your inventory small, but it means <b>${actionsView} refine actions</b> and charms are spent per action, so Batches (${actionsBatch} actions) needs far fewer charms.` : `Each card is one recipe: <b>base</b> + material → result, grouped so you can multi-refine the whole batch in one action. <b>${actionsBatch} refine actions</b> in total${cfMax() > 0 ? ` with batches split to fit a ×${cfMax()} charm factor` : '. A batch of N items needs a charm factor of N × 100 ÷ base success; pick your charms above to split batches automatically'}.`} Tap to tick off what you have crafted; use the pencil if the game gave you a different result. P = perfect stats, L = below perfect; every chip shows the exact stats to look for.</div>
@@ -1392,18 +1430,16 @@ __SOLVER_JS__
         <div class="table-wrap"><table class="ref"><thead><tr><th>Lv</th><th>Perfect stats</th><th class="r">Standard</th><th class="r">PORE</th></tr></thead><tbody>${refRows.join('')}</tbody></table></div>
       </div>
 
-      ${labHTML(item, obs)}`;
+      ${labHTML(item, obs)}`);
 
     // animations
     requestAnimationFrame(() => {
       const arc = document.getElementById('ringArc');
-      if (arc) { arc.style.strokeDashoffset = '264'; requestAnimationFrame(() => { arc.style.strokeDashoffset = String(ringOffset); }); }
+      if (arc && newPlan && !reduced) { arc.style.transition = 'none'; arc.style.strokeDashoffset = '264'; arc.getBoundingClientRect(); arc.style.transition = ''; arc.style.strokeDashoffset = ringOffset.toFixed(1); }
       if (newPlan) {
-        countUp(document.getElementById('heroNum'), lastHeroValue || standard, cost);
-        if (pct >= 20 && lastSig !== null) burst();
+        countUp(document.getElementById('heroNum'), prevHero || standard, cost);
+        if (pct >= 20 && hadPlan) burst();
       }
-      lastHeroValue = cost;
-      lastSig = last.sig;
       if (revealResults) {
         revealResults = false;
         if (!matchMedia('(min-width: 980px)').matches) {
@@ -1706,7 +1742,8 @@ __SOLVER_JS__
       case 'owned-qty': { const o = state.o[Number(el.dataset.idx)]; if (!o) return; o.q = Math.max(1, Math.min(999, o.q + Number(el.dataset.delta))); haptic(); afterChange(); break; }
       case 'view': state.view = el.dataset.view; persist(); renderResults(); break;
       case 'reset-progress': saveJSON(doneKey(), []); renderResults(); toast('Progress reset'); break;
-      case 'charm': { const k = el.dataset.key; state.ch[k] = ((state.ch[k] || 0) + 1) % 4; if (!state.ch[k]) delete state.ch[k]; haptic(); persist(); renderResults(); break; }
+      case 'charm-clear': state.ch = {}; state.cf = 0; haptic(); persist(); renderResults(); break;
+      case 'charm': { const k = el.dataset.key; state.cf = 0; state.ch[k] = ((state.ch[k] || 0) + 1) % 4; if (!state.ch[k]) delete state.ch[k]; haptic(); persist(); renderResults(); break; }
       case 'icon-style': setIconStyle(iconStyle === 'modern' ? 'pixel' : 'modern'); toast(iconStyle === 'modern' ? 'Modern icons' : 'Pixel icons'); break;
       case 'share': share(); break;
       case 'copy-plan': copy(planText(), 'Plan copied'); break;
