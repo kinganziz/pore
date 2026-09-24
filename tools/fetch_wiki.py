@@ -60,6 +60,66 @@ def fetch(url: str, dest: pathlib.Path, offline: bool) -> bytes:
     return data
 
 
+def parse_frontmatter(markdown: str) -> dict:
+    """Minimal YAML front-matter parser for the wiki's item pages.
+
+    Handles `key: value`, quoted scalars, inline JSON objects, one level of block mappings
+    (used by `stats:`) and duplicate keys (a later non-empty value wins). Obsidian's own cache
+    drops the front matter of a couple of pages that contain duplicate keys, so this fallback
+    keeps those items (e.g. Air Emerald Ring, Lucky Egg) in the database.
+    """
+    match = re.match(r"^---\r?\n(.*?)\r?\n---", markdown, re.S)
+    if not match:
+        return {}
+    fm: dict = {}
+    current = None
+    for raw in match.group(1).splitlines():
+        if not raw.strip():
+            continue
+        if raw.startswith(("  ", "\t")) and current is not None:
+            sub = raw.strip()
+            if sub.startswith("- "):
+                fm.setdefault(current, [])
+                if not isinstance(fm[current], list):
+                    fm[current] = []
+                fm[current].append(sub[2:])
+                continue
+            if ":" in sub:
+                k, v = sub.split(":", 1)
+                if not isinstance(fm.get(current), dict):
+                    fm[current] = {}
+                fm[current][k.strip()] = _scalar(v.strip())
+            continue
+        if ":" not in raw:
+            continue
+        key, value = raw.split(":", 1)
+        key, value = key.strip(), value.strip()
+        current = key
+        if value == "":
+            if key not in fm:
+                fm[key] = None
+            continue
+        parsed = _scalar(value)
+        if parsed is not None and parsed != "" or key not in fm:
+            fm[key] = parsed
+    return fm
+
+
+def _scalar(value: str):
+    if value.startswith("{"):
+        try:
+            return json.loads(value)
+        except json.JSONDecodeError:
+            return value
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+        return value[1:-1]
+    if re.fullmatch(r"-?\d+", value):
+        return int(value)
+    if re.fullmatch(r"-?\d+\.\d+", value):
+        return float(value)
+    return value
+
+
 def png_size(data: bytes) -> tuple[int, int]:
     if data[:8] != b"\x89PNG\r\n\x1a\n":
         raise ValueError("not a PNG")
@@ -77,12 +137,20 @@ def main() -> None:
 
     media = {path.split("/", 1)[1]: path for path in index if path.startswith("Media/")}
 
+    def frontmatter_of(path: str, meta: dict) -> dict:
+        fm = meta.get("frontmatter")
+        if fm:
+            return fm
+        # Obsidian's cache has no front matter for this page: read the page itself.
+        markdown = fetch(ACCESS_URL + urllib.parse.quote(path), CACHE_DIR / "pages" / path, offline).decode("utf-8")
+        return parse_frontmatter(markdown)
+
     picked = []
     skipped = []
     for path, meta in index.items():
         if not (path.startswith("Items/") and path.endswith(".md") and meta):
             continue
-        fm = meta.get("frontmatter") or {}
+        fm = frontmatter_of(path, meta)
         if fm.get("type") not in EQUIP_TYPES:
             continue
         stats = fm.get("stats")
@@ -139,7 +207,7 @@ def main() -> None:
     for path, meta in index.items():
         if not (path.startswith("Items/") and path.endswith(".md") and meta):
             continue
-        fm = meta.get("frontmatter") or {}
+        fm = frontmatter_of(path, meta)
         factor = fm.get("charm")
         if not isinstance(factor, (int, float)) or factor <= 0:
             continue
