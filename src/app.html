@@ -926,6 +926,7 @@
   .cstock-grid span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }   /* name for screen readers; the icon shows it */
   .cstock-grid input { width: 100%; text-align: center; }
   .shop-row.short .what small b { color: var(--bad); }
+  .rec-none { font-size: 12px; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -1115,7 +1116,7 @@ __SOLVER_JS__
   const STAT_NAMES = Array.from(new Set(ITEM_DB.statNames.concat(Object.keys(STAT_META)))).sort();
   const AFF_LABEL = a => a ? a.split('_').map(w => w[0] + w.slice(1).toLowerCase()).join(' + ') : '';
   const EXAMPLES = ['Wooden Sword', 'Soldier Sword', 'Platinum Dagger', 'Purpurite Sword'];
-  const STORAGE = { state: 'pore.state.v3', badges: 'pore.badges.v3', recent: 'pore.recent.v1', theme: 'pore.theme', done: 'pore.done.', obs: 'pore.observations.v1', icons: 'pore.iconstyle.v2', skin: 'pore.skin', font: 'pore.font', projects: 'pore.projects.v1', cstock: 'pore.charmstock.v1' };
+  const STORAGE = { state: 'pore.state.v3', badges: 'pore.badges.v3', recent: 'pore.recent.v1', theme: 'pore.theme', done: 'pore.done.', obs: 'pore.observations.v1', icons: 'pore.iconstyle.v2', skin: 'pore.skin', font: 'pore.font', projects: 'pore.projects.v1', cstock: 'pore.charmstock.v1', community: 'pore.community.v1' };
   const CHARM_ITEMS = 'Rabbits Foot ×2 · Lucky Egg ×3 · Wishbone ×3 · Clover ×4 · Starfish ×4 · Horseshoe ×5 · Lucky Rose ×6';
   const REPO_URL = 'https://github.com/kinganziz/pore';
   const MODEL_KEYS = new Set(S.models.map(m => m.key));
@@ -1863,6 +1864,38 @@ __SOLVER_JS__
     const name = `${isPerfectNode(info.node, item.chain) ? 'P' : 'L'}${info.node.L} ${info.node.s.map((v, i) => `${v} ${item.stats[i].short}`).join(' · ')}`;
     return `<div class="verdict shared" title="This item is needed by ${info.others + 1} recipes: keep enough of it for all of them">🔗 ${esc(name)}: need ${fmt(info.total)} in total, ${fmt(info.here)} for this recipe, ${fmt(info.total - info.here)} for ${info.others} other recipe${info.others === 1 ? '' : 's'}</div>`;
   }
+  // Community record: refines other players reported on GitHub (issues labelled "observations"), read back from
+  // the public API (no login, nothing sent) and cached for six hours.
+  let community = null;
+  function loadCommunity() {
+    const c = loadJSON(STORAGE.community, null);
+    if (c && Array.isArray(c.obs)) community = c.obs;
+    if (c && Date.now() - c.ts < 6 * 3600e3) return;
+    fetch('https://api.github.com/repos/kinganziz/pore/issues?labels=observations&state=all&per_page=100', { headers: { Accept: 'application/vnd.github+json' } })
+      .then(r => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then(issues => {
+        const obs = [];
+        for (const is of Array.isArray(issues) ? issues : []) {
+          const m = /```json\s*([\s\S]*?)```/.exec(is.body || '');
+          if (!m) continue;
+          let rows; try { rows = JSON.parse(m[1]); } catch (e) { continue; }
+          for (const o of Array.isArray(rows) ? rows : []) {
+            if (!o || !Array.isArray(o.base) || !Array.isArray(o.mat) || !Array.isArray(o.actual) || !Array.isArray(o.stats)) continue;
+            if (o.stats.length !== o.base.length || o.actual.length !== o.base.length) continue;
+            obs.push({ baseL: +o.baseL, base: o.base.map(Number), matL: +o.matL, mat: o.mat.map(Number), actual: o.actual.map(Number), rates: o.stats.map(n => rateOf(metaFor(n).cat)) });
+          }
+        }
+        community = obs;
+        saveJSON(STORAGE.community, { ts: Date.now(), obs });
+        if (last && last.res) renderResults();
+      })
+      .catch(() => { /* offline or rate-limited: keep the cached copy */ });
+  }
+  function communityFor(item) {
+    if (!community) return null;
+    const sig = rateSig(item.rates), n = item.stats.length;
+    return community.filter(o => o.base.length === n && rateSig(o.rates) === sig);
+  }
   function recordHTML(item, obs) {
     const here = recordStats(obs), all = recordStats(observations);
     const line = (label, r) => {
@@ -1874,7 +1907,10 @@ __SOLVER_JS__
     };
     const others = sameFormulaItems(item).length;
     const label = others ? `${esc(item.name)} <span class="rec-plus">+ ${others} same-formula item${others === 1 ? '' : 's'}</span>` : esc(item.name);
-    return `<div class="record">${line(label, here)}${all.total !== here.total ? line('All items', all) : ''}</div>`;
+    const com = communityFor(item);
+    const comLine = com === null ? '' : com.length ? line('Community reports <span class="rec-plus">(GitHub, this formula)</span>', recordStats(com))
+      : `<div class="rec-none">No community reports for this formula yet. "Report on GitHub" shares yours with everyone.</div>`;
+    return `<div class="record">${line(label, here)}${all.total !== here.total ? line('All items', all) : ''}${comLine}</div>`;
   }
 
   function obsFormHTML(id, step, item) {
@@ -2947,6 +2983,7 @@ __SOLVER_JS__
     document.querySelectorAll('.dataDate').forEach(el => el.textContent = date);
     projects = loadJSON(STORAGE.projects, []);
     charmStock = loadJSON(STORAGE.cstock, {}) || {};
+    loadCommunity();   // the cached copy now, a refresh from GitHub in the background when it is older than 6 h
     document.getElementById('backupFile').addEventListener('change', e => {
       const f = e.target.files && e.target.files[0]; e.target.value = '';
       if (!f) return;
