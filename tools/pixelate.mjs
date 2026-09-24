@@ -78,7 +78,7 @@ function pixelate(svg) {
   const inkIdx = palette.reduce((best, c, i) => (lum(c) < 0.16 && (best < 0 || lum(c) < lum(palette[best])) ? i : best), -1);
   if (inkIdx < 0) palette.push([20, 20, 30]);
   const INK = inkIdx < 0 ? palette.length - 1 : inkIdx;
-  const isInk = i => i === INK || lum(palette[i]) < 0.13;
+  const isInk = i => i === INK || lum(palette[i]) < 0.2;       // the drawing's outlines (black, dark brown, ...)
   const isShine = i => lum(palette[i]) > 0.9;
 
   const px = SUB * GRID;
@@ -167,11 +167,22 @@ function pixelate(svg) {
   }));
 
   // 3. continuous outline: every fill cell that touches the outside gets an ink cell next to it
+  // the outline colour the drawing mostly uses on its silhouette (a gold ring keeps its brown outline)
+  const edgeInk = new Map();
+  for (let y = 0; y < GRID; y++) for (let x = 0; x < GRID; x++) {
+    const k = grid[y][x];
+    if (k !== T && isInk(k) && N4.some(([dx, dy]) => at(grid, x + dx, y + dy) === T)) edgeInk.set(k, (edgeInk.get(k) || 0) + 1);
+  }
+  const OUTLINE = edgeInk.size ? [...edgeInk].sort((a, b) => b[1] - a[1])[0][0] : INK;
   const out = grid.map(r => r.slice());
   const added = new Set();
   for (let y = 0; y < GRID; y++) for (let x = 0; x < GRID; x++) {
     if (grid[y][x] !== T) continue;
-    if (N4.some(([dx, dy]) => isFill(at(grid, x + dx, y + dy)))) { out[y][x] = INK; added.add(y * GRID + x); }
+    if (!N4.some(([dx, dy]) => isFill(at(grid, x + dx, y + dy)))) continue;
+    const near = new Map();                                     // continue the neighbouring outline's colour
+    N8.forEach(([dx, dy]) => { const n = at(grid, x + dx, y + dy); if (n !== T && isInk(n)) near.set(n, (near.get(n) || 0) + 1); });
+    out[y][x] = near.size ? [...near].sort((a, b) => b[1] - a[1])[0][0] : OUTLINE;
+    added.add(y * GRID + x);
   }
   grid = out;
 
@@ -196,7 +207,7 @@ function pixelate(svg) {
       if (k === T) { x++; continue; }
       let x1 = x + 1;
       while (x1 < GRID && grid[y][x1] === k) x1++;
-      const c = toHex(vivid(palette[k]));
+      const c = toHex(isInk(k) ? palette[k] : vivid(palette[k]));
       if (!runs.has(c)) runs.set(c, []);
       runs.get(c).push(`M${x} ${y}h${x1 - x}v1h-${x1 - x}z`);
       x = x1;
