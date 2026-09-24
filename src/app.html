@@ -849,6 +849,26 @@
   .rec-bar { grid-area: bar; height: 8px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
   .rec-bar i { display: block; height: 100%; border-radius: inherit; background: var(--good); }
   .rec-line small { grid-area: meta; color: var(--muted); font-size: 12px; }
+  /* ---------- "Ask anz" guide ---------- */
+  .guide-cta { margin-top: 14px; gap: 10px; }
+  .guide-cta img { width: 26px; height: auto; margin: -6px 0; }
+  .guide-progress { display: grid; grid-template-columns: 1fr auto; gap: 6px; margin: 4px 0 14px; font-size: 13px; color: var(--muted); }
+  .guide-progress .track { grid-column: 1 / -1; height: 8px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+  .guide-progress .fill { height: 100%; border-radius: inherit; background: var(--good); transition: width .3s var(--ease); }
+  .talk { display: flex; align-items: flex-start; gap: 12px; padding: 12px; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--line-2); }
+  .talk .tip-portrait { width: 60px; height: 60px; }
+  .talk .tip-avatar { width: 56px; }
+  .talk-body { display: grid; gap: 4px; min-width: 0; }
+  .talk-line { font-size: 16px; line-height: 1.6; }
+  .talk-line .chip { vertical-align: middle; margin: 1px 0; }
+  .talk-warn { display: block; margin-top: 8px; color: var(--warn); font-size: 14px; }
+  .guide-facts { display: grid; gap: 4px; margin: 12px 4px 0; font-size: 13px; color: var(--muted); }
+  .guide-actions { display: grid; gap: 8px; margin-top: 16px; }
+  .guide-actions .btn.small { justify-self: center; }
+  .guide-other { margin-top: 14px; padding: 12px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); }
+  .guide-nav { display: flex; justify-content: space-between; margin-top: 18px; }
+  .guide-sheet .verdict { margin: 10px 0 0; }
+  :root[data-skin="pixel"] .talk { border: 2px solid var(--line); border-radius: 12px; box-shadow: var(--px-btn); }
 </style>
 </head>
 <body>
@@ -925,6 +945,17 @@
   </div>
 </div>
 
+<div class="sheet-backdrop" id="guideSheet" hidden>
+  <div class="sheet guide-sheet" role="dialog" aria-modal="true" aria-labelledby="guideTitle">
+    <div class="sheet-head">
+      <h2 id="guideTitle">Ask anz</h2>
+      <button class="icon-btn" type="button" data-action="close-guide" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body" id="guideBody"></div>
+  </div>
+</div>
 <div class="sheet-backdrop" id="infoSheet" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="infoTitle">
     <div class="sheet-head">
@@ -1029,7 +1060,7 @@ __SOLVER_JS__
   /* ================= state ================= */
   const state = { item: null, custom: null, L: 10, t: {}, o: [], k: {}, stock: 0, view: 'up', m: 'exact', cf: 0, ch: {} };
   const ui = {};
-  ['itemBody', 'itemHint', 'targetCard', 'targetBody', 'targetHint', 'ownedCard', 'ownedBody', 'resultsBody', 'pickerSheet', 'pickerBody', 'filters', 'searchInput', 'infoSheet', 'toast', 'fx', 'themeBtn', 'infoBtn', 'catGrid', 'dataDate']
+  ['itemBody', 'itemHint', 'targetCard', 'targetBody', 'targetHint', 'ownedCard', 'ownedBody', 'resultsBody', 'pickerSheet', 'pickerBody', 'filters', 'searchInput', 'infoSheet', 'guideSheet', 'guideBody', 'toast', 'fx', 'themeBtn', 'infoBtn', 'catGrid', 'dataDate']
     .forEach(id => ui[id] = document.getElementById(id));
   const picker = { q: '', type: 'ALL', sort: 'name', view: 'grid' };   // views: list, grid (icon + name + cost), icons
   try { const v = localStorage.getItem('pore.pickerview'); if (['list', 'grid', 'icons'].includes(v)) picker.view = v; } catch (e) { /* ignore */ }
@@ -1139,6 +1170,7 @@ __SOLVER_JS__
     navIdx = st.idx || 0;
     if (st.sheet !== 'picker') closePicker({ fromHistory: true });
     if (st.sheet !== 'info') closeInfo({ fromHistory: true });
+    if (st.sheet !== 'guide') closeGuide({ fromHistory: true });
     const m = /[#&]s=([A-Za-z0-9_-]+)/.exec(location.hash);
     const want = m ? m[1] : '';
     const have = state.item ? b64url(JSON.stringify(encodeState(true))) : '';
@@ -1154,6 +1186,7 @@ __SOLVER_JS__
     jumpTo(st.y || 0);
     if (st.sheet === 'picker') openPicker({ fromHistory: true });
     if (st.sheet === 'info') openInfo({ fromHistory: true });
+    if (st.sheet === 'guide') openGuide({ fromHistory: true });
   });
   function restore() {
     badges = Object.assign({}, ITEM_DB.badges || {}, loadJSON(STORAGE.badges, {}));
@@ -1738,7 +1771,8 @@ __SOLVER_JS__
       </button>`;
     }).join('');
 
-    // guide
+    // guide (a recorded result re-plans; carry the ticks over to the new plan)
+    if (carryDone) { const set = loadDone(); carryDone.forEach(x => set.add(x)); saveJSON(doneKey(), Array.from(set)); carryDone = null; }
     const done = loadDone();
     const groups = new Map();
     stepIndex = new Map();
@@ -1835,7 +1869,8 @@ __SOLVER_JS__
           <div class="tile"><small>Collect</small><b>${fmt(toCollect)}</b><i>${stock ? `${stock} in stock` : 'base items'}</i></div>
         </div>
         <div class="note">Result: ${chipHTML(res.plan.nodes[res.plan.root], item, 'result')}${res.ms > 400 ? ` · solved in ${(res.ms / 1000).toFixed(1)}s` : ''}</div>
-        <div class="btn-row" style="margin-top:14px">
+        <button class="btn primary block guide-cta" type="button" data-action="guide-open"><img src="icons/app/anz.png?v=3" alt="" width="124" height="128">Ask anz: guide me step by step</button>
+        <div class="btn-row" style="margin-top:10px">
           <button class="btn small" type="button" data-action="share">${navigator.share ? 'Share plan' : 'Copy link'}</button>
           <button class="btn small ghost" type="button" data-action="copy-plan">Copy as text</button>
         </div>
@@ -1878,6 +1913,7 @@ __SOLVER_JS__
 
       ${labHTML(item, obs)}`);
 
+    if (!ui.guideSheet.hidden) renderGuide();
     // Back/Forward to a plan: return to where the page was once its results are on screen
     if (pendingScroll != null && last) { const y = pendingScroll; pendingScroll = null; jumpTo(y); }
     // animations
@@ -1994,7 +2030,7 @@ __SOLVER_JS__
   function showHome() {
     state.item = null; state.t = {}; state.o = []; state.stock = 0; state.k = {};
     resetPlan(); pendingScroll = null;
-    closePicker({ fromHistory: true }); closeInfo({ fromHistory: true });
+    closePicker({ fromHistory: true }); closeInfo({ fromHistory: true }); closeGuide({ fromHistory: true });
     renderAll();
     jumpTo(0);
   }
@@ -2122,6 +2158,89 @@ __SOLVER_JS__
       `<span class="tip-next" aria-hidden="true">▼</span></button>`;
   }
 
+  /* ================= "Ask anz": one step at a time ================= */
+  // Walks the batch steps from the lowest level up (every step's inputs exist by the time it comes up),
+  // sharing progress with the crafting guide and results with the in-game record.
+  let carryDone = null;
+  const guide = { i: -1, other: false, resync: false };
+  function guideSteps() { return last && last.analysis ? last.analysis.steps.slice().sort((x, y) => x.L - y.L) : []; }
+  function guideFirstOpen() {
+    const steps = guideSteps(), done = loadDone();
+    if (!steps.some(st => done.has(stepId(st)))) return -1;          // nothing done yet: start with collecting
+    const k = steps.findIndex(st => !done.has(stepId(st)));
+    return k < 0 ? steps.length : k;
+  }
+  function openGuide(opts) {
+    if (!ui.guideSheet.hidden || !last || !last.analysis) return;
+    if (!(opts && opts.fromHistory)) pushScreen({ sheet: 'guide' });
+    guide.i = guideFirstOpen(); guide.other = false;
+    ui.guideSheet.hidden = false; document.body.classList.add('locked');
+    renderGuide();
+  }
+  function closeGuide(opts) {
+    if (ui.guideSheet.hidden) return;
+    if (!(opts && opts.fromHistory) && sheetOnTop('guide')) { history.back(); return; }
+    ui.guideSheet.hidden = true; document.body.classList.remove('locked');
+    renderResults();
+  }
+  function setDone(id, on) {
+    const set = loadDone();
+    if (on) set.add(id); else set.delete(id);
+    saveJSON(doneKey(), Array.from(set));
+  }
+  function anzSays(html) {
+    return `<div class="talk"><span class="tip-portrait"><img class="tip-avatar" src="icons/app/anz.png?v=3" alt="" width="124" height="128"></span>` +
+      `<div class="talk-body"><b class="tip-name">anz</b><div class="talk-line">${html}</div></div></div>`;
+  }
+  function renderGuide() {
+    if (ui.guideSheet.hidden) return;
+    const item = last && last.item, a = last && last.analysis;
+    if (!item || !a || !last.res) { ui.guideBody.innerHTML = anzSays('One moment, working out the plan…'); return; }
+    if (guide.resync) { guide.resync = false; guide.i = guideFirstOpen(); }
+    const steps = guideSteps(), done = loadDone(), n = steps.length;
+    guide.i = Math.max(-1, Math.min(guide.i, n));
+    const doneCount = steps.filter(st => done.has(stepId(st))).length;
+    const head = `<div class="guide-progress"><span>${guide.i < 0 ? 'Getting ready' : guide.i >= n ? 'Finished' : `Step ${guide.i + 1} of ${n}`}</span><span>${doneCount}/${n} done</span>` +
+      `<div class="track"><div class="fill" style="width:${n ? (doneCount / n) * 100 : 0}%"></div></div></div>`;
+    let body;
+    if (guide.i < 0) {
+      const cost = a.p1, stock = Math.min(state.stock || 0, cost), toCollect = cost - stock;
+      const owned = a.ownedUse.reduce((x, y) => x + y, 0);
+      body = anzSays(`Let's take your <b>${esc(item.name)}</b> to <b>P${state.L}</b>. First, gather <b>${fmt(toCollect)}</b> base items (P1 ${esc(item.name)})` +
+        `${stock ? `; you already have ${fmt(stock)}` : ''}${owned ? `, plus the ${owned} refined cop${owned === 1 ? 'y' : 'ies'} you own` : ''}. ` +
+        `After that it's ${n} refine step${n === 1 ? '' : 's'} and about ${fmtGold(a.gold)} gold. I'll tell you exactly what to combine.`) +
+        `<div class="guide-actions"><button class="btn primary block" type="button" data-action="guide-next">I have them, let's go</button></div>`;
+    } else if (guide.i >= n) {
+      const root = last.res.plan.nodes[last.res.plan.root];
+      body = anzSays(`That's it! Your ${esc(item.name)} should now be ${chipHTML(root, item, 'result')}. ` +
+        `You used <b>${fmt(a.p1)}</b> base items instead of ${fmt(last.res.standard)}. See you in town!`) +
+        `<div class="guide-actions"><button class="btn primary block" type="button" data-action="close-guide">Close</button>` +
+        `<button class="btn small ghost" type="button" data-action="guide-back">Back</button></div>`;
+    } else {
+      const st = steps[guide.i], id = stepId(st), isDone = done.has(id);
+      const risky = !obsForItem(item.key, item.stats.length).some(o => obsKey(o.item, o.baseL, o.base, o.matL, o.mat) === obsKey(item.key, st.base.L, st.base.s, st.mat.L, st.mat.s)) && isRisky(item, st);
+      const line = `${guide.i === n - 1 ? 'Last one! ' : ''}Take <b>${st.count}×</b> ${chipHTML(st.base, item, 'base')} and refine ${st.count > 1 ? 'each' : 'it'} with ${chipHTML(st.mat, item)} as material. ` +
+        `You'll get ${chipHTML(st.result, item, 'result')}.` +
+        (risky ? `<span class="talk-warn">⚠ Watch this one: the game could give one point more or less. Tell me what you got.</span>` : '');
+      const facts = `<div class="guide-facts"><span>${batchMeta(st.L, st.count)}</span>` +
+        `<span>${S.SUCCESS[st.L]}% base success · ${fmtGold(S.GOLD[st.L] * st.count)} gold</span></div>`;
+      const inputs = item.stats.map((x, k) => `<label>${x.short}<input class="num small" type="number" inputmode="numeric" min="1" step="1" value="${st.result.s[k]}" data-guide-input="${k}"></label>`).join('');
+      const other = guide.other ? `<div class="guide-other"><div class="obs-title">What did the game give you?</div><div class="obs-inputs">${inputs}</div>` +
+        `<div class="btn-row"><button class="btn small primary" type="button" data-action="guide-save">Save &amp; re-plan</button><button class="btn small ghost" type="button" data-action="guide-other">Cancel</button></div></div>` : '';
+      body = anzSays(line) + facts + verdictHTML(item, st) +
+        `<div class="guide-actions">` +
+        (isDone
+          ? `<button class="btn block" type="button" data-action="guide-skip">Already done ✓ · next step</button><button class="btn small ghost" type="button" data-action="guide-undo">Not done yet</button>`
+          : `<button class="btn primary block" type="button" data-action="guide-done">Done ✓</button>` +
+            `<button class="btn good block" type="button" data-action="guide-match">Done, and it matched exactly</button>` +
+            `<button class="btn small" type="button" data-action="guide-other">The game gave something else</button>`) +
+        `</div>${other}` +
+        `<div class="guide-nav"><button class="btn small ghost" type="button" data-action="guide-back">← Back</button><button class="btn small ghost" type="button" data-action="guide-skip">Skip →</button></div>`;
+    }
+    ui.guideBody.innerHTML = head + body;
+  }
+  function guideStep() { const steps = guideSteps(); return steps[guide.i]; }
+
   function pickItem(key) {
     state.item = key;
     state.t = {}; state.o = []; state.stock = 0; state.k = {};
@@ -2199,7 +2318,7 @@ __SOLVER_JS__
   }
   function renderAll() { renderItem(); renderTarget(); renderOwned(); renderResults(); persist(); }
   function afterChange() { renderTarget(); renderOwned(); persist(); scheduleSolve(); }
-  function closeSheets() { closePicker(); closeInfo(); }
+  function closeSheets() { closePicker(); closeInfo(); closeGuide(); }
   function openInfo(opts) {
     if (!ui.infoSheet.hidden) return;
     if (!(opts && opts.fromHistory)) pushScreen({ sheet: 'info' });
@@ -2281,6 +2400,37 @@ __SOLVER_JS__
         break;
       }
       case 'obs-cancel': openObsForm = null; renderResults(); break;
+      case 'guide-open': openGuide(); break;
+      case 'close-guide': closeGuide(); break;
+      case 'guide-next': guide.i++; guide.other = false; renderGuide(); break;
+      case 'guide-back': guide.i--; guide.other = false; renderGuide(); break;
+      case 'guide-skip': guide.i++; guide.other = false; renderGuide(); break;
+      case 'guide-undo': { const st = guideStep(); if (st) setDone(stepId(st), false); renderGuide(); break; }
+      case 'guide-other': guide.other = !guide.other; renderGuide(); break;
+      case 'guide-done': case 'guide-match': {
+        const st = guideStep(); if (!st || !last) return;
+        if (act === 'guide-match') addObservation(last.item, st, st.result.s.slice());
+        setDone(stepId(st), true); haptic(14);
+        guide.i++; guide.other = false;
+        if (guide.i >= guideSteps().length) burst();
+        renderGuide();
+        toast(act === 'guide-match' ? 'Recorded: matched ✓' : 'Nice! Next step');
+        break;
+      }
+      case 'guide-save': {
+        const st = guideStep(); if (!st || !last) return;
+        const item = last.item;
+        const actual = item.stats.map((x, k) => Math.round(Number((ui.guideBody.querySelector(`[data-guide-input="${k}"]`) || {}).value)));
+        if (actual.some(v => !(v > 0))) { toast('Enter every stat'); return; }
+        addObservation(item, st, actual);
+        carryDone = loadDone(); carryDone.add(stepId(st));
+        carryDone.add(stepId(Object.assign({}, st, { result: Object.assign({}, st.result, { s: actual }) })));   // the same refine, now with the real result
+        guide.other = false; guide.resync = true; last = null; haptic(14);
+        renderItem(); renderTarget(); renderOwned(); persist(); scheduleSolve(0);
+        renderGuide();
+        toast(sameVec(actual, st.result.s) ? 'Recorded: matched ✓' : 'Got it, re-planning from your result');
+        break;
+      }
       case 'obs-match': {
         const step = stepIndex.get(el.dataset.step);
         if (!step || !last) return;
@@ -2299,6 +2449,8 @@ __SOLVER_JS__
         const actual = item.stats.map((st, i) => Math.round(Number((form.querySelector(`[data-obs-input="${i}"]`) || {}).value)));
         if (actual.some(v => !(v > 0))) { toast('Enter every stat'); return; }
         addObservation(item, step, actual);
+        carryDone = loadDone();
+        if (carryDone.has(el.dataset.step)) carryDone.add(stepId(Object.assign({}, step, { result: Object.assign({}, step.result, { s: actual }) })));
         openObsForm = null; last = null; haptic(14);
         renderItem(); renderTarget(); renderOwned(); persist(); scheduleSolve(0);
         toast(sameVec(actual, step.result.s) ? 'Recorded: matches the prediction' : 'Recorded — re-planning with your result');
