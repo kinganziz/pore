@@ -644,7 +644,7 @@
 <div class="glow glow-b"></div>
 
 <header class="topbar">
-  <a class="brand" href="./" data-action="home" aria-label="PORE home: choose another item">
+  <a class="brand" href="./" data-action="home" aria-label="PORE: back to the previous screen">
     <span class="brand-back" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span>
     <div class="logo" aria-hidden="true">
       <svg viewBox="0 0 32 32" fill="none"><path d="M8 4h16l6 8-14 17L2 12z" fill="#fff" fill-opacity=".92"/><path d="M8 4l4 8 4-8 4 8 4-8M2 12h28M12 12l4 17 4-17" stroke="#7b6cf0" stroke-width="1.6"/></svg>
@@ -894,8 +894,46 @@ __SOLVER_JS__
   function persist() {
     saveJSON(STORAGE.state, encodeState(false));
     const hash = state.item ? '#s=' + b64url(JSON.stringify(encodeState(true))) : '';
-    if (location.hash !== hash) { try { history.replaceState(null, '', location.pathname + location.search + hash); } catch (e) { /* ignore */ } }
+    if (location.hash !== hash) { try { history.replaceState(history.state, '', location.pathname + location.search + hash); } catch (e) { /* ignore */ } }
   }
+
+  /* ================= history: Back returns to the previous screen, exactly as it was ================= */
+  // Every screen is a history entry: home or an item plan (its whole state lives in the #s= hash), with the
+  // item picker and the help sheet as entries on top. Each entry remembers its page scroll.
+  let navIdx = 0, pendingScroll = null;
+  function navEntry(extra) { return Object.assign({ pore: 1, idx: navIdx, sheet: null, y: 0 }, extra); }
+  function rememberScroll() { try { history.replaceState(Object.assign({}, history.state, { y: Math.round(window.scrollY) }), '', location.href); } catch (e) { /* ignore */ } }
+  function pushScreen(extra, url) { rememberScroll(); navIdx++; try { history.pushState(navEntry(extra), '', url || location.href); } catch (e) { /* ignore */ } }
+  function jumpTo(y) { window.scrollTo({ top: y, left: 0, behavior: 'instant' }); }   // no smooth scroll when restoring a screen
+  // keep the current entry's scroll up to date (Back/Forward leave an entry without warning)
+  let scrollSaveTimer = null;
+  window.addEventListener('scroll', () => {
+    clearTimeout(scrollSaveTimer);
+    scrollSaveTimer = setTimeout(() => { if (pendingScroll == null && !document.body.classList.contains('locked')) rememberScroll(); }, 200);
+  }, { passive: true });
+  function sheetOnTop(name) { return !!(history.state && history.state.sheet === name); }
+  function resetPlan() { last = null; lastSig = null; lastHeroValue = 0; openObsForm = null; solveSeq++; }
+  window.addEventListener('popstate', e => {
+    const st = e.state && e.state.pore ? e.state : navEntry({ idx: 0 });
+    navIdx = st.idx || 0;
+    if (st.sheet !== 'picker') closePicker({ fromHistory: true });
+    if (st.sheet !== 'info') closeInfo({ fromHistory: true });
+    const m = /[#&]s=([A-Za-z0-9_-]+)/.exec(location.hash);
+    const want = m ? m[1] : '';
+    const have = state.item ? b64url(JSON.stringify(encodeState(true))) : '';
+    if (want !== have) {
+      if (!want) showHome();
+      else {
+        try { applyState(JSON.parse(unb64url(want))); } catch (err) { /* ignore */ }
+        resetPlan(); revealResults = false;
+        renderAll();
+        if (state.item) { pendingScroll = st.y || 0; scheduleSolve(0); }
+      }
+    }
+    jumpTo(st.y || 0);
+    if (st.sheet === 'picker') openPicker({ fromHistory: true });
+    if (st.sheet === 'info') openInfo({ fromHistory: true });
+  });
   function restore() {
     badges = Object.assign({}, ITEM_DB.badges || {}, loadJSON(STORAGE.badges, {}));
     recent = loadJSON(STORAGE.recent, []);
@@ -1093,10 +1131,11 @@ __SOLVER_JS__
   const ICON_ORDER = ['modern', 'pixelhd', 'pixel'];
   const DEFAULT_ICONS = 'pixelhd';   // "Pixel"
   let iconStyle = DEFAULT_ICONS;
+  const ICONS_V = '__ICONS_V__';   // content hash of the icon files (tools/build.py): new icons never come from a stale cache
   function iconSVG(key, cls) {
     const sprite = ICON_STYLES[iconStyle].sprite;
-    if (!sprite) return `<img class="pixel ${cls || ''}" src="icons/modern/${key}.svg" alt="" decoding="async" loading="lazy" draggable="false">`;
-    return `<svg class="pixel ${cls || ''}" aria-hidden="true"><use href="icons/${sprite}.svg#${key}"/></svg>`;
+    if (!sprite) return `<img class="pixel ${cls || ''}" src="icons/modern/${key}.svg?v=${ICONS_V}" alt="" decoding="async" loading="lazy" draggable="false">`;
+    return `<svg class="pixel ${cls || ''}" aria-hidden="true"><use href="icons/${sprite}.svg?v=${ICONS_V}#${key}"/></svg>`;
   }
   function setIconStyle(style) {
     iconStyle = ICON_STYLES[style] ? style : DEFAULT_ICONS;
@@ -1527,6 +1566,8 @@ __SOLVER_JS__
 
       ${labHTML(item, obs)}`);
 
+    // Back/Forward to a plan: return to where the page was once its results are on screen
+    if (pendingScroll != null && last) { const y = pendingScroll; pendingScroll = null; jumpTo(y); }
     // animations
     requestAnimationFrame(() => {
       const arc = document.getElementById('ringArc');
@@ -1633,25 +1674,36 @@ __SOLVER_JS__
       setTimeout(() => location.reload(), 150);
       return;
     }
+    if (navIdx > 0) { history.back(); return; }   // back to the previous screen, exactly as it was
+    pushScreen({}, location.pathname + location.search);
+    showHome();
+  }
+  function showHome() {
     state.item = null; state.t = {}; state.o = []; state.stock = 0; state.k = {};
-    last = null; lastSig = null; lastHeroValue = 0; openObsForm = null; solveSeq++;
-    closeSheets();
+    resetPlan(); pendingScroll = null;
+    closePicker({ fromHistory: true }); closeInfo({ fromHistory: true });
     renderAll();
-    window.scrollTo(0, 0);
+    jumpTo(0);
   }
 
   /* ================= picker ================= */
   let sheetOpener = null;
-  function openPicker() {
+  function openPicker(opts) {
+    if (!ui.pickerSheet.hidden) return;
+    const fromHistory = !!(opts && opts.fromHistory);
+    if (!fromHistory) pushScreen({ sheet: 'picker' });
     sheetOpener = document.activeElement;
     ui.pickerSheet.hidden = false;
     document.body.classList.add('locked');
     renderFilters();
     renderPickerList();
+    if (fromHistory) ui.pickerBody.scrollTop = picker.scroll || 0;   // same filters, search and position as before
     setTimeout(() => { if (matchMedia('(min-width: 720px)').matches) ui.searchInput.focus(); else ui.pickerSheet.querySelector('[data-action="close-picker"]').focus(); }, 50);
   }
-  function closePicker() {
+  function closePicker(opts) {
     if (ui.pickerSheet.hidden) return;
+    if (!(opts && (opts.fromHistory || opts.keepHistory)) && sheetOnTop('picker')) { history.back(); return; }
+    picker.scroll = ui.pickerBody.scrollTop;
     ui.pickerSheet.hidden = true; document.body.classList.remove('locked');
     if (sheetOpener && sheetOpener.focus && document.contains(sheetOpener)) sheetOpener.focus();
     sheetOpener = null;
@@ -1742,8 +1794,9 @@ __SOLVER_JS__
     state.t = {}; state.o = []; state.stock = 0; state.k = {};
     last = null; openObsForm = null;
     if (key !== 'custom') { recent = [key].concat(recent.filter(k => k !== key)).slice(0, 5); saveJSON(STORAGE.recent, recent); }
-    closePicker();
-    try { if (!/[#&]s=/.test(location.hash)) history.pushState(null, '', location.pathname + location.search + '#s='); } catch (e) { /* ignore */ }
+    closePicker({ keepHistory: true });   // the picker stays in history: Back returns to it
+    pushScreen({}, location.pathname + location.search + '#s=');
+    pendingScroll = null;
     renderAll();
     revealResults = true;
     scheduleSolve(0);
@@ -1812,7 +1865,19 @@ __SOLVER_JS__
   }
   function renderAll() { renderItem(); renderTarget(); renderOwned(); renderResults(); persist(); }
   function afterChange() { renderTarget(); renderOwned(); persist(); scheduleSolve(); }
-  function closeSheets() { closePicker(); ui.infoSheet.hidden = true; document.body.classList.remove('locked'); }
+  function closeSheets() { closePicker(); closeInfo(); }
+  function openInfo(opts) {
+    if (!ui.infoSheet.hidden) return;
+    if (!(opts && opts.fromHistory)) pushScreen({ sheet: 'info' });
+    ui.infoSheet.hidden = false; document.body.classList.add('locked');
+    setTimeout(() => ui.infoSheet.querySelector('[data-action="close-info"]').focus(), 50);
+  }
+  function closeInfo(opts) {
+    if (ui.infoSheet.hidden) return;
+    if (!(opts && opts.fromHistory) && sheetOnTop('info')) { history.back(); return; }
+    ui.infoSheet.hidden = true; document.body.classList.remove('locked');
+    if (!(opts && opts.fromHistory)) ui.infoBtn.focus();
+  }
 
   /* ================= events ================= */
   document.addEventListener('click', e => {
@@ -1831,7 +1896,7 @@ __SOLVER_JS__
       }
       case 'open-picker': openPicker(); break;
       case 'close-picker': closePicker(); break;
-      case 'close-info': ui.infoSheet.hidden = true; document.body.classList.remove('locked'); ui.infoBtn.focus(); break;
+      case 'close-info': closeInfo(); break;
       case 'clear-search': picker.q = ''; ui.searchInput.value = ''; el.hidden = true; renderPickerList(); ui.searchInput.focus(); break;
       case 'filter': picker.type = el.dataset.type; renderFilters(); renderPickerList(); break;
       case 'sort': picker.sort = el.dataset.sort; renderPickerList(); break;
@@ -1996,7 +2061,7 @@ __SOLVER_JS__
   });
 
   ui.pickerSheet.addEventListener('click', e => { if (e.target === ui.pickerSheet) closePicker(); });
-  ui.infoSheet.addEventListener('click', e => { if (e.target === ui.infoSheet) { ui.infoSheet.hidden = true; document.body.classList.remove('locked'); } });
+  ui.infoSheet.addEventListener('click', e => { if (e.target === ui.infoSheet) closeInfo(); });
   document.addEventListener('keydown', e => {
     if (e.key === 'Tab') {
       const sheet = !ui.pickerSheet.hidden ? ui.pickerSheet : !ui.infoSheet.hidden ? ui.infoSheet : null;
@@ -2012,9 +2077,9 @@ __SOLVER_JS__
     if (e.key === 'Escape') closeSheets();
     if (e.key === '/' && ui.pickerSheet.hidden && ui.infoSheet.hidden && !/input|select|textarea/i.test(document.activeElement.tagName)) { e.preventDefault(); openPicker(); }
   });
-  ui.infoBtn.addEventListener('click', () => { ui.infoSheet.hidden = false; document.body.classList.add('locked'); setTimeout(() => ui.infoSheet.querySelector('[data-action="close-info"]').focus(), 50); });
+  ui.infoBtn.addEventListener('click', () => openInfo());
   ui.themeBtn.addEventListener('click', () => setTheme(document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light'));
-  window.addEventListener('hashchange', () => { const m = /[#&]s=([A-Za-z0-9_-]+)/.exec(location.hash); if (!m) { if (state.item) goHome(); return; } try { applyState(JSON.parse(unb64url(m[1]))); last = null; renderAll(); scheduleSolve(0); } catch (e) { /* ignore */ } });
+  // (hash changes, e.g. Back to an earlier plan, are handled by the popstate listener)
 
   /* ================= boot ================= */
   (function boot() {
@@ -2029,8 +2094,12 @@ __SOLVER_JS__
     ui.dataDate.textContent = `data ${date}`;
     document.querySelectorAll('.dataDate').forEach(el => el.textContent = date);
     restore();
+    try { history.scrollRestoration = 'manual'; } catch (e) { /* ignore */ }
+    const st0 = history.state && history.state.pore ? history.state : null;
+    navIdx = st0 ? st0.idx || 0 : 0;
+    try { history.replaceState(navEntry({ idx: navIdx, y: st0 ? st0.y || 0 : 0 }), '', location.href); } catch (e) { /* ignore */ }
     renderAll();
-    if (state.item) scheduleSolve(0);
+    if (state.item) { pendingScroll = st0 ? st0.y || 0 : null; scheduleSolve(0); }
     const idle = window.requestIdleCallback || (fn => setTimeout(fn, 1200));
     idle(() => computeBadges());
     window.PORE = { version: '2.0.0', hasWorker: Solver.hasWorker, items: ITEMS.length };

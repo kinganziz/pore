@@ -17,11 +17,23 @@ DATA = ROOT / "data" / "items.json"
 OUT = ROOT / "index.html"
 DATA_PLACEHOLDER = "__ITEMS_JSON__"
 SOLVER_PLACEHOLDER = "__SOLVER_JS__"
+ICONS_PLACEHOLDER = "__ICONS_V__"
+
+
+def icons_version() -> str:
+    """Content hash of every icon file the app loads. It goes into the icon URLs (?v=...), so a deploy that
+    changes icons never shows stale cached copies. Line endings are normalised so CI and Windows agree."""
+    h = hashlib.sha1()
+    files = sorted((ROOT / "icons" / "modern").glob("*.svg")) + [ROOT / "icons" / "sprite-pixel.svg", ROOT / "icons" / "sprite-pixel-modern.svg"]
+    for path in files:
+        h.update(path.name.encode())
+        h.update(path.read_bytes().replace(b"\r\n", b"\n"))
+    return h.hexdigest()[:10]
 
 
 def main() -> None:
     template = SRC.read_text(encoding="utf-8")
-    for placeholder in (DATA_PLACEHOLDER, SOLVER_PLACEHOLDER):
+    for placeholder in (DATA_PLACEHOLDER, SOLVER_PLACEHOLDER, ICONS_PLACEHOLDER):
         if template.count(placeholder) != 1:
             raise SystemExit(f"expected exactly one {placeholder} in {SRC}")
     data = json.loads(DATA.read_text(encoding="utf-8"))
@@ -36,7 +48,7 @@ def main() -> None:
     # Compact JSON; "</" can never appear inside base64 so the inline script stays safe,
     # but escape it anyway for robustness.
     blob = json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
-    html = template.replace(DATA_PLACEHOLDER, blob).replace(SOLVER_PLACEHOLDER, solver)
+    html = template.replace(DATA_PLACEHOLDER, blob).replace(SOLVER_PLACEHOLDER, solver).replace(ICONS_PLACEHOLDER, icons_version())
     OUT.write_text(html, encoding="utf-8")
     print(f"wrote {OUT.relative_to(ROOT)} ({OUT.stat().st_size // 1024} KB, {data['count']} items, data fetched {data['fetched']})")
 
