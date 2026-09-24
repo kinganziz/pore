@@ -912,14 +912,15 @@ def ring(ic, metal, style="plain", gem_=None):
     s = []
     if style == "attack":
         d = "M32 8 C39 17 49 25 49 39 C49 49 41 56 32 56 C23 56 15 49 15 39 C15 25 25 17 32 8 Z"
-        s.append(line(d, m[3], 13))
-        s.append(line(d, ic.lgu(m, 15, 8, 49, 56), 9))
+        s.append(line(d, m[3], 9))
+        s.append(line(d, ic.lgu(m, 15, 8, 49, 56), 5.5))
         s.append(line("M21 30 C24 23 27 18 30 15", HL, 2, 0.7))
         return "".join(s)
-    width = {"flat": 13, "mana": 12}.get(style, 9)
-    s.append(f'<circle cx="32" cy="40" r="15.5" fill="none" stroke="{m[3]}" stroke-width="{width + 4}"/>')
+    # slim band (a thin metal hoop, like the amulet cords); flat and mana rings are a little wider
+    width = {"flat": 8, "mana": 7}.get(style, 5.5)
+    s.append(f'<circle cx="32" cy="40" r="15.5" fill="none" stroke="{m[3]}" stroke-width="{width + 3.5}"/>')
     s.append(f'<circle cx="32" cy="40" r="15.5" fill="none" stroke="{ic.lgu(m, 16, 24, 48, 56)}" stroke-width="{width}"/>')
-    s.append('<path d="M19.5 32 A15.5 15.5 0 0 1 29.5 24.7" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".7"/>')
+    s.append('<path d="M19.5 32 A15.5 15.5 0 0 1 29.5 24.7" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".7"/>')
     if style in ("crit", "critdmg"):
         s.append(f'<rect x="18" y="12" width="28" height="15" rx="3.5" fill="{ic.lg(m)}" stroke="{m[3]}" stroke-width="2"/>')
         for i in range(4):
@@ -981,9 +982,9 @@ def necklace(ic, metal, pendant=None, kind="mining"):
     s = []
     if kind == "mining":
         d = "M16 46 C6 36 8 18 22 12 C34 6 50 10 54 22 C57 32 50 40 40 42 C34 43 30 40 28 44"
-        s.append(line(d, m[3], 6))
-        s.append(line(d, ic.lgu(m), 3.4))
-        s.append(f'<path d="{d}" fill="none" stroke="{m[3]}" stroke-width="3.4" stroke-dasharray="1 3" opacity=".5"/>')
+        # a solid chain: dark link dashes read as holes once the icon is pixelated
+        s.append(line(d, m[3], 7))
+        s.append(line(d, ic.lgu(m), 4.2))
         s.append(circle(ic, 18, 45, 12, m, ic.lg(m)))
         s += gem(ic, 18, 45, 7.5, pendant)
     elif kind == "liora":
