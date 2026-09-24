@@ -1,7 +1,7 @@
 /* PORE service worker — offline app shell. Generated into /sw.js by tools/build.py. */
-const VERSION = '1770f0e8ed';
+const VERSION = 'c64337a0af';
 const SHELL = 'pore-shell-' + VERSION;
-const SHELL_FILES = ['./', './index.html', './manifest.webmanifest', './icons/sprite.svg', './icons/sprite-pixel.svg', './icons/app/icon-192.png', './icons/app/icon-512.png', './icons/app/maskable-512.png'];
+const SHELL_FILES = ['./', './index.html', './manifest.webmanifest', './icons/sprite.svg', './icons/sprite-pixel.svg', './icons/sprite-pixel-modern.svg', './icons/app/icon-192.png', './icons/app/icon-512.png', './icons/app/maskable-512.png'];
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(SHELL).then(cache => cache.addAll(SHELL_FILES)).then(() => self.skipWaiting()));
@@ -29,7 +29,7 @@ self.addEventListener('fetch', event => {
   // so a refresh always shows the latest deploy.
   event.respondWith(
     fetch(req, { cache: 'no-cache' }).then(res => {
-      if (res.ok && (url.pathname.endsWith('/') || url.pathname.endsWith('.html') || url.pathname.endsWith('.webmanifest') || /\/icons\/sprite(-pixel)?\.svg$/.test(url.pathname) || url.pathname.includes('/icons/app/'))) {
+      if (res.ok && (url.pathname.endsWith('/') || url.pathname.endsWith('.html') || url.pathname.endsWith('.webmanifest') || /\/icons\/sprite(-pixel|-pixel-modern)?\.svg$/.test(url.pathname) || url.pathname.includes('/icons/app/'))) {
         const copy = res.clone();
         caches.open(SHELL).then(cache => cache.put(req, copy));
       }
