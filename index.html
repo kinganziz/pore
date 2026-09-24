@@ -20,7 +20,7 @@
     var t = g('pore.theme') || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
     d.setAttribute('data-theme', t);
     d.setAttribute('data-skin', g('pore.skin') === 'pixel' ? 'pixel' : 'modern');
-    d.setAttribute('data-font', g('pore.font') === 'vt323' ? 'vt323' : 'jersey');
+    d.setAttribute('data-font', g('pore.font') === 'jersey' ? 'jersey' : 'vt323');   // VT323 is the default reading font
   })();
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -617,7 +617,8 @@
   .app-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 2px 0 16px; }
   .app-actions .btn { width: 100%; white-space: nowrap; }
   .app-actions svg { width: 16px; height: 16px; flex: 0 0 auto; }
-  .font-pick { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: -6px 0 16px; color: var(--muted); font-size: 14px; }
+  .font-pick { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: -6px 0 16px; padding-bottom: 14px; border-bottom: 1px solid var(--line-2); color: var(--muted); font-size: 14px; }   /* divider: controls above, help text below */
+  :root[data-skin="pixel"] .font-pick { border-bottom: 2px dashed var(--line); }
   .font-pick button:first-child { font-family: "Jersey 15", sans-serif; } .font-pick button:last-child { font-family: "VT323", monospace; }
   .info-body b { color: var(--text); }
   .formula { padding: 12px 14px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; line-height: 1.6; text-wrap: balance; }
@@ -1779,9 +1780,9 @@ function createSolver() {
     const topbar = document.querySelector('.topbar');
     if (topbar) document.documentElement.style.setProperty('--topbar-h', Math.round(topbar.getBoundingClientRect().height) + 'px');
   }
-  let readFont = 'jersey';
+  let readFont = 'vt323';   // default reading font; Jersey 15 is the alternative (help page switch)
   function setFont(f) {
-    readFont = f === 'vt323' ? 'vt323' : 'jersey';
+    readFont = f === 'jersey' ? 'jersey' : 'vt323';
     document.documentElement.setAttribute('data-font', readFont);
     document.querySelectorAll('[data-action="font"]').forEach(b => b.classList.toggle('on', b.dataset.font === readFont));
     try { localStorage.setItem(STORAGE.font, readFont); } catch (e) { /* ignore */ }
@@ -2756,7 +2757,7 @@ function createSolver() {
     try { const saved = localStorage.getItem(STORAGE.icons); iconStyle = ICON_STYLES[saved] ? saved : DEFAULT_ICONS; } catch (e) { /* ignore */ }
     applyLook();
     try { setSkin(localStorage.getItem(STORAGE.skin)); } catch (e) { setSkin('modern'); }
-    try { setFont(localStorage.getItem(STORAGE.font)); } catch (e) { setFont('jersey'); }
+    try { setFont(localStorage.getItem(STORAGE.font)); } catch (e) { setFont('vt323'); }
     ui.catGrid.innerHTML = Object.values(CATS).map(c => `<div><span>${c.label} <b>${c.pct}</b></span><small>${c.who}</small></div>`).join('');
     const date = (ITEM_DB.fetched || '').slice(0, 10);
     ui.dataDate.textContent = `data ${date}`;
