@@ -894,6 +894,23 @@
   .same-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
   .rec-plus { color: var(--muted); font-weight: 400; font-size: 12px; }
   :root[data-skin="pixel"] .same-formula { border: 2px solid var(--line); border-radius: 12px; }
+  /* ---------- my projects ---------- */
+  .proj-list { display: grid; gap: 8px; }
+  .proj-row { display: flex; align-items: stretch; gap: 6px; }
+  .proj-open { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); color: inherit; text-align: left; cursor: pointer; }
+  .proj-row.first .proj-open { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); background: color-mix(in srgb, var(--accent) 9%, var(--surface)); }
+  .proj-open .pixel { width: 36px; height: 36px; flex: 0 0 auto; }
+  .proj-custom { width: 36px; text-align: center; font-size: 20px; }
+  .proj-main { flex: 1 1 auto; min-width: 0; display: grid; gap: 4px; }
+  .proj-main b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .proj-main b small { color: var(--muted); font-weight: 400; }
+  .proj-main > small { color: var(--muted); font-size: 12px; }
+  .proj-bar { height: 6px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+  .proj-bar i { display: block; height: 100%; background: var(--good); border-radius: inherit; }
+  .proj-go { flex: 0 0 auto; font-size: 13px; color: var(--accent); font-weight: 700; }
+  .proj-x { flex: 0 0 auto; width: 34px; border-radius: 12px; border: 1px solid var(--line); background: transparent; color: var(--muted); font-size: 18px; cursor: pointer; }
+  .btn.starred { color: var(--gold); border-color: color-mix(in srgb, var(--gold) 45%, var(--line)); }
+  :root[data-skin="pixel"] :is(.proj-open, .proj-x) { border: 2px solid var(--line); border-radius: 12px; box-shadow: var(--px-btn); }
 </style>
 </head>
 <body>
@@ -1077,7 +1094,7 @@ __SOLVER_JS__
   const STAT_NAMES = Array.from(new Set(ITEM_DB.statNames.concat(Object.keys(STAT_META)))).sort();
   const AFF_LABEL = a => a ? a.split('_').map(w => w[0] + w.slice(1).toLowerCase()).join(' + ') : '';
   const EXAMPLES = ['Wooden Sword', 'Soldier Sword', 'Platinum Dagger', 'Purpurite Sword'];
-  const STORAGE = { state: 'pore.state.v3', badges: 'pore.badges.v3', recent: 'pore.recent.v1', theme: 'pore.theme', done: 'pore.done.', obs: 'pore.observations.v1', icons: 'pore.iconstyle.v2', skin: 'pore.skin', font: 'pore.font' };
+  const STORAGE = { state: 'pore.state.v3', badges: 'pore.badges.v3', recent: 'pore.recent.v1', theme: 'pore.theme', done: 'pore.done.', obs: 'pore.observations.v1', icons: 'pore.iconstyle.v2', skin: 'pore.skin', font: 'pore.font', projects: 'pore.projects.v1' };
   const CHARM_ITEMS = 'Rabbits Foot ×2 · Lucky Egg ×3 · Wishbone ×3 · Clover ×4 · Starfish ×4 · Horseshoe ×5 · Lucky Rose ×6';
   const REPO_URL = 'https://github.com/kinganziz/pore';
   const MODEL_KEYS = new Set(S.models.map(m => m.key));
@@ -1544,6 +1561,7 @@ __SOLVER_JS__
       ${sameFormulaHTML(item)}
       <div class="item-actions">
         <button class="btn small" type="button" data-action="open-picker">Change item</button>
+        <button class="btn small ${currentProject() ? 'starred' : 'ghost'}" type="button" data-action="project-toggle" title="Keep this item in My projects on the start screen">${currentProject() ? '★ In my projects' : '☆ Add to my projects'}</button>
         ${item.page ? `<a class="btn small ghost" href="https://wiki.pixel-odyssey.app/Items/${encodeURIComponent(item.page)}" target="_blank" rel="noopener">Wiki ↗</a>` : `<button class="btn small ghost" type="button" data-action="edit-custom">Edit stats</button>`}
       </div>`;
     ui.targetCard.hidden = false;
@@ -1798,7 +1816,7 @@ __SOLVER_JS__
     const item = last ? last.item : resolveItem();
     if (!item) {
       const ex = EXAMPLES.map(n => ITEMS.find(it => it.name === n)).filter(Boolean).map(it => `<button class="example" type="button" data-action="pick" data-key="${it.key}">${iconSVG(it.key)}${esc(it.name)}</button>`).join('');
-      ui.resultsBody.innerHTML = `
+      ui.resultsBody.innerHTML = `${projectsHTML()}
         <div class="card empty">
           <div class="glyph"><span class="hd-only">💎</span><svg class="px-only px-gem" viewBox="0 0 15 12" shape-rendering="crispEdges"><path fill="#0b0b1e" d="M0 4h1v1h-1zM1 3h1v1h-1zM1 5h1v1h-1zM10 0h1v1h-1zM10 8h1v1h-1zM11 1h1v1h-1zM11 7h1v1h-1zM12 2h1v1h-1zM12 6h1v1h-1zM13 3h1v1h-1zM13 5h1v1h-1zM14 4h1v1h-1zM2 2h1v1h-1zM2 6h1v1h-1zM3 1h1v1h-1zM3 7h1v1h-1zM4 0h1v1h-1zM4 8h1v1h-1zM5 0h1v1h-1zM5 9h1v1h-1zM6 0h1v1h-1zM6 10h1v1h-1zM7 0h1v1h-1zM7 11h1v1h-1zM8 0h1v1h-1zM8 10h1v1h-1zM9 0h1v1h-1zM9 9h1v1h-1z"/><path fill="#9fe3ff" d="M2 3h1v1h-1zM2 5h1v1h-1zM3 2h1v1h-1zM3 3h1v1h-1zM3 5h1v1h-1zM3 6h1v1h-1zM4 1h1v1h-1zM4 2h1v1h-1zM4 3h1v1h-1zM4 5h1v1h-1zM4 6h1v1h-1zM4 7h1v1h-1zM5 1h1v1h-1zM5 3h1v1h-1zM5 5h1v1h-1zM5 6h1v1h-1zM5 7h1v1h-1zM5 8h1v1h-1zM6 5h1v1h-1zM6 6h1v1h-1zM6 7h1v1h-1zM6 8h1v1h-1zM6 9h1v1h-1z"/><path fill="#e6fbff" d="M6 1h1v1h-1zM6 3h1v1h-1zM7 10h1v1h-1zM7 1h1v1h-1zM7 2h1v1h-1zM7 3h1v1h-1zM7 5h1v1h-1zM7 6h1v1h-1zM7 7h1v1h-1zM7 8h1v1h-1zM7 9h1v1h-1zM8 1h1v1h-1zM8 2h1v1h-1zM8 3h1v1h-1z"/><path fill="#5cc3ff" d="M10 1h1v1h-1zM10 2h1v1h-1zM10 3h1v1h-1zM11 2h1v1h-1zM11 3h1v1h-1zM12 3h1v1h-1zM9 1h1v1h-1zM9 2h1v1h-1zM9 3h1v1h-1z"/><path fill="#ffffff" d="M5 2h1v1h-1zM6 2h1v1h-1z"/><path fill="#3aa0f0" d="M1 4h1v1h-1zM10 4h1v1h-1zM11 4h1v1h-1zM12 4h1v1h-1zM13 4h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM5 4h1v1h-1zM6 4h1v1h-1zM7 4h1v1h-1zM8 4h1v1h-1zM9 4h1v1h-1z"/><path fill="#2a74cc" d="M10 5h1v1h-1zM10 6h1v1h-1zM10 7h1v1h-1zM11 5h1v1h-1zM11 6h1v1h-1zM12 5h1v1h-1zM8 5h1v1h-1zM8 6h1v1h-1zM8 7h1v1h-1zM8 8h1v1h-1zM8 9h1v1h-1zM9 5h1v1h-1zM9 6h1v1h-1zM9 7h1v1h-1zM9 8h1v1h-1z"/></svg></div>
           <h3>Refine smarter, not harder</h3>
@@ -1859,6 +1877,10 @@ __SOLVER_JS__
     if (carryDone) { const set = loadDone(); carryDone.forEach(x => set.add(x)); saveJSON(doneKey(), Array.from(set)); carryDone = null; }
     const done = loadDone();
     const groups = new Map();
+    {
+      const tot = a.steps.length, dn = a.steps.filter(st => done.has(stepId(st))).length;
+      if (currentProject() || dn > 0) upsertProject({ done: dn, total: tot });
+    }
     stepIndex = new Map();
     for (const st of a.steps) { if (!groups.has(st.L)) groups.set(st.L, []); groups.get(st.L).push(st); }
     const levels = Array.from(groups.keys()).sort((x, y) => state.view === 'down' ? y - x : x - y);
@@ -2355,6 +2377,52 @@ __SOLVER_JS__
     return `<div class="g-how"><b>In the game</b>${lines.map(x => `<p>${x}</p>`).join('')}</div>`;
   }
 
+  /* ================= my projects ================= */
+  // An item you work on (a tick, the guide, or the star) becomes a project: its settings and progress are kept
+  // and it is listed on the start screen, so several items can be on the go at once.
+  let projects = [];
+  function projectId() { return state.item === 'custom' ? 'custom:' + ((state.custom && state.custom.name) || '') : state.item; }
+  function saveProjects() { saveJSON(STORAGE.projects, projects); }
+  function currentProject() { return state.item ? projects.find(x => x.id === projectId()) : null; }
+  function upsertProject(extra) {
+    if (!state.item) return;
+    const item = resolveItem(); if (!item) return;
+    const id = projectId();
+    let pr = projects.find(x => x.id === id);
+    const snap = JSON.stringify(encodeState(false));
+    if (pr && pr.snap === snap && Object.keys(extra || {}).every(k => pr[k] === extra[k])) return;   // nothing new
+    if (!pr) { pr = { id }; projects.unshift(pr); }
+    Object.assign(pr, { name: item.name, key: state.item === 'custom' ? null : state.item, L: state.L, snap, ts: Date.now() }, extra || {});
+    projects.sort((x, y) => y.ts - x.ts);
+    projects = projects.slice(0, 24);
+    saveProjects();
+  }
+  function removeProject(id) { projects = projects.filter(x => x.id !== id); saveProjects(); }
+  function openProject(id) {
+    const pr = projects.find(x => x.id === id); if (!pr) return;
+    closePicker({ keepHistory: true });
+    pushScreen({}, location.pathname + location.search + '#s=');
+    try { applyState(JSON.parse(pr.snap)); } catch (e) { return; }
+    resetPlan(); pendingScroll = null; revealResults = true;
+    jumpTo(0);
+    renderAll(); scheduleSolve(0);
+  }
+  function projectsHTML() {
+    if (!projects.length) return '';
+    const rows = projects.map((pr, i) => {
+      const pct = pr.total ? Math.round((pr.done || 0) / pr.total * 100) : 0;
+      const icon = pr.key ? iconSVG(pr.key) : '<span class="proj-custom">✦</span>';
+      return `<div class="proj-row ${i === 0 ? 'first' : ''}">` +
+        `<button class="proj-open" type="button" data-action="project-open" data-id="${esc(pr.id)}">${icon}` +
+        `<span class="proj-main"><b>${esc(pr.name)} <small>→ P${pr.L}</small></b>` +
+        `<span class="proj-bar"><i style="width:${pct}%"></i></span>` +
+        `<small>${pr.total ? `${pr.done || 0}/${pr.total} steps done` : 'not started'}${pr.star ? ' · ★' : ''}</small></span>` +
+        `${i === 0 ? '<span class="proj-go">Continue ›</span>' : ''}</button>` +
+        `<button class="proj-x" type="button" data-action="project-remove" data-id="${esc(pr.id)}" aria-label="Remove ${esc(pr.name)} from my projects" title="Remove from my projects">×</button></div>`;
+    }).join('');
+    return `<div class="card projects"><div class="section-title"><h3>My projects</h3><span class="hint">${projects.length} item${projects.length === 1 ? '' : 's'}</span></div><div class="proj-list">${rows}</div></div>`;
+  }
+
   function pickItem(key) {
     state.item = key;
     state.t = {}; state.o = []; state.stock = 0; state.k = {};
@@ -2514,7 +2582,14 @@ __SOLVER_JS__
         break;
       }
       case 'obs-cancel': openObsForm = null; renderResults(); break;
-      case 'guide-open': openGuide(); break;
+      case 'guide-open': upsertProject({}); openGuide(); break;
+      case 'project-open': openProject(el.dataset.id); break;
+      case 'project-remove': removeProject(el.dataset.id); renderResults(); toast('Removed from my projects'); break;
+      case 'project-toggle': {
+        if (currentProject()) { removeProject(projectId()); toast('Removed from my projects'); }
+        else { upsertProject({ star: true }); toast('Added to my projects'); }
+        renderItem(); break;
+      }
       case 'close-guide': closeGuide(); break;
       case 'guide-next': guide.i++; guide.other = false; renderGuide(); break;
       case 'guide-back': guide.i--; guide.other = false; renderGuide(); break;
@@ -2713,6 +2788,7 @@ __SOLVER_JS__
     const date = (ITEM_DB.fetched || '').slice(0, 10);
     ui.dataDate.textContent = `data ${date}`;
     document.querySelectorAll('.dataDate').forEach(el => el.textContent = date);
+    projects = loadJSON(STORAGE.projects, []);
     syncTopbar();
     if (window.ResizeObserver) new ResizeObserver(syncTopbar).observe(document.querySelector('.topbar'));
     restore();
