@@ -112,8 +112,11 @@
   .topbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
   .brand { overflow: hidden; }
   .brand h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  @media (max-width: 390px) { .brand { gap: 10px; } .logo { width: 34px; height: 34px; } .brand p { font-size: 11px; } }
-  @media (max-width: 340px) { .brand p { display: none; } }
+  @media (max-width: 430px) {
+    .brand { gap: 10px; }
+    .brand p { white-space: normal; font-size: 11px; line-height: 1.25; margin-top: 2px; }
+    .brand p span { display: block; white-space: nowrap; }
+  }
   .topbar-actions { display: flex; gap: 8px; flex: 0 0 auto; }
   @media (max-width: 400px) { .topbar-actions { gap: 6px; } .topbar .icon-btn { width: 36px; height: 36px; } }
   .icon-btn {
@@ -553,7 +556,7 @@
     </div>
     <div>
       <h1>PORE</h1>
-      <p>Pixel Odyssey Refinement Engine</p>
+      <p><span>Pixel Odyssey</span> <span>Refinement Engine</span></p>
     </div>
   </div>
   <div class="topbar-actions">
