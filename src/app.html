@@ -629,6 +629,10 @@ __SOLVER_JS__
     ['SHOES', 'Shoes', 'Shoes'], ['SHIELD', 'Shields', 'Shield'], ['RING', 'Rings', 'Ring'], ['AMULET', 'Amulets', 'Amulet'],
     ['NECKLACE', 'Necklaces', 'Necklace'], ['TOOL', 'Tools', 'Tool']];
   const TYPE_SINGULAR = Object.fromEntries(TYPES.map(t => [t[0], t[2]]));
+  // everyday words players type that the wiki's type names do not contain
+  const TYPE_WORDS = { WEAPON: ['weapon', 'sword', 'blade', 'axe', 'staff', 'wand', 'dagger', 'mace', 'bow'], HELMET: ['helmet', 'helm', 'hat', 'head', 'cap', 'hood'],
+    CHEST: ['chest', 'chestplate', 'armor', 'armour', 'body', 'shirt', 'robe'], LEGGEAR: ['leg', 'legs', 'leggear', 'pants', 'greaves', 'trousers'],
+    SHOES: ['shoes', 'boots', 'feet', 'footwear'], SHIELD: ['shield'], RING: ['ring'], AMULET: ['amulet'], NECKLACE: ['necklace', 'neck', 'chain'], TOOL: ['tool', 'pickaxe', 'gloves', 'broom', 'rod'] };
 
   const CATS = {
     combat: { key: 'combat', label: 'Combat', pct: '25%', num: 1, den: 4, f64: 0.25, dec: 0.25, who: 'Attack, Defense, HP, Speed, Luck, Mana, elemental resistance' },
@@ -1438,7 +1442,7 @@ __SOLVER_JS__
     if (picker.type === 'CUSTOM') { renderCustomForm(); return; }
     const q = picker.q.trim().toLowerCase();
     let list = ITEMS.filter(it => picker.type === 'ALL' || it.type === picker.type);
-    if (q) list = list.filter(it => it.name.toLowerCase().includes(q) || Object.keys(it.stats).some(n => n.toLowerCase().includes(q) || metaFor(n).short.toLowerCase().includes(q)) || (it.affinity || '').toLowerCase().includes(q) || TYPE_SINGULAR[it.type].toLowerCase().includes(q));
+    if (q) list = list.filter(it => it.name.toLowerCase().includes(q) || Object.keys(it.stats).some(n => n.toLowerCase().includes(q) || metaFor(n).short.toLowerCase().includes(q)) || (it.affinity || '').toLowerCase().includes(q) || TYPE_SINGULAR[it.type].toLowerCase().includes(q) || (TYPE_WORDS[it.type] || []).some(w => w.startsWith(q) || q.startsWith(w)));
     if (picker.sort === 'cost') list = list.slice().sort((x, y) => (badges[x.key] == null ? 1e9 : badges[x.key]) - (badges[y.key] == null ? 1e9 : badges[y.key]) || x.name.localeCompare(y.name));
     else list = list.slice().sort((x, y) => x.name.localeCompare(y.name));
     const row = it => `<button class="row ${state.item === it.key ? 'on' : ''}" type="button" data-action="pick" data-key="${it.key}">
