@@ -842,6 +842,9 @@
   .verdict.ok { color: var(--good); background: color-mix(in srgb, var(--good) 12%, transparent); }
   .verdict.diff { color: var(--info); background: color-mix(in srgb, var(--info) 12%, transparent); }
   .verdict.risk { color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); }
+  .verdict.shared { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+  .verdict + .verdict { margin-top: -6px; }
+  .guide-sheet .verdict.shared { margin-top: 10px; }
   .record { display: grid; gap: 10px; margin: 4px 0 12px; }
   .rec-line { display: grid; grid-template-columns: minmax(0, 1fr) 42px; grid-template-areas: "label num" "bar bar" "meta meta"; gap: 4px 10px; align-items: center; }
   .rec-label { grid-area: label; font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1703,6 +1706,18 @@ __SOLVER_JS__
     riskCache.set(key, risky);
     return risky;
   }
+  // recipes whose base is the same item (same level and stats): one pile feeds several recipes
+  function sharedBases(steps) {
+    const key = nd => `${nd.k}|${nd.L}|${nd.s.join(',')}`;
+    const count = new Map();
+    steps.forEach(st => { const k = key(st.base); count.set(k, (count.get(k) || 0) + 1); });
+    const letters = new Map();
+    steps.forEach(st => { const k = key(st.base); if (count.get(k) > 1 && !letters.has(k)) letters.set(k, String.fromCharCode(65 + letters.size % 26)); });
+    return st => { const k = key(st.base); return letters.has(k) ? { letter: letters.get(k), n: count.get(k) } : null; };
+  }
+  function sharedTagHTML(info) {
+    return info ? `<div class="verdict shared" title="The same base item is used in ${info.n} recipes of this plan: take them from one pile">🔗 shared base ${info.letter} · used in ${info.n} recipes</div>` : '';
+  }
   function recordHTML(item, obs) {
     const here = recordStats(obs), all = recordStats(observations);
     const line = (label, r) => {
@@ -1796,6 +1811,7 @@ __SOLVER_JS__
     const levels = Array.from(groups.keys()).sort((x, y) => state.view === 'down' ? y - x : x - y);
     let doneCount = 0;
     let totalSteps = a.steps.length;
+    const sharedOf = sharedBases(a.steps);
     const stepCard = (st, id, extra) => {
       stepIndex.set(id, st);
       const isDone = done.has(id);
@@ -1809,7 +1825,7 @@ __SOLVER_JS__
             <span class="recipe"><span class="mult">×${st.count}</span><span class="op op-blank"></span>${chipHTML(st.base, item, 'base')}<span class="op">+</span>${chipHTML(st.mat, item)}<span class="op">→</span>${chipHTML(st.result, item, 'result', observed)}${extra || ''}</span>
             <button class="obs-btn" type="button" data-action="obs-open" data-step="${esc(id)}" title="Record the in-game result of this refine" aria-label="Record the in-game result"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17z"/><path d="M13.5 6.5l3 3"/></svg></button>
           </label>
-          ${verdict}
+          ${sharedTagHTML(sharedOf(st))}${verdict}
           ${openObsForm === id ? obsFormHTML(id, st, item) : ''}
         </div>`;
     };
@@ -2248,7 +2264,7 @@ __SOLVER_JS__
       const inputs = item.stats.map((x, k) => `<label>${x.short}<input class="num small" type="number" inputmode="numeric" min="1" step="1" value="${st.result.s[k]}" data-guide-input="${k}"></label>`).join('');
       const other = guide.other ? `<div class="guide-other"><div class="obs-title">What did the game give you?</div><div class="obs-inputs">${inputs}</div>` +
         `<div class="btn-row"><button class="btn small primary" type="button" data-action="guide-save">Save &amp; re-plan</button><button class="btn small ghost" type="button" data-action="guide-other">Cancel</button></div></div>` : '';
-      body = anzSays(say) + recipe + guideHowTo(st.L, n) + verdictHTML(item, st) +
+      body = anzSays(say) + recipe + sharedTagHTML(sharedBases(a.steps)(st)) + guideHowTo(st.L, n) + verdictHTML(item, st) +
         `<div class="guide-actions">` +
         (isDone
           ? `<button class="btn primary block" type="button" data-action="guide-skip">Already done ✓ · next step</button><button class="btn small ghost" type="button" data-action="guide-undo">Not done yet</button>`
