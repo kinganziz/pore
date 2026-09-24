@@ -821,7 +821,7 @@
   /* ---------- helper dialogue (start screen): anz speaking, RPG style ---------- */
   .tip { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; max-width: 380px; margin: 24px auto 0; padding: 9px 30px 9px 9px;
     text-align: left; color: var(--text); background: var(--surface-2); border: 1px solid var(--line-2); border-radius: 16px; cursor: pointer; }
-  .tip-portrait { flex: 0 0 auto; width: 52px; height: 52px; display: grid; place-items: end center; }   /* the transparent avatar stands on its own */
+  .tip-portrait { flex: 0 0 auto; width: 52px; height: 52px; display: grid; place-items: center; align-self: center; }   /* the transparent avatar stands on its own */
   .tip-avatar { width: 50px; height: auto; aspect-ratio: 124 / 128; pointer-events: none; -webkit-user-drag: none; }   /* anz's own custom avatar */
   .tip-body { display: grid; gap: 3px; min-width: 0; }
   .tip-name { font-family: var(--display); font-size: 13px; color: var(--accent); letter-spacing: .5px; }
@@ -858,7 +858,7 @@
   .guide-progress { display: grid; grid-template-columns: 1fr auto; gap: 6px; margin: 4px 0 14px; font-size: 13px; color: var(--muted); }
   .guide-progress .track { grid-column: 1 / -1; height: 8px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
   .guide-progress .fill { height: 100%; border-radius: inherit; background: var(--good); transition: width .3s var(--ease); }
-  .talk { display: flex; align-items: flex-start; gap: 12px; padding: 12px; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--line-2); }
+  .talk { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--line-2); }
   .talk .tip-portrait { width: 60px; height: 60px; }
   .talk .tip-avatar { width: 56px; }
   .talk-body { display: grid; gap: 4px; min-width: 0; }
