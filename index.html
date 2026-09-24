@@ -618,8 +618,7 @@
   .app-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 2px 0 16px; }
   .app-actions .btn { width: 100%; white-space: nowrap; }
   .app-actions svg { width: 16px; height: 16px; flex: 0 0 auto; }
-  .font-pick { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: -6px 0 16px; padding-bottom: 14px; border-bottom: 1px solid var(--line-2); color: var(--muted); font-size: 14px; }   /* divider: controls above, help text below */
-  :root[data-skin="pixel"] .font-pick { border-bottom: 2px dashed var(--line); }
+  .font-pick { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: -6px 0 16px; color: var(--muted); font-size: 14px; }
   .font-pick button:first-child { font-family: "Jersey 15", sans-serif; } .font-pick button:last-child { font-family: "VT323", monospace; }
   .info-body b { color: var(--text); }
   .formula { padding: 12px 14px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; line-height: 1.6; text-wrap: balance; }
@@ -911,6 +910,10 @@
   .proj-x { flex: 0 0 auto; width: 34px; border-radius: 12px; border: 1px solid var(--line); background: transparent; color: var(--muted); font-size: 18px; cursor: pointer; }
   .btn.starred { color: var(--gold); border-color: color-mix(in srgb, var(--gold) 45%, var(--line)); }
   :root[data-skin="pixel"] :is(.proj-open, .proj-x) { border: 2px solid var(--line); border-radius: 12px; box-shadow: var(--px-btn); }
+  .data-pick { display: grid; gap: 8px; margin: -6px 0 16px; padding-bottom: 14px; border-bottom: 1px solid var(--line-2); color: var(--muted); font-size: 14px; }
+  .data-btns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .data-btns .btn { width: 100%; }
+  :root[data-skin="pixel"] .data-pick { border-bottom: 2px dashed var(--line); }
 </style>
 </head>
 <body>
@@ -1014,6 +1017,12 @@
       <div class="font-pick"><span>Font</span><div class="seg" role="group" aria-label="Font">
         <button type="button" data-action="font" data-font="jersey">Jersey 15</button><button type="button" data-action="font" data-font="vt323">VT323</button>
       </div></div>
+      <div class="data-pick"><span>Your data</span><div class="data-btns">
+        <button class="btn small" type="button" data-action="backup-save">Save backup</button>
+        <button class="btn small" type="button" data-action="backup-load">Restore</button>
+        <button class="btn small ghost" type="button" data-action="backup-copy">Copy code</button>
+        <button class="btn small ghost" type="button" data-action="backup-paste">Paste code</button>
+      </div><input type="file" id="backupFile" accept=".json,application/json" hidden></div>
       <p>Refining combines two copies of the same item. The <b>base</b> item goes up one level and gains stats from the <b>material</b> item. A "perfect" refine uses two identical items, so a perfect P10 normally eats 512 base items (1 → 2 → 4 → … → 512).</p>
       <p>PORE searches every other way to combine items. Because stat gains are rounded down and every refine adds at least +2, weaker materials often reach the very same stats. The planner keeps only the cheapest way to reach each stat combination at each level and builds up to your target, so the answer is the cheapest plan under the chosen formula.</p>
       <h3>Stat formula (per stat)</h3>
@@ -2853,6 +2862,35 @@ function createSolver() {
     return `<div class="card projects"><div class="section-title"><h3>My projects</h3><span class="hint">${projects.length} item${projects.length === 1 ? '' : 's'}</span></div><div class="proj-list">${rows}</div></div>`;
   }
 
+  /* ================= backup ================= */
+  // Everything PORE keeps lives in this browser's storage under "pore.*": projects, ticks, recorded results,
+  // charms and settings. A backup is those keys in one JSON file (or a copyable code).
+  function backupData() {
+    const data = {};
+    try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith('pore.')) data[k] = localStorage.getItem(k); } } catch (e) { /* ignore */ }
+    return { app: 'PORE', v: 1, saved: new Date().toISOString(), data };
+  }
+  function restoreBackup(obj) {
+    if (!obj || obj.app !== 'PORE' || !obj.data || typeof obj.data !== 'object') { toast('That is not a PORE backup'); return; }
+    const n = Object.keys(obj.data).length;
+    if (!confirm(`Restore this backup (${n} saved entries${obj.saved ? `, from ${obj.saved.slice(0, 10)}` : ''})? It replaces what PORE has on this device.`)) return;
+    try {
+      Object.keys(localStorage).filter(k => k.startsWith('pore.')).forEach(k => localStorage.removeItem(k));
+      for (const [k, v] of Object.entries(obj.data)) if (k.startsWith('pore.') && typeof v === 'string') localStorage.setItem(k, v);
+    } catch (e) { toast('Could not restore: storage is blocked'); return; }
+    toast('Backup restored, reloading…');
+    setTimeout(() => { location.href = location.pathname; }, 500);
+  }
+  function saveBackupFile() {
+    const blob = new Blob([JSON.stringify(backupData(), null, 1)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `pore-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    toast('Backup saved');
+  }
+
   function pickItem(key) {
     state.item = key;
     state.t = {}; state.o = []; state.stock = 0; state.k = {};
@@ -3014,6 +3052,15 @@ function createSolver() {
       case 'obs-cancel': openObsForm = null; renderResults(); break;
       case 'guide-open': upsertProject({}); openGuide(); break;
       case 'project-open': openProject(el.dataset.id); break;
+      case 'backup-save': saveBackupFile(); break;
+      case 'backup-load': document.getElementById('backupFile').click(); break;
+      case 'backup-copy': copy(btoa(unescape(encodeURIComponent(JSON.stringify(backupData())))), 'Backup code copied: keep it somewhere safe'); break;
+      case 'backup-paste': {
+        const code = prompt('Paste your PORE backup code');
+        if (!code) break;
+        try { restoreBackup(JSON.parse(decodeURIComponent(escape(atob(code.trim()))))); } catch (err) { toast('That code is not a PORE backup'); }
+        break;
+      }
       case 'project-remove': removeProject(el.dataset.id); renderResults(); toast('Removed from my projects'); break;
       case 'project-toggle': {
         if (currentProject()) { removeProject(projectId()); toast('Removed from my projects'); }
@@ -3219,6 +3266,11 @@ function createSolver() {
     ui.dataDate.textContent = `data ${date}`;
     document.querySelectorAll('.dataDate').forEach(el => el.textContent = date);
     projects = loadJSON(STORAGE.projects, []);
+    document.getElementById('backupFile').addEventListener('change', e => {
+      const f = e.target.files && e.target.files[0]; e.target.value = '';
+      if (!f) return;
+      f.text().then(t => { try { restoreBackup(JSON.parse(t)); } catch (err) { toast('That file is not a PORE backup'); } });
+    });
     syncTopbar();
     if (window.ResizeObserver) new ResizeObserver(syncTopbar).observe(document.querySelector('.topbar'));
     restore();
