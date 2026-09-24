@@ -645,10 +645,7 @@
     *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
   }
 
-  /* ---------- icon glow: the icon's own colours, dark theme only ---------- */
-  :root:not([data-theme="light"]) :is(.icon-frame.lg, .example, .tile-item, .icon-only, .row .icon-frame, .charm-chip.on) .pixel { filter: url(#icon-glow); }
-  /* the picker has ~240 glowing tiles: off-screen ones skip layout and painting until scrolled near,
-     so a phone only ever filters the tiles on screen */
+  /* the picker has ~240 tiles: off-screen ones skip layout and painting until scrolled near */
   .tile-item { content-visibility: auto; contain-intrinsic-size: auto 104px; }
   .icon-only { content-visibility: auto; contain-intrinsic-size: auto 64px; }
   .sheet .row { content-visibility: auto; contain-intrinsic-size: auto 66px; }
@@ -779,14 +776,6 @@
 </style>
 </head>
 <body>
-<!-- icon glow (after the DLM pixel theme's "the icon emits, it does not halo"): the icon's own colours, blurred ~3px -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
-  <filter id="icon-glow" x="-30%" y="-30%" width="160%" height="160%" color-interpolation-filters="sRGB">
-    <feGaussianBlur in="SourceGraphic" stdDeviation="2.2" result="b"/>
-    <feComponentTransfer in="b" result="g"><feFuncA type="linear" slope="1.6"/></feComponentTransfer>
-    <feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge>
-  </filter>
-</defs></svg>
 <div class="glow glow-a"></div>
 <div class="glow glow-b"></div>
 
