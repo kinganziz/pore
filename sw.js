@@ -1,5 +1,5 @@
 /* PORE service worker — offline app shell. Generated into /sw.js by tools/build.py. */
-const VERSION = '8614ed47d7';
+const VERSION = 'bf4fdd43ae';
 const SHELL = 'pore-shell-' + VERSION;
 const ICONS = 'pore-icons-v1';
 const SHELL_FILES = ['./', './index.html', './manifest.webmanifest', './icons/sprite.svg', './icons/sprite-modern.svg', './icons/app/icon-192.png', './icons/app/icon-512.png', './icons/app/maskable-512.png'];
@@ -32,8 +32,10 @@ self.addEventListener('fetch', event => {
   }
 
   // App shell: network first (so deploys show up), fall back to the cached copy when offline.
+  // cache: 'no-cache' revalidates with the server (ETag) instead of trusting the 10-minute HTTP cache,
+  // so a refresh always shows the latest deploy.
   event.respondWith(
-    fetch(req).then(res => {
+    fetch(req, { cache: 'no-cache' }).then(res => {
       if (res.ok && (url.pathname.endsWith('/') || url.pathname.endsWith('.html') || url.pathname.endsWith('.webmanifest') || /\/icons\/sprite(-modern)?\.svg$/.test(url.pathname) || url.pathname.includes('/icons/app/'))) {
         const copy = res.clone();
         caches.open(SHELL).then(cache => cache.put(req, copy));

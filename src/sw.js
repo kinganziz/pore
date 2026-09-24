@@ -32,8 +32,10 @@ self.addEventListener('fetch', event => {
   }
 
   // App shell: network first (so deploys show up), fall back to the cached copy when offline.
+  // cache: 'no-cache' revalidates with the server (ETag) instead of trusting the 10-minute HTTP cache,
+  // so a refresh always shows the latest deploy.
   event.respondWith(
-    fetch(req).then(res => {
+    fetch(req, { cache: 'no-cache' }).then(res => {
       if (res.ok && (url.pathname.endsWith('/') || url.pathname.endsWith('.html') || url.pathname.endsWith('.webmanifest') || /\/icons\/sprite(-modern)?\.svg$/.test(url.pathname) || url.pathname.includes('/icons/app/'))) {
         const copy = res.clone();
         caches.open(SHELL).then(cache => cache.put(req, copy));

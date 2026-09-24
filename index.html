@@ -2311,7 +2311,8 @@ function createSolver() {
     window.PORE = { version: '2.0.0', hasWorker: Solver.hasWorker, items: ITEMS.length };
     if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').then(reg => {
+        navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => {
+          reg.update().catch(() => {});
           reg.addEventListener('updatefound', () => {
             const nw = reg.installing;
             if (!nw) return;
