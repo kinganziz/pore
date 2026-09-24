@@ -1013,7 +1013,7 @@
     </div>
     <div class="search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-      <input id="searchInput" type="search" placeholder="Search items or stats" autocomplete="off" autocorrect="off" spellcheck="false">
+      <input id="searchInput" type="search" placeholder="Search items or stats, e.g. atk 10+" autocomplete="off" autocorrect="off" spellcheck="false">
       <button class="clear" type="button" data-action="clear-search" aria-label="Clear search" hidden>×</button>
     </div>
     <div class="filters" id="filters"></div>
@@ -2772,7 +2772,9 @@ function createSolver() {
     if (picker.type === 'CUSTOM') { renderCustomForm(); return; }
     const q = picker.q.trim().toLowerCase();
     let list = ITEMS.filter(it => picker.type === 'ALL' || it.type === picker.type);
-    if (q) list = list.filter(it => it.name.toLowerCase().includes(q) || Object.keys(it.stats).some(n => n.toLowerCase().includes(q) || metaFor(n).short.toLowerCase().includes(q)) || (it.affinity || '').toLowerCase().includes(q) || TYPE_SINGULAR[it.type].toLowerCase().includes(q) || (TYPE_WORDS[it.type] || []).some(w => w.startsWith(q) || q.startsWith(w)));
+    const sq = statQuery(q);
+    if (sq) list = list.filter(it => Object.entries(it.stats).some(([n, v]) => sq.match(n) && sq.test(v)));
+    else if (q) list = list.filter(it => it.name.toLowerCase().includes(q) || Object.keys(it.stats).some(n => n.toLowerCase().includes(q) || metaFor(n).short.toLowerCase().includes(q)) || (it.affinity || '').toLowerCase().includes(q) || TYPE_SINGULAR[it.type].toLowerCase().includes(q) || (TYPE_WORDS[it.type] || []).some(w => w.startsWith(q) || q.startsWith(w)));
     const byCost = (x, y) => (badges[x.key] == null ? 1e9 : badges[x.key]) - (badges[y.key] == null ? 1e9 : badges[y.key]) || x.name.localeCompare(y.name);
     if (picker.sort === 'cost') list = list.slice().sort(byCost);
     else list = list.slice().sort((x, y) => x.name.localeCompare(y.name));
@@ -3077,6 +3079,18 @@ function createSolver() {
       ${row('Refine rates', cats(A), cats(B))}
       <div class="cmp-foot"><button class="btn small" type="button" data-action="compare-pick">Compare with another</button><button class="btn small ghost" type="button" data-action="pick" data-key="${B.it.key}">Plan ${esc(B.it.name)}</button></div>
     </div>`;
+  }
+
+  // "atk 10", "10 atk", "def 20+", "atk>=15", "spd<8": search by a stat's P1 value
+  function statQuery(q) {
+    let m = /^([a-z %.]+?)\s*(>=|<=|>|<|=)?\s*(\d+)\s*(\+)?$/.exec(q), name, op, v;
+    if (m) { name = m[1].trim(); op = m[4] ? '>=' : (m[2] || '='); v = +m[3]; }
+    else if ((m = /^(\d+)\s*(\+)?\s*([a-z %.]+)$/.exec(q))) { name = m[3].trim(); op = m[2] ? '>=' : '='; v = +m[1]; }
+    else return null;
+    const names = Object.keys(STAT_META).filter(n => n.toLowerCase().includes(name) || STAT_META[n][0].toLowerCase() === name || STAT_META[n][0].toLowerCase().startsWith(name));
+    if (!names.length) return null;
+    const cmp = { '=': x => x === v, '>=': x => x >= v, '<=': x => x <= v, '>': x => x > v, '<': x => x < v }[op];
+    return { match: n => names.includes(n), test: cmp };
   }
 
   function pickItem(key) {
