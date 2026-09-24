@@ -6,7 +6,7 @@
 // 1-pixel line, stair-step corners are thinned (pixel-perfect lines) and stray pixels are removed.
 //
 //   npm install                      (once; installs @resvg/resvg-js)
-//   node tools/pixelate.mjs [--size 24]
+//   node tools/pixelate.mjs [--size 20]
 //
 // Writes icons/pixel-modern/<key>.svg and the bundle icons/sprite-pixel-modern.svg.
 
@@ -20,7 +20,7 @@ const SRC = path.join(ROOT, 'icons', 'modern');
 const OUT = path.join(ROOT, 'icons', 'pixel-modern');
 const SPRITE = path.join(ROOT, 'icons', 'sprite-pixel-modern.svg');
 const arg = name => { const i = process.argv.indexOf(name); return i > 0 ? process.argv[i + 1] : null; };
-const GRID = Number(arg('--size') || 24);
+const GRID = Number(arg('--size') || 20);   // 20x20: chunky enough to read as pixel art at 48px, keeps the details
 const SUB = 12;                               // sub-samples per cell side
 const FILL_MIN = 0.42;                        // share of a cell that must be covered to paint it
 

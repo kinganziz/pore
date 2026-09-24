@@ -55,7 +55,7 @@ tools/fetch_wiki.py refreshes data/items.json from the wiki's Obsidian Publish c
 tools/modern_icons.py draws PORE's equipment icons -> icons/modern/ (charms there are hand-drawn)
 tools/check_icons.py checks every item has a drawing in all three icon styles
 tools/pixel_icons.py draws the Classic pixel-art set natively on a 16x16 grid -> icons/pixel/, icons/sprite-pixel.svg
-tools/pixelate.mjs   redraws the HD icons as 24x24 pixel art ("Pixel") -> icons/pixel-modern/, icons/sprite-pixel-modern.svg
+tools/pixelate.mjs   redraws the HD icons as 20x20 pixel art ("Pixel") -> icons/pixel-modern/, icons/sprite-pixel-modern.svg
 tools/build.py      injects data + solver into the template -> index.html
 tools/test_solver.mjs  solver regression tests (reference values + brute-force cross-check)
 ```
@@ -72,7 +72,7 @@ python tools/build.py          # rebuild index.html after editing src/
 node tools/test_solver.mjs     # run the solver tests
 ```
 
-All icons are PORE's own drawings, in three styles: HD (vector drawings in icons/modern/), Pixel (the same drawings as 24x24 pixel art)
+All icons are PORE's own drawings, in three styles: HD (vector drawings in icons/modern/), Pixel (the same drawings as 20x20 pixel art)
 and Classic (a hand-built 16x16 pixel-art set); no artwork from the
 game or the wiki is used or stored.
 Charms (with their success multipliers) are read from the wiki too and drive the automatic batch
