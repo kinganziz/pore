@@ -28,9 +28,8 @@ def main() -> None:
     badges = ROOT / "data" / "badges.json"
     if badges.exists():  # precomputed cheapest-P10 costs (node tools/badges.mjs)
         data["badges"] = json.loads(badges.read_text(encoding="utf-8"))
-    # The page uses the SVG twins in icons/svg/; drop the embedded PNG data URIs to keep it light.
     for entry in data["items"] + data.get("charms", []):
-        entry["icon"] = {"w": entry["icon"]["w"], "h": entry["icon"]["h"]}
+        entry.pop("icon", None)  # artwork comes from icons/sprite.svg (PORE's own drawings)
     solver = SOLVER.read_text(encoding="utf-8")
     if "</script" in solver.lower():
         raise SystemExit("solver.js must not contain '</script'")

@@ -10,8 +10,8 @@ and open `index.html`.
 
 ## Features
 
-- **Every item from the wiki** with icons: weapons, helmets, chest, leg gear, shoes, shields,
-  rings, amulets, necklaces, tools. Custom items (up to 3 stats) are supported too.
+- **Every item from the wiki**: weapons, helmets, chest, leg gear, shoes, shields, rings, amulets,
+  necklaces, tools, each with its own PORE-drawn icon. Custom items (up to 3 stats) are supported too.
 - **1, 2 and 3-stat items.** The solver keeps a Pareto frontier of (cost, stats) per level, so
   multi-stat items are solved exactly, not stat by stat.
 - **Any target**: level P2–P10, perfect stats or "at least X", ignore a stat you do not care about.
@@ -50,8 +50,10 @@ formula lab tells you which one matches your recorded observations.
 index.html          built single-file app (data + solver inlined) — this is what GitHub Pages serves
 src/app.html        app template (UI, styles, worker glue)
 src/solver.js       the solver (pure JS; runs in a Web Worker, on the page, or in Node)
-data/items.json     equipment database generated from the wiki (icons embedded as data URIs)
+data/items.json     equipment + charm database generated from the wiki (names, stats, factors; no artwork)
 tools/fetch_wiki.py refreshes data/items.json from the wiki's Obsidian Publish cache
+tools/modern_icons.py draws PORE's equipment icons -> icons/modern/ (charms there are hand-drawn)
+tools/make_svg.py   bundles icons/modern/ into icons/sprite.svg
 tools/build.py      injects data + solver into the template -> index.html
 tools/test_solver.mjs  solver regression tests (reference values + brute-force cross-check)
 ```
@@ -59,14 +61,14 @@ tools/test_solver.mjs  solver regression tests (reference values + brute-force c
 ## Working on it
 
 ```bash
-python tools/fetch_wiki.py     # refresh item + charm data and icons from the wiki (needs network)
-python tools/make_svg.py       # regenerate icons/svg/*.svg (vector twins of the pixel icons; needs Pillow)
+python tools/fetch_wiki.py     # refresh item + charm data from the wiki (needs network)
+python tools/modern_icons.py   # draw icons for new items (never overwrites hand-edited files)
+python tools/make_svg.py       # bundle icons/modern/ into icons/sprite.svg
 python tools/build.py          # rebuild index.html after editing src/
 node tools/test_solver.mjs     # run the solver tests
 ```
 
-The app renders icons from `icons/svg/` (pixel-exact SVG twins of the wiki's PNGs; the PNG data stays
-in `data/items.json` only as the generator's input and is stripped from `index.html`).
+All icons are PORE's own drawings; no artwork from the game or the wiki is used or stored.
 Charms (with their success multipliers) are read from the wiki too and drive the automatic batch
 splitting in the crafting guide.
 
@@ -74,5 +76,5 @@ Edit `src/app.html` / `src/solver.js`, rebuild, commit `index.html` together wit
 
 ## Credits
 
-Item data and icons belong to Pixel Odyssey and are taken from the official wiki. PORE is a
-fan-made tool.
+Item names and stats belong to Pixel Odyssey and are taken from the official wiki. The icons are
+PORE's own drawings. PORE is a fan-made tool.

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Fetch equippable item data and icons from the Pixel Odyssey wiki.
+"""Fetch equippable item and charm data (names, stats, factors) from the Pixel Odyssey wiki.
+
+Artwork is NOT taken from the wiki: PORE uses its own drawings (icons/modern/, bundled by tools/make_svg.py).
 
 The wiki (https://wiki.pixel-odyssey.app) is an Obsidian Publish site, which
 exposes a JSON index of every vault file plus raw file access:
@@ -8,9 +10,8 @@ exposes a JSON index of every vault file plus raw file access:
   files:  https://publish-01.obsidian.md/access/<site-id>/<vault path>
 
 Every item page under Items/*.md carries YAML frontmatter with the item's
-name, type, slot, stats and icon file name. This script reads that index,
-keeps the equippable items that have stats, downloads their icons and writes
-data/items.json (icons embedded as base64 PNG data URIs).
+name, type, slot and stats. This script reads that index,
+keeps the equippable items that have stats and writes data/items.json.
 
 Usage:
     python tools/fetch_wiki.py            # refresh data/items.json
@@ -18,13 +19,10 @@ Usage:
 """
 from __future__ import annotations
 
-import base64
-import concurrent.futures
 import datetime as dt
 import json
 import pathlib
 import re
-import struct
 import sys
 import urllib.parse
 import urllib.request
@@ -43,7 +41,6 @@ EQUIP_TYPES = [
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CACHE_DIR = ROOT / ".cache"
-ICON_DIR = CACHE_DIR / "icons"
 OUT_FILE = ROOT / "data" / "items.json"
 
 
@@ -120,12 +117,6 @@ def _scalar(value: str):
     return value
 
 
-def png_size(data: bytes) -> tuple[int, int]:
-    if data[:8] != b"\x89PNG\r\n\x1a\n":
-        raise ValueError("not a PNG")
-    return struct.unpack(">II", data[16:24])
-
-
 def main() -> None:
     offline = "--offline" in sys.argv
     CACHE_DIR.mkdir(exist_ok=True)
@@ -134,8 +125,6 @@ def main() -> None:
     if not offline and cache_path.exists():
         cache_path.unlink()  # always refresh the index when online
     index = json.loads(fetch(CACHE_URL, cache_path, offline).decode("utf-8"))
-
-    media = {path.split("/", 1)[1]: path for path in index if path.startswith("Media/")}
 
     def frontmatter_of(path: str, meta: dict) -> dict:
         fm = meta.get("frontmatter")
@@ -164,25 +153,10 @@ def main() -> None:
         if not clean:
             skipped.append(fm.get("name"))
             continue
-        image = re.sub(r"^\[\[|\]\]$", "", str(fm.get("image") or ""))
-        media_path = media.get(image)
-        if not media_path:
-            skipped.append(f"{fm.get('name')} (no icon {image})")
-            continue
-        picked.append((path, fm, clean, media_path))
-
-    def download_icon(entry):
-        path, fm, clean, media_path = entry
-        url = ACCESS_URL + urllib.parse.quote(media_path)
-        dest = ICON_DIR / media_path.split("/", 1)[1]
-        return fetch(url, dest, offline)
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=12) as pool:
-        icon_bytes = list(pool.map(download_icon, picked))
+        picked.append((path, fm, clean))
 
     items = []
-    for (path, fm, clean, media_path), png in zip(picked, icon_bytes):
-        width, height = png_size(png)
+    for path, fm, clean in picked:
         items.append({
             "id": fm.get("id"),
             "name": fm["name"],
@@ -192,11 +166,6 @@ def main() -> None:
             "affinity": fm.get("affinity") or None,
             "desc": (fm.get("description") or "").strip(),
             "page": path[len("Items/"):-len(".md")],
-            "icon": {
-                "w": width,
-                "h": height,
-                "src": "data:image/png;base64," + base64.b64encode(png).decode("ascii"),
-            },
         })
 
     type_order = {t: i for i, t in enumerate(EQUIP_TYPES)}
@@ -211,20 +180,12 @@ def main() -> None:
         factor = fm.get("charm")
         if not isinstance(factor, (int, float)) or factor <= 0:
             continue
-        image = re.sub(r"^\[\[|\]\]$", "", str(fm.get("image") or ""))
-        media_path = media.get(image)
-        if not media_path:
-            skipped.append(f"{fm.get('name')} (charm, no icon {image})")
-            continue
-        png = fetch(ACCESS_URL + urllib.parse.quote(media_path), ICON_DIR / media_path.split("/", 1)[1], offline)
-        width, height = png_size(png)
         charms.append({
             "id": fm.get("id"),
             "name": fm["name"],
             "factor": int(factor),
             "desc": (fm.get("description") or "").strip(),
             "page": path[len("Items/"):-len(".md")],
-            "icon": {"w": width, "h": height, "src": "data:image/png;base64," + base64.b64encode(png).decode("ascii")},
         })
     charms.sort(key=lambda c: (c["factor"], c["name"]))
 
@@ -246,7 +207,7 @@ def main() -> None:
     print(f"wrote {OUT_FILE.relative_to(ROOT)}: {len(items)} items, {OUT_FILE.stat().st_size // 1024} KB")
     print("by type:", ", ".join(f"{k} {v}" for k, v in by_type.items()))
     if skipped:
-        print("skipped (no usable stats/icon):", ", ".join(str(s) for s in skipped))
+        print("skipped (no usable stats):", ", ".join(str(s) for s in skipped))
 
 
 if __name__ == "__main__":
