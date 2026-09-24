@@ -914,6 +914,18 @@
   .data-btns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .data-btns .btn { width: 100%; }
   :root[data-skin="pixel"] .data-pick { border-bottom: 2px dashed var(--line); }
+  .cstock { margin: 0 0 10px; }
+  .cstock summary { cursor: pointer; font-weight: 600; font-size: 14px; list-style: none; }
+  .cstock summary::-webkit-details-marker { display: none; }
+  .cstock summary::before { content: "▸ "; color: var(--accent); }
+  .cstock[open] summary::before { content: "▾ "; }
+  .cstock summary small { display: block; margin-left: 14px; color: var(--muted); font-weight: 400; font-size: 12px; }
+  .cstock-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 6px; margin-top: 10px; }
+  .cstock-grid label { display: grid; justify-items: center; gap: 4px; min-width: 0; }
+  .cstock-grid .pixel { width: 30px; height: 30px; }
+  .cstock-grid span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }   /* name for screen readers; the icon shows it */
+  .cstock-grid input { width: 100%; text-align: center; }
+  .shop-row.short .what small b { color: var(--bad); }
 </style>
 </head>
 <body>
@@ -1103,7 +1115,7 @@ __SOLVER_JS__
   const STAT_NAMES = Array.from(new Set(ITEM_DB.statNames.concat(Object.keys(STAT_META)))).sort();
   const AFF_LABEL = a => a ? a.split('_').map(w => w[0] + w.slice(1).toLowerCase()).join(' + ') : '';
   const EXAMPLES = ['Wooden Sword', 'Soldier Sword', 'Platinum Dagger', 'Purpurite Sword'];
-  const STORAGE = { state: 'pore.state.v3', badges: 'pore.badges.v3', recent: 'pore.recent.v1', theme: 'pore.theme', done: 'pore.done.', obs: 'pore.observations.v1', icons: 'pore.iconstyle.v2', skin: 'pore.skin', font: 'pore.font', projects: 'pore.projects.v1' };
+  const STORAGE = { state: 'pore.state.v3', badges: 'pore.badges.v3', recent: 'pore.recent.v1', theme: 'pore.theme', done: 'pore.done.', obs: 'pore.observations.v1', icons: 'pore.iconstyle.v2', skin: 'pore.skin', font: 'pore.font', projects: 'pore.projects.v1', cstock: 'pore.charmstock.v1' };
   const CHARM_ITEMS = 'Rabbits Foot ×2 · Lucky Egg ×3 · Wishbone ×3 · Clover ×4 · Starfish ×4 · Horseshoe ×5 · Lucky Rose ×6';
   const REPO_URL = 'https://github.com/kinganziz/pore';
   const MODEL_KEYS = new Set(S.models.map(m => m.key));
@@ -1707,7 +1719,62 @@ __SOLVER_JS__
   }
   function factorClass(n) { const len = compactFactor(n).length; return len <= 3 ? '' : len <= 5 ? 'mid' : 'long'; }
   function charmPickerHTML() {
-    return `<div class="charm-chips">${CHARMS.map(c => { const n = state.ch[c.key] || 0; return `<button type="button" class="charm-chip ${n ? 'on' : ''}" data-action="charm" data-key="${c.key}" title="${esc(c.desc || c.name)}">${iconSVG(c.key)}<span class="cn">${esc(c.name)}</span><b>×${c.factor}</b>${n > 1 ? `<i>${n}×</i>` : ''}</button>`; }).join('')}<div class="charm-total ${cfMax() > 0 ? 'on' : ''}" aria-live="polite" title="${cfMax() > 0 ? '×' + fmt(cfMax()) + ' per refine action' : 'No charms equipped'}">${cfMax() > 0 ? `<small>total</small><b class="${factorClass(cfMax())}">×${compactFactor(cfMax())}</b><small>per action</small>` : '<small>total</small><b>—</b><small>none yet</small>'}</div></div>`;
+    return charmStockHTML() + `<div class="charm-chips">${CHARMS.map(c => { const n = state.ch[c.key] || 0; return `<button type="button" class="charm-chip ${n ? 'on' : ''}" data-action="charm" data-key="${c.key}" title="${esc(c.desc || c.name)}">${iconSVG(c.key)}<span class="cn">${esc(c.name)}</span><b>×${c.factor}</b>${n > 1 ? `<i>${n}×</i>` : ''}</button>`; }).join('')}<div class="charm-total ${cfMax() > 0 ? 'on' : ''}" aria-live="polite" title="${cfMax() > 0 ? '×' + fmt(cfMax()) + ' per refine action' : 'No charms equipped'}">${cfMax() > 0 ? `<small>total</small><b class="${factorClass(cfMax())}">×${compactFactor(cfMax())}</b><small>per action</small>` : '<small>total</small><b>—</b><small>none yet</small>'}</div></div>`;
+  }
+  // Which of your equipped charms to use for one refine action that needs factor F: the fewest charms that
+  // reach it (ties: the smallest product, so less is wasted). Charms are used up by each refine action.
+  let comboCache = { key: null, list: [] };
+  function charmCombos() {
+    const key = JSON.stringify(state.ch);
+    if (comboCache.key === key) return comboCache.list;
+    const types = CHARMS.filter(c => (state.ch[c.key] || 0) > 0);
+    const list = [];
+    (function rec(i, use, prod, cnt) {
+      if (i === types.length) { if (cnt) list.push({ use: Object.assign({}, use), prod, cnt }); return; }
+      const c = types[i];
+      for (let k = 0; k <= state.ch[c.key]; k++) {
+        if (k) use[c.key] = k; else delete use[c.key];
+        rec(i + 1, use, prod * Math.pow(c.factor, k), cnt + k);
+      }
+      delete use[c.key];
+    })(0, {}, 1, 0);
+    list.sort((x, y) => x.cnt - y.cnt || x.prod - y.prod);
+    comboCache = { key, list };
+    return list;
+  }
+  function comboFor(F) { return F <= 1 ? { use: {}, prod: 1, cnt: 0 } : (charmCombos().find(c => c.prod >= F) || null); }
+  function comboText(c) {
+    if (!c) return '';
+    if (!c.cnt) return 'no charm needed';
+    return CHARMS.filter(x => c.use[x.key]).map(x => `${c.use[x.key] > 1 ? c.use[x.key] + '× ' : ''}${esc(x.name)}`).join(' + ') + ` (×${compactFactor(c.prod)})`;
+  }
+  // the refine actions of one recipe under the current charm limit: [{ size, times }]
+  function roundsFor(L, n) {
+    const cf = cfMax();
+    if (!(cf > 0)) return [{ size: n, times: 1 }];
+    const per = perAction(L, cf);
+    if (per < 1) return [{ size: 1, times: n }];
+    const k = Math.floor(n / per), rest = n - k * per, r = [];
+    if (k) r.push({ size: per, times: k });
+    if (rest) r.push({ size: rest, times: 1 });
+    return r;
+  }
+  // charms the whole plan uses, per charm (only when charms are equipped)
+  function charmUse(steps) {
+    if (!(charmProduct() > 0)) return null;
+    const tot = {};
+    for (const st of steps) for (const r of roundsFor(st.L, st.count)) {
+      const c = comboFor(batchCharm(st.L, r.size));
+      if (!c) continue;
+      for (const [k, v] of Object.entries(c.use)) tot[k] = (tot[k] || 0) + v * r.times;
+    }
+    return tot;
+  }
+  let charmStock = {};
+  function charmStockHTML() {
+    const any = CHARMS.some(c => charmStock[c.key] > 0);
+    return `<details class="cstock" ${any ? '' : ''}><summary>My charm stock <small>${any ? CHARMS.filter(c => charmStock[c.key] > 0).map(c => `${charmStock[c.key]} ${esc(c.name)}`).join(' · ') : 'optional: how many of each you own'}</small></summary>` +
+      `<div class="cstock-grid">${CHARMS.map(c => `<label title="${esc(c.name)} (×${c.factor})">${iconSVG(c.key)}<span>${esc(c.name)}</span><input class="num small" type="number" inputmode="numeric" min="0" step="1" value="${charmStock[c.key] || ''}" placeholder="0" data-field="cstock" data-key="${c.key}"></label>`).join('')}</div></details>`;
   }
   function charmProduct() { let f = 1, any = false; for (const c of CHARMS) { const n = state.ch[c.key] || 0; if (n > 0) { any = true; f *= Math.pow(c.factor, n); } } return any ? f : 0; }
   // effective max charm factor per action: typed value wins, otherwise the product of equipped charms (0 = unlimited)
@@ -2018,7 +2085,16 @@ __SOLVER_JS__
         <div class="shop">
           <div class="shop-row"><div class="qty">${fmt(toCollect)}</div><div class="what">${esc(item.name)} · unrefined (P1)<small>${stock ? `${fmt(cost)} needed, ${fmt(stock)} already in stock` : 'base items to collect'}</small></div></div>
           ${ownedRows}
-          <div class="shop-row"><div class="qty">${fmtGold(a.gold)}</div><div class="what">gold in refining fees<small>${fmt(a.refines)} refines · charms: ${CHARM_ITEMS}</small></div></div>
+          <div class="shop-row"><div class="qty">${fmtGold(a.gold)}</div><div class="what">gold in refining fees<small>${fmt(a.refines)} refines${charmUse(a.steps) ? '' : ` · charms: ${CHARM_ITEMS}`}</small></div></div>
+          ${(() => {
+            const use = charmUse(a.steps);
+            if (!use) return `<div class="shop-row"><div class="qty">–</div><div class="what">charms<small>equip your charms in the crafting guide to see how many this plan uses</small></div></div>`;
+            const rows = CHARMS.filter(c => use[c.key]).map(c => {
+              const have = charmStock[c.key] || 0, need = use[c.key], short = Math.max(0, need - have);
+              return `<div class="shop-row ${short && have ? 'short' : ''}"><div class="qty">${fmt(need)}</div><div class="what">${esc(c.name)} (×${c.factor})<small>${have ? (short ? `you have ${fmt(have)}: <b>${fmt(short)} short</b>` : `you have ${fmt(have)}: enough`) : 'used up across all refine actions'}</small></div></div>`;
+            }).join('');
+            return rows || `<div class="shop-row"><div class="qty">0</div><div class="what">charms<small>every refine in this plan is 100% without charms</small></div></div>`;
+          })()}
         </div>
       </div>
 
@@ -2370,10 +2446,14 @@ __SOLVER_JS__
       if (per < 1) {
         lines.push(`Your charms add up to <b>×${compactFactor(cf)}</b>, but one item here needs <b>×${one}</b> for 100%. Add a charm, or refine without and accept ${p}%.`);
       } else if (per >= n) {
-        lines.push(`Refine all <b>${n}</b> at once with your charms (×${compactFactor(cf)}): 100% success.`);
+        lines.push(`Refine all <b>${n}</b> at once: 100% success.`);
+        const c = comboFor(batchCharm(L, n));
+        if (c) lines.push(`Equip: <b>${comboText(c)}</b>.`);
       } else {
         const k = Math.ceil(n / per), rest = n - (k - 1) * per;
-        lines.push(`Refine <b>${per} at a time</b> with your charms (×${compactFactor(cf)}): <b>${k} rounds</b>${rest < per ? ` (the last one with ${rest})` : ''}, 100% each.`);
+        lines.push(`Refine <b>${per} at a time</b>: <b>${k} rounds</b>${rest < per ? ` (the last one with ${rest})` : ''}, 100% each.`);
+        const full = comboFor(batchCharm(L, per)), lastC = rest < per ? comboFor(batchCharm(L, rest)) : null;
+        if (full) lines.push(`Equip each round: <b>${comboText(full)}</b>${lastC && comboText(lastC) !== comboText(full) ? `; last round: <b>${comboText(lastC)}</b>` : ''}.`);
       }
     } else if (p >= 100) {
       lines.push(`Success is 100% here, so single refines need no charm.`);
@@ -2749,6 +2829,13 @@ __SOLVER_JS__
     const f = el.dataset.field;
     if (!f) return;
     if (f === 'cat') { state.k[el.dataset.stat] = el.value; last = null; renderItem(); afterChange(); return; }
+    if (f === 'cstock') {
+      const n = Math.max(0, Math.min(99999, Math.round(Number(el.value) || 0)));
+      if (n) charmStock[el.dataset.key] = n; else delete charmStock[el.dataset.key];
+      saveJSON(STORAGE.cstock, charmStock);
+      renderResults(); if (!ui.guideSheet.hidden) renderGuide();
+      return;
+    }
     if (f === 'owned-level') { const o = state.o[Number(el.dataset.idx)]; if (o) { o.L = Number(el.value); afterChange(); } return; }
     if (f === 'step') {
       const snap = undoPoint();
@@ -2859,6 +2946,7 @@ __SOLVER_JS__
     ui.dataDate.textContent = `data ${date}`;
     document.querySelectorAll('.dataDate').forEach(el => el.textContent = date);
     projects = loadJSON(STORAGE.projects, []);
+    charmStock = loadJSON(STORAGE.cstock, {}) || {};
     document.getElementById('backupFile').addEventListener('change', e => {
       const f = e.target.files && e.target.files[0]; e.target.value = '';
       if (!f) return;
