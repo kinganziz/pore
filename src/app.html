@@ -2127,6 +2127,7 @@ __SOLVER_JS__
         <div class="btn-row" style="margin-top:10px">
           <button class="btn small" type="button" data-action="share">${navigator.share ? 'Share plan' : 'Copy link'}</button>
           <button class="btn small ghost" type="button" data-action="copy-plan">Copy as text</button>
+          <button class="btn small ghost" type="button" data-action="share-image">Share image</button>
         </div>
       </div>
 
@@ -2663,6 +2664,64 @@ __SOLVER_JS__
     return { match: n => names.includes(n), test: cmp };
   }
 
+  /* ================= share the plan as an image ================= */
+  function loadImg(src) { return new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = src; }); }
+  async function planImage() {
+    const item = last && last.item, a = last && last.analysis, res = last && last.res;
+    if (!item || !a || !res) return null;
+    const css = getComputedStyle(document.documentElement);
+    const col = n => css.getPropertyValue(n).trim() || '#888';
+    const font = getComputedStyle(document.body).fontFamily;
+    const disp = css.getPropertyValue('--display').trim() || font;
+    const W = 1080, H = 1080, c = document.createElement('canvas');
+    c.width = W; c.height = H;
+    const g = c.getContext('2d');
+    g.fillStyle = col('--bg'); g.fillRect(0, 0, W, H);
+    // card
+    const pad = 70;
+    g.fillStyle = col('--bg-2'); g.strokeStyle = col('--line-2'); g.lineWidth = 4;
+    g.beginPath(); g.roundRect ? g.roundRect(pad, pad, W - pad * 2, H - pad * 2, 48) : g.rect(pad, pad, W - pad * 2, H - pad * 2); g.fill(); g.stroke();
+    // icon
+    const sprite = ICON_STYLES[iconStyle].sprite;
+    const iconSrc = item.key === 'custom' ? null : (sprite ? `icons/pixel-modern/${item.key}.svg?v=${ICONS_V}` : `icons/modern/${item.key}.svg?v=${ICONS_V}`);
+    if (iconSrc) {
+      try { const im = await loadImg(iconSrc); g.imageSmoothingEnabled = !sprite; g.drawImage(im, pad + 60, pad + 60, 200, 200); } catch (e) { /* no icon */ }
+    }
+    g.fillStyle = col('--text'); g.textBaseline = 'alphabetic';
+    const fit = (txt, size, maxW, fam) => { let z = size; do { g.font = `${z}px ${fam}`; z -= 2; } while (g.measureText(txt).width > maxW && z > 20); };
+    fit(item.name, 72, W - pad * 2 - 320, disp); g.fillText(item.name, pad + 300, pad + 150);
+    g.fillStyle = col('--muted'); fit(`to P${state.L}`, 48, 500, font); g.fillText(`to P${state.L}`, pad + 300, pad + 220);
+    // big number
+    g.fillStyle = col('--text'); g.font = `170px ${disp}`; const big = fmt(a.p1); g.fillText(big, pad + 60, pad + 520);
+    const bw = g.measureText(big).width;
+    g.fillStyle = col('--muted'); g.font = `50px ${font}`; g.fillText('base items', pad + 90 + bw, pad + 520);
+    const saved = res.standard - a.p1, pct = res.standard ? Math.round(saved / res.standard * 100) : 0;
+    g.fillStyle = col('--good'); g.font = `54px ${font}`; g.fillText(`instead of ${fmt(res.standard)}: ${pct}% saved`, pad + 60, pad + 610);
+    // result stats
+    const root = res.plan.nodes[res.plan.root];
+    const statTxt = root.s.map((v, i) => `${v} ${item.stats[i].short}`).join(' · ');
+    g.fillStyle = col('--text'); fit(`Result: ${statTxt}`, 48, W - pad * 2 - 120, font); g.fillText(`Result: ${statTxt}`, pad + 60, pad + 720);
+    g.fillStyle = col('--muted'); g.font = `40px ${font}`;
+    g.fillText(`${fmt(a.refines)} refines · ${fmtGold(a.gold)} gold`, pad + 60, pad + 790);
+    // footer
+    g.fillStyle = col('--accent'); g.font = `44px ${disp}`; g.fillText('PORE', pad + 60, H - pad - 60);
+    g.fillStyle = col('--muted'); g.font = `36px ${font}`; g.fillText('kinganziz.github.io/pore', pad + 220, H - pad - 62);
+    return new Promise(ok => c.toBlob(ok, 'image/png'));
+  }
+  async function sharePlanImage() {
+    const blob = await planImage();
+    if (!blob) return;
+    const name = `pore-${(last.item.name || 'plan').toLowerCase().replace(/[^a-z0-9]+/g, '-')}-p${state.L}.png`;
+    const file = new File([blob], name, { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: `PORE: ${last.item.name} to P${state.L}` }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    toast('Image saved');
+  }
+
   function pickItem(key) {
     state.item = key;
     state.t = {}; state.o = []; state.stock = 0; state.k = {};
@@ -2850,6 +2909,7 @@ __SOLVER_JS__
       case 'charm-clear': state.ch = {}; state.cf = 0; haptic(); persist(); renderResults(); break;
       case 'charm': { const k = el.dataset.key; state.cf = 0; state.ch[k] = ((state.ch[k] || 0) + 1) % 4; if (!state.ch[k]) delete state.ch[k]; haptic(); persist(); renderResults(); break; }
       case 'share': share(); break;
+      case 'share-image': sharePlanImage(); break;
       case 'copy-plan': copy(planText(), 'Plan copied'); break;
       case 'obs-open': {
         e.preventDefault();
