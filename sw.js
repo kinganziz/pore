@@ -1,7 +1,7 @@
 /* PORE service worker — offline app shell. Generated into /sw.js by tools/build.py. */
-const VERSION = '4bf20ff0c9';
+const VERSION = 'e23a4389dc';
 const SHELL = 'pore-shell-' + VERSION;
-const SHELL_FILES = ['./', './index.html', './manifest.webmanifest', './icons/sprite-pixel-modern.svg', './icons/app/icon-192.png', './icons/app/icon-512.png', './icons/app/maskable-512.png'];
+const SHELL_FILES = ['./', './index.html', './manifest.webmanifest', './icons/sprite-pixel-modern.svg', './icons/app/anz.png', './icons/app/icon-192.png', './icons/app/icon-512.png', './icons/app/maskable-512.png'];
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(SHELL).then(cache => cache.addAll(SHELL_FILES)).then(() => self.skipWaiting()));
