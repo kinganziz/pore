@@ -110,6 +110,7 @@
   .brand-back { display: none; width: 18px; margin-right: -6px; color: var(--muted); }
   .brand-back svg { width: 18px; height: 18px; display: block; }
   body.has-item .brand-back { display: block; }
+
   .logo { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center;
     background: linear-gradient(135deg, var(--accent), var(--accent-2)); box-shadow: 0 8px 24px rgba(139, 124, 255, .35); flex: 0 0 auto; }
   .logo svg { width: 22px; height: 22px; }
@@ -182,7 +183,8 @@
   .seg button { border: 0; background: transparent; padding: 7px 12px; font-size: 12px; font-weight: 700; color: var(--muted); transition: background .2s, color .2s; }
   .seg button.on { background: var(--text); color: var(--bg); }
   .seg-full { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; margin-bottom: 12px; }
-  .seg-full button { padding: 9px 4px; font-size: 13px; }
+  .seg-full button { padding: 9px 4px; font-size: 13px; white-space: nowrap; }
+  @media (max-width: 350px) { .seg-full button { font-size: 12px; padding: 9px 2px; } }
   .seg.accent button.on { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; }
   .seg.safe button.on { background: linear-gradient(135deg, var(--good), #1fa3c9); color: #06231a; }
 
@@ -379,8 +381,11 @@
   .charm-chip i { position: absolute; top: 4px; left: 5px; font-style: normal; font-size: 10px; min-width: 16px; padding: 0 4px; border-radius: 999px; background: var(--gold); color: var(--gold-ink); font-weight: 800; }
   .charm-chip.on { border-color: rgba(246, 196, 83, .6); background: rgba(246, 196, 83, .12); }
   .charm-total { display: grid; place-content: center; justify-items: center; text-align: center; gap: 1px; min-width: 0; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); padding: 6px 4px; }
-  .charm-total b { font-family: var(--display); font-size: 18px; line-height: 1.1; color: var(--muted); }
-  .charm-total small { font-size: 9.5px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+  .charm-total b { font-family: var(--display); font-size: 18px; line-height: 1.1; color: var(--muted); max-width: 100%; white-space: nowrap; }
+  .charm-total b.mid { font-size: 15px; }
+  .charm-total b.long { font-size: 13px; }
+  .charm-total small { font-size: 9.5px; color: var(--muted); font-weight: 700; line-height: 1.15; max-width: 100%; overflow-wrap: break-word; }
+  .charm-total small:first-child { text-transform: uppercase; letter-spacing: .5px; }
   .charm-total.on { border-color: rgba(246, 196, 83, .55); background: linear-gradient(160deg, rgba(246, 196, 83, .22), rgba(246, 196, 83, .06)); }
   .charm-total.on b { color: var(--gold); }
   .charm-box .charm-row { padding-bottom: 8px; }
@@ -566,6 +571,23 @@
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   .toast.tappable { pointer-events: auto; cursor: pointer; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; }
   .fx { position: fixed; inset: 0; z-index: 40; pointer-events: none; }
+
+  /* ---------- very small phones (<= 350px) ---------- */
+  @media (max-width: 350px) {
+    .topbar { padding-left: 12px; padding-right: 12px; gap: 8px; }
+    .topbar .logo { width: 32px; height: 32px; border-radius: 10px; }
+    .topbar .logo svg { width: 19px; height: 19px; }
+    .topbar .brand { gap: 8px; }
+    .topbar .brand h1 { font-size: 18px; }
+    .topbar .brand p { font-size: 10px; }
+    .topbar .topbar-actions { gap: 5px; }
+    .topbar .icon-btn { width: 34px; height: 34px; }
+    .stat-row { gap: 8px; padding: 10px; }
+    .stat-row .val { min-width: 34px; font-size: 18px; }
+    .cat-select select { max-width: 104px; font-size: 11px; padding: 6px 22px 6px 8px; }
+    .cat-select::after { right: 8px; }
+  }
+  .stat-row .nm { overflow-wrap: anywhere; }
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
@@ -1628,6 +1650,13 @@ function createSolver() {
   // Multi-refine rule (verified in-game): success = base% x charm factor / items in the batch.
   function batchCharm(L, n) { return Math.max(1, Math.ceil(n * 100 / S.SUCCESS[L] - 1e-9)); }
   function perAction(L, factor) { return Math.floor(factor * S.SUCCESS[L] / 100 + 1e-9); }
+  function compactFactor(n) {
+    if (n < 10000) return fmt(n);
+    const units = [[1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'k']];
+    for (const [v, u] of units) if (n >= v) { const x = n / v; return (x >= 100 ? Math.round(x) : x.toFixed(1).replace(/\.0$/, '')) + u; }
+    return fmt(n);
+  }
+  function factorClass(n) { const len = compactFactor(n).length; return len <= 3 ? '' : len <= 5 ? 'mid' : 'long'; }
   function charmProduct() { let f = 1, any = false; for (const c of CHARMS) { const n = state.ch[c.key] || 0; if (n > 0) { any = true; f *= Math.pow(c.factor, n); } } return any ? f : 0; }
   // effective max charm factor per action: typed value wins, otherwise the product of equipped charms (0 = unlimited)
   function cfMax() { return state.cf > 0 ? state.cf : charmProduct(); }
@@ -1644,7 +1673,7 @@ function createSolver() {
     const cf = cfMax();
     if (cf > 0) {
       const per = perAction(L, cf);
-      if (per < 1) txt = `<b style="color:var(--bad)">needs ×${batchCharm(L, 1)} per item, above your ×${cf} max</b>`;
+      if (per < 1) txt = `<b style="color:var(--bad)">needs ×${batchCharm(L, 1)} per item, above your ×${compactFactor(cf)} max</b>`;
       else if (per >= n) txt = `1 action · ×${whole} charm for 100%`;
       else {
         const k = Math.ceil(n / per), rest = n - (k - 1) * per;
@@ -1845,10 +1874,10 @@ function createSolver() {
             <div class="nm">Charms per refine action<small>Tap to equip, tap again to stack. Factors multiply.</small></div>
             ${cfMax() > 0 ? '<button class="mini" type="button" data-action="charm-clear">Clear</button>' : ''}
           </div>
-          <div class="charm-chips">${CHARMS.map(c => { const n = state.ch[c.key] || 0; return `<button type="button" class="charm-chip ${n ? 'on' : ''}" data-action="charm" data-key="${c.key}" title="${esc(c.desc || c.name)}">${iconSVG(c.key)}<span class="cn">${esc(c.name)}</span><b>×${c.factor}</b>${n > 1 ? `<i>×${n}</i>` : ''}</button>`; }).join('')}<div class="charm-total ${cfMax() > 0 ? 'on' : ''}" aria-live="polite">${cfMax() > 0 ? `<small>total</small><b>×${fmt(cfMax())}</b><small>per action</small>` : '<small>total</small><b>—</b><small>none yet</small>'}</div></div>
+          <div class="charm-chips">${CHARMS.map(c => { const n = state.ch[c.key] || 0; return `<button type="button" class="charm-chip ${n ? 'on' : ''}" data-action="charm" data-key="${c.key}" title="${esc(c.desc || c.name)}">${iconSVG(c.key)}<span class="cn">${esc(c.name)}</span><b>×${c.factor}</b>${n > 1 ? `<i>×${n}</i>` : ''}</button>`; }).join('')}<div class="charm-total ${cfMax() > 0 ? 'on' : ''}" aria-live="polite" title="${cfMax() > 0 ? '×' + fmt(cfMax()) + ' per refine action' : 'No charms equipped'}">${cfMax() > 0 ? `<small>total</small><b class="${factorClass(cfMax())}">×${compactFactor(cfMax())}</b><small>per action</small>` : '<small>total</small><b>—</b><small>none yet</small>'}</div></div>
         </div>
         <div class="progress"><span id="progressText">${doneCount}/${totalSteps} done</span><div class="track"><div class="fill" id="progressFill" style="width:${totalSteps ? (doneCount / totalSteps) * 100 : 0}%"></div></div>${doneCount ? `<button class="mini" type="button" data-action="reset-progress">reset</button>` : ''}</div>
-        <div class="note" style="margin:0 0 4px">${state.view === 'jit' ? `One branch at a time: make the two ingredients, refine them, move on. Keeps your inventory small, but it means <b>${actionsView} refine actions</b> and charms are spent per action, so Batches (${actionsBatch} actions) needs far fewer charms.` : `Each card is one recipe: <b>base</b> + material → result, grouped so you can multi-refine the whole batch in one action. <b>${actionsBatch} refine actions</b> in total${cfMax() > 0 ? ` with batches split to fit a ×${cfMax()} charm factor` : '. A batch of N items needs a charm factor of N × 100 ÷ base success; pick your charms above to split batches automatically'}.`} Tap to tick off what you have crafted; use the pencil if the game gave you a different result. P = perfect stats, L = below perfect; every chip shows the exact stats to look for.</div>
+        <div class="note" style="margin:0 0 4px">${state.view === 'jit' ? `One branch at a time: make the two ingredients, refine them, move on. Keeps your inventory small, but it means <b>${actionsView} refine actions</b> and charms are spent per action, so Batches (${actionsBatch} actions) needs far fewer charms.` : `Each card is one recipe: <b>base</b> + material → result, grouped so you can multi-refine the whole batch in one action. <b>${actionsBatch} refine actions</b> in total${cfMax() > 0 ? ` with batches split to fit a ×${compactFactor(cfMax())} charm factor` : '. A batch of N items needs a charm factor of N × 100 ÷ base success; pick your charms above to split batches automatically'}.`} Tap to tick off what you have crafted; use the pencil if the game gave you a different result. P = perfect stats, L = below perfect; every chip shows the exact stats to look for.</div>
         ${guide}
       </div>
 
