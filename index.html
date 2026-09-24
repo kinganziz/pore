@@ -15,7 +15,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%238b7cff'/%3E%3Cstop offset='1' stop-color='%23d16dff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M8 4h16l6 8-14 17L2 12z' fill='url(%23g)'/%3E%3Cpath d='M8 4l4 8 4-8 4 8 4-8M2 12h28M12 12l4 17 4-17' stroke='%23ffffff' stroke-opacity='.55' stroke-width='1.4' fill='none'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Jersey+15&family=Press+Start+2P&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Jersey+15&family=VT323&family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
   :root {
     color-scheme: dark;
@@ -607,6 +607,8 @@
   .app-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 2px 0 16px; }
   .app-actions .btn { width: 100%; white-space: nowrap; }
   .app-actions svg { width: 16px; height: 16px; flex: 0 0 auto; }
+  .font-pick { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: -6px 0 16px; color: var(--muted); font-size: 14px; }
+  .font-pick button:first-child { font-family: "Jersey 15", sans-serif; } .font-pick button:last-child { font-family: "VT323", monospace; }
   .info-body b { color: var(--text); }
   .formula { padding: 12px 14px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; line-height: 1.6; text-wrap: balance; }
   .formula .nw { white-space: nowrap; }   /* wraps between terms on narrow phones instead of scrolling past the rounded corners */
@@ -787,6 +789,9 @@
   :root[data-skin="pixel"] .charm-total b.long { font-size: 14px; }
 
   :root[data-skin="pixel"] .hd-btn { font-size: 9px; letter-spacing: 0; padding: 0 !important; }   /* Press Start 2P is wide */
+  /* reading font option (help page): VT323 instead of Jersey 15; font-size-adjust scales it to the same size */
+  :root[data-font="vt323"], :root[data-font="vt323"][data-skin="pixel"] { --font: "VT323", ui-monospace, monospace; }
+  :root[data-font="vt323"][data-skin="pixel"] { --display: "Press Start 2P", "VT323", monospace; }
 </style>
 </head>
 <body>
@@ -875,6 +880,9 @@
         <button class="btn small" type="button" data-action="reload"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg>Reload app</button>
         <button class="btn small" type="button" data-action="check-update"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Check for update</button>
       </div>
+      <div class="font-pick"><span>Font</span><div class="seg" role="group" aria-label="Font">
+        <button type="button" data-action="font" data-font="jersey">Jersey 15</button><button type="button" data-action="font" data-font="vt323">VT323</button>
+      </div></div>
       <p>Refining combines two copies of the same item. The <b>base</b> item goes up one level and gains stats from the <b>material</b> item. A "perfect" refine uses two identical items, so a perfect P10 normally eats 512 base items (1 → 2 → 4 → … → 512).</p>
       <p>PORE searches every other way to combine items. Because stat gains are rounded down and every refine adds at least +2, weaker materials often reach the very same stats. The planner keeps only the cheapest way to reach each stat combination at each level and builds up to your target, so the answer is the cheapest plan under the chosen formula.</p>
       <h3>Stat formula (per stat)</h3>
@@ -1384,7 +1392,7 @@ function createSolver() {
   const STAT_NAMES = Array.from(new Set(ITEM_DB.statNames.concat(Object.keys(STAT_META)))).sort();
   const AFF_LABEL = a => a ? a.split('_').map(w => w[0] + w.slice(1).toLowerCase()).join(' + ') : '';
   const EXAMPLES = ['Wooden Sword', 'Soldier Sword', 'Platinum Dagger', 'Purpurite Sword'];
-  const STORAGE = { state: 'pore.state.v3', badges: 'pore.badges.v3', recent: 'pore.recent.v1', theme: 'pore.theme', done: 'pore.done.', obs: 'pore.observations.v1', icons: 'pore.iconstyle.v2', skin: 'pore.skin' };
+  const STORAGE = { state: 'pore.state.v3', badges: 'pore.badges.v3', recent: 'pore.recent.v1', theme: 'pore.theme', done: 'pore.done.', obs: 'pore.observations.v1', icons: 'pore.iconstyle.v2', skin: 'pore.skin', font: 'pore.font' };
   const CHARM_ITEMS = 'Rabbits Foot ×2 · Lucky Egg ×3 · Wishbone ×3 · Clover ×4 · Starfish ×4 · Horseshoe ×5 · Lucky Rose ×6';
   const REPO_URL = 'https://github.com/kinganziz/pore';
   const MODEL_KEYS = new Set(S.models.map(m => m.key));
@@ -1745,6 +1753,14 @@ function createSolver() {
   function syncTopbar() {
     const topbar = document.querySelector('.topbar');
     if (topbar) document.documentElement.style.setProperty('--topbar-h', Math.round(topbar.getBoundingClientRect().height) + 'px');
+  }
+  let readFont = 'jersey';
+  function setFont(f) {
+    readFont = f === 'vt323' ? 'vt323' : 'jersey';
+    document.documentElement.setAttribute('data-font', readFont);
+    document.querySelectorAll('[data-action="font"]').forEach(b => b.classList.toggle('on', b.dataset.font === readFont));
+    try { localStorage.setItem(STORAGE.font, readFont); } catch (e) { /* ignore */ }
+    syncTopbar();
   }
   let skin = 'modern';
   function setSkin(next) {
@@ -2512,6 +2528,7 @@ function createSolver() {
       case 'skin': setSkin(skin === 'pixel' ? 'modern' : 'pixel'); toast(skin === 'pixel' ? 'Pixel game theme' : 'Modern theme'); break;
       case 'icon-style': setIconStyle(iconStyle === 'modern' ? 'pixelhd' : 'modern'); toast(ICON_STYLES[iconStyle].label); break;
       case 'reload': location.reload(); break;
+      case 'font': setFont(el.dataset.font); toast(readFont === 'vt323' ? 'Font: VT323' : 'Font: Jersey 15'); break;
       case 'check-update': {
         if (!swReg) { toast('Reloading'); location.reload(); break; }
         toast('Checking for updates…');
@@ -2714,6 +2731,7 @@ function createSolver() {
     try { const saved = localStorage.getItem(STORAGE.icons); iconStyle = ICON_STYLES[saved] ? saved : DEFAULT_ICONS; } catch (e) { /* ignore */ }
     applyLook();
     try { setSkin(localStorage.getItem(STORAGE.skin)); } catch (e) { setSkin('modern'); }
+    try { setFont(localStorage.getItem(STORAGE.font)); } catch (e) { setFont('jersey'); }
     ui.catGrid.innerHTML = Object.values(CATS).map(c => `<div><span>${c.label} <b>${c.pct}</b></span><small>${c.who}</small></div>`).join('');
     const date = (ITEM_DB.fetched || '').slice(0, 10);
     ui.dataDate.textContent = `data ${date}`;
