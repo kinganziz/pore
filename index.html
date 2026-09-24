@@ -371,14 +371,14 @@
   .charm-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; }
   .charm-row .nm, .stock-row .nm { min-width: 0; }
   .charm-row .num, .stock-row .num { flex: 0 0 auto; }
-  .charm-chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; padding: 0 12px 12px; }
+  .charm-chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 6px; padding: 6px 12px 12px; }
   @media (min-width: 560px) { .charm-chips { grid-template-columns: repeat(8, minmax(0, 1fr)); } }
   .charm-chip { position: relative; display: grid; justify-items: center; align-content: start; gap: 4px; min-width: 0; padding: 9px 4px 8px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); font-size: 10.5px; font-weight: 600; line-height: 1.15; text-align: center; transition: transform .12s, background .2s, border-color .2s; }
   .charm-chip:active { transform: scale(.95); }
   .charm-chip .pixel { width: 30px; height: 30px; }
   .charm-chip .cn { display: block; max-width: 100%; font-size: 10px; letter-spacing: -.1px; overflow-wrap: normal; word-break: keep-all; }
-  .charm-chip b { position: absolute; top: 4px; right: 5px; font-size: 10px; color: var(--gold); }
-  .charm-chip i { position: absolute; top: 4px; left: 5px; font-style: normal; font-size: 10px; min-width: 16px; padding: 0 4px; border-radius: 999px; background: var(--gold); color: var(--gold-ink); font-weight: 800; }
+  .charm-chip b { font-size: 10.5px; line-height: 1; color: var(--gold); }
+  .charm-chip i { position: absolute; top: -6px; right: -4px; font-style: normal; font-size: 10px; line-height: 16px; min-width: 20px; padding: 0 5px; border-radius: 999px; background: var(--gold); color: var(--gold-ink); font-weight: 800; box-shadow: 0 2px 6px rgba(0, 0, 0, .35); }
   .charm-chip.on { border-color: rgba(246, 196, 83, .6); background: rgba(246, 196, 83, .12); }
   .charm-total { display: grid; place-content: center; justify-items: center; text-align: center; gap: 1px; min-width: 0; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); padding: 6px 4px; }
   .charm-total b { font-family: var(--display); font-size: 18px; line-height: 1.1; color: var(--muted); max-width: 100%; white-space: nowrap; }
@@ -1876,7 +1876,7 @@ function createSolver() {
             <div class="nm">Charms per refine action<small>Tap to equip, tap again to stack. Factors multiply.</small></div>
             ${cfMax() > 0 ? '<button class="mini" type="button" data-action="charm-clear">Clear</button>' : ''}
           </div>
-          <div class="charm-chips">${CHARMS.map(c => { const n = state.ch[c.key] || 0; return `<button type="button" class="charm-chip ${n ? 'on' : ''}" data-action="charm" data-key="${c.key}" title="${esc(c.desc || c.name)}">${iconSVG(c.key)}<span class="cn">${esc(c.name)}</span><b>×${c.factor}</b>${n > 1 ? `<i>×${n}</i>` : ''}</button>`; }).join('')}<div class="charm-total ${cfMax() > 0 ? 'on' : ''}" aria-live="polite" title="${cfMax() > 0 ? '×' + fmt(cfMax()) + ' per refine action' : 'No charms equipped'}">${cfMax() > 0 ? `<small>total</small><b class="${factorClass(cfMax())}">×${compactFactor(cfMax())}</b><small>per action</small>` : '<small>total</small><b>—</b><small>none yet</small>'}</div></div>
+          <div class="charm-chips">${CHARMS.map(c => { const n = state.ch[c.key] || 0; return `<button type="button" class="charm-chip ${n ? 'on' : ''}" data-action="charm" data-key="${c.key}" title="${esc(c.desc || c.name)}">${iconSVG(c.key)}<span class="cn">${esc(c.name)}</span><b>×${c.factor}</b>${n > 1 ? `<i>${n}×</i>` : ''}</button>`; }).join('')}<div class="charm-total ${cfMax() > 0 ? 'on' : ''}" aria-live="polite" title="${cfMax() > 0 ? '×' + fmt(cfMax()) + ' per refine action' : 'No charms equipped'}">${cfMax() > 0 ? `<small>total</small><b class="${factorClass(cfMax())}">×${compactFactor(cfMax())}</b><small>per action</small>` : '<small>total</small><b>—</b><small>none yet</small>'}</div></div>
         </div>
         <div class="progress"><span id="progressText">${doneCount}/${totalSteps} done</span><div class="track"><div class="fill" id="progressFill" style="width:${totalSteps ? (doneCount / totalSteps) * 100 : 0}%"></div></div>${doneCount ? `<button class="mini" type="button" data-action="reset-progress">reset</button>` : ''}</div>
         <div class="note" style="margin:0 0 4px">${state.view === 'jit' ? `One branch at a time: make the two ingredients, refine them, move on. Keeps your inventory small, but it means <b>${actionsView} refine actions</b> and charms are spent per action, so Batches (${actionsBatch} actions) needs far fewer charms.` : `Each card is one recipe: <b>base</b> + material → result, grouped so you can multi-refine the whole batch in one action. <b>${actionsBatch} refine actions</b> in total${cfMax() > 0 ? ` with batches split to fit a ×${compactFactor(cfMax())} charm factor` : '. A batch of N items needs a charm factor of N × 100 ÷ base success; pick your charms above to split batches automatically'}.`} Tap to tick off what you have crafted; use the pencil if the game gave you a different result. P = perfect stats, L = below perfect; every chip shows the exact stats to look for.</div>
