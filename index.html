@@ -645,6 +645,9 @@
     *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
   }
 
+  /* ---------- icon glow: only on the few icons in focus (never the whole picker grid: filters on
+     hundreds of tiles are what broke painting on Android before); dark theme only ---------- */
+  :root:not([data-theme="light"]) :is(.icon-frame.lg, .example, .tile-item.on, .icon-only.on, .row.on .icon-frame, .charm-chip.on) .pixel { filter: url(#icon-glow); }
   /* =====================================================================================
      Pixel game theme: an option (gamepad button in the header); the modern design above is the default.
      Follows the DLM pixel theme: "Cartridge" palette, Pixelify Sans body + Press Start 2P display,
@@ -740,6 +743,20 @@
   :root[data-skin="pixel"] :is(h1, h2, .hero-num, .stat-row .val, .lvl-head .lv, .hero-label, .tile b) { font-family: var(--display); font-weight: 400; letter-spacing: 0; line-height: 1.3; }
   :root[data-skin="pixel"] h2 { font-size: 13px; }
   :root[data-skin="pixel"] h3 { font-family: var(--display); font-weight: 400; font-size: 11px; line-height: 1.5; letter-spacing: 0; }
+  /* Press Start 2P runs ~1.4x larger than other fonts at the same size: scale every display spot down,
+     and keep the smallest labels (tile costs, chip levels) in the reading font */
+  :root[data-skin="pixel"] :is(.tile-item .tc, .chip b, .cat-grid b) { font-family: var(--font); font-weight: 600; }
+  :root[data-skin="pixel"] .tile-item .tc { font-size: 12px; }
+  :root[data-skin="pixel"] .item-head .name { font-size: 15px; line-height: 1.35; }
+  :root[data-skin="pixel"] .target-summary .big { font-size: 16px; }
+  :root[data-skin="pixel"] .ring .lbl b { font-size: 15px; }
+  :root[data-skin="pixel"] .tile b { font-size: 13px; }
+  :root[data-skin="pixel"] .charm-total b { font-size: 12px; }
+  :root[data-skin="pixel"] :is(.recipe .mult, .row .badge b) { font-size: 11px; }
+  :root[data-skin="pixel"] .shop-row .qty { font-size: 15px; }
+  :root[data-skin="pixel"] :is(.ladder-row .lv, table.ref .lv, .fit-row .score) { font-size: 10px; }
+  :root[data-skin="pixel"] .sheet-head h2 { font-size: 13px; }
+  :root[data-skin="pixel"] :is(.empty h3, .section-title h3) { font-size: 13px; line-height: 1.5; }
   :root[data-skin="pixel"] .brand h1 { font-size: 16px; text-shadow: 3px 3px 0 var(--px-shadow); }
   :root[data-skin="pixel"] .hero-label { font-size: 8px; letter-spacing: .08em; line-height: 1.6; }
   :root[data-skin="pixel"] .hero-num { font-size: clamp(30px, 9vw, 40px); text-shadow: 4px 4px 0 var(--px-shadow); }
@@ -753,10 +770,19 @@
   :root[data-skin="pixel"] .ring circle { stroke-linecap: butt; }
   :root[data-skin="pixel"] .ring svg { filter: none !important; }
   :root[data-skin="pixel"] .search svg { z-index: 1; }
+
   :root[data-skin="pixel"] .hd-btn { font-size: 9px; letter-spacing: 0; padding: 0 !important; }   /* Press Start 2P is wide */
 </style>
 </head>
 <body>
+<!-- icon glow (after the DLM pixel theme's "the icon emits, it does not halo"): the icon's own colours, blurred ~3px -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+  <filter id="icon-glow" x="-30%" y="-30%" width="160%" height="160%" color-interpolation-filters="sRGB">
+    <feGaussianBlur in="SourceGraphic" stdDeviation="2.2" result="b"/>
+    <feComponentTransfer in="b" result="g"><feFuncA type="linear" slope="1.6"/></feComponentTransfer>
+    <feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+</defs></svg>
 <div class="glow glow-a"></div>
 <div class="glow glow-b"></div>
 
