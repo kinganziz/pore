@@ -1,5 +1,5 @@
 /* PORE service worker — offline app shell. Generated into /sw.js by tools/build.py. */
-const VERSION = '5357216c81';
+const VERSION = '5a6a5d0cba';
 const SHELL = 'pore-shell-' + VERSION;
 const ICONS = 'pore-icons-v1';
 const SHELL_FILES = ['./', './index.html', './manifest.webmanifest', './icons/app/icon-192.png', './icons/app/icon-512.png', './icons/app/maskable-512.png'];

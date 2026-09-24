@@ -258,6 +258,7 @@
   .example:active { transform: scale(.96); }
 
   .hero {
+    scroll-margin-top: 74px;
     position: relative; overflow: hidden; padding: 20px;
     background: linear-gradient(var(--surface), var(--surface)) padding-box,
                 linear-gradient(135deg, rgba(139, 124, 255, .7), rgba(209, 109, 255, .15), rgba(55, 211, 154, .5)) border-box;
@@ -1100,6 +1101,7 @@ function createSolver() {
   let lastHeroValue = 0, lastSig = null;
   let stepIndex = new Map();      // step id -> step (from the last render)
   let openObsForm = null;         // step id whose observation form is open
+  let revealResults = false;      // scroll the plan into view after the next solve (mobile)
 
   const esc = s => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
   const fmt = n => Number(n).toLocaleString('en-US');
@@ -1742,6 +1744,13 @@ function createSolver() {
       }
       lastHeroValue = cost;
       lastSig = last.sig;
+      if (revealResults) {
+        revealResults = false;
+        if (!matchMedia('(min-width: 980px)').matches) {
+          const hero = document.querySelector('.hero');
+          if (hero) setTimeout(() => hero.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }), 120);
+        }
+      }
       if (openObsForm) { const f = document.querySelector('[data-obs-form]'); if (f) { const inp = f.querySelector('input'); if (inp) inp.focus(); } }
     });
   }
@@ -1897,6 +1906,7 @@ function createSolver() {
     if (key !== 'custom') { recent = [key].concat(recent.filter(k => k !== key)).slice(0, 5); saveJSON(STORAGE.recent, recent); }
     closePicker();
     renderAll();
+    revealResults = true;
     scheduleSolve(0);
     const item = resolveItem();
     if (item) toast(`Planning ${item.name}`);
