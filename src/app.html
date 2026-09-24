@@ -59,17 +59,18 @@
   }
   :root[data-theme="light"] {
     color-scheme: light;
-    --bg: #f2f3f9;
-    --bg-2: #e8eaf5;
-    --tile: #fafafd; --tile-2: #fefeff; --tile-on: #efedfd;
-    --surface: rgba(255, 255, 255, .78);
-    --surface-2: rgba(255, 255, 255, .95);
-    --surface-3: rgba(20, 24, 60, .07);
-    --line: rgba(20, 24, 60, .1);
-    --line-2: rgba(20, 24, 60, .22);
+    /* softer light theme: blue-grey paper instead of near-white */
+    --bg: #dcdfeb;
+    --bg-2: #d3d7e6;
+    --tile: #e9ebf4; --tile-2: #f1f2f8; --tile-on: #dedaf6;
+    --surface: rgba(240, 242, 249, .72);
+    --surface-2: rgba(246, 247, 252, .85);
+    --surface-3: rgba(20, 24, 60, .08);
+    --line: rgba(20, 24, 60, .13);
+    --line-2: rgba(20, 24, 60, .26);
     --text: #161a2a;
-    --muted: #5b6377;
-    --soft: #8a91a3;
+    --muted: #4f576c;
+    --soft: #7b8296;
     --shadow: 0 20px 50px rgba(20, 24, 60, .14);
   }
 
@@ -327,7 +328,7 @@
                 linear-gradient(135deg, rgba(139, 124, 255, .7), rgba(209, 109, 255, .15), rgba(55, 211, 154, .5)) border-box;
     border: 1px solid transparent;
   }
-  :root[data-theme="light"] .hero { background: linear-gradient(#fff, #fff) padding-box, linear-gradient(135deg, rgba(139, 124, 255, .7), rgba(209, 109, 255, .2), rgba(55, 211, 154, .6)) border-box; }
+  :root[data-theme="light"] .hero { background: linear-gradient(#eef0f7, #eef0f7) padding-box, linear-gradient(135deg, rgba(139, 124, 255, .7), rgba(209, 109, 255, .2), rgba(55, 211, 154, .6)) border-box; }
   .hero::before { content: ""; position: absolute; inset: -40% -20% auto; height: 60%; background: radial-gradient(circle at 30% 50%, rgba(139, 124, 255, .22), transparent 60%); pointer-events: none; }
   .hero-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .hero-label { font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
@@ -691,9 +692,9 @@
     --ease: steps(3, end);
   }
   :root[data-skin="pixel"][data-theme="light"] {
-    --bg: #f1ecdc; --bg-2: #e9e2cc;
-    --surface: #fffaf0; --surface-2: #efe8d4; --surface-3: #e2d9bf;
-    --tile: #fffaf0; --tile-2: #efe8d4; --tile-on: #ffe3dc;
+    --bg: #e3d9bd; --bg-2: #dad0b2;
+    --surface: #efe7d1; --surface-2: #e6dcc2; --surface-3: #d9ceb0;
+    --tile: #efe7d1; --tile-2: #e6dcc2; --tile-on: #f3d6cc;
     --text: #1b1b33; --muted: #5c5c80; --soft: #8a8aa8;
     --accent: #e0474f; --accent-2: #e0474f; --on-accent: #fff;
     --gold: #f0b400; --gold-ink: #1b1b33;
@@ -2095,7 +2096,7 @@ __SOLVER_JS__
   function haptic(ms) { try { if (userTouched && navigator.vibrate) navigator.vibrate(ms || 8); } catch (e) { /* ignore */ } }
   function setTheme(t) {
     document.documentElement.setAttribute('data-theme', t);
-    document.querySelector('meta[name="theme-color"]').setAttribute('content', t === 'light' ? '#f2f3f9' : '#0a0c12');
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', t === 'light' ? '#dcdfeb' : '#0a0c12');
     try { localStorage.setItem(STORAGE.theme, t); } catch (e) { /* ignore */ }
   }
   function renderAll() { renderItem(); renderTarget(); renderOwned(); renderResults(); persist(); }
