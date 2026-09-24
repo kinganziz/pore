@@ -885,6 +885,15 @@
   .g-how p b { color: var(--text); }
   .g-how .charm-chips { margin-top: 10px; }
   :root[data-skin="pixel"] .g-recipe, :root[data-skin="pixel"] .g-how { border: 2px solid var(--line); border-radius: 12px; }
+  .same-formula { margin-top: 12px; padding: 10px 12px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); }
+  .same-formula summary { cursor: pointer; list-style: none; display: grid; gap: 2px; }
+  .same-formula summary::-webkit-details-marker { display: none; }
+  .same-formula summary b::before { content: "▸ "; color: var(--accent); }
+  .same-formula[open] summary b::before { content: "▾ "; }
+  .same-formula summary small { color: var(--muted); font-size: 12px; }
+  .same-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .rec-plus { color: var(--muted); font-weight: 400; font-size: 12px; }
+  :root[data-skin="pixel"] .same-formula { border: 2px solid var(--line); border-radius: 12px; }
 </style>
 </head>
 <body>
@@ -1646,8 +1655,29 @@ function createSolver() {
 
   /* ================= observations ================= */
   function obsKey(item, baseL, base, matL, mat) { return `${item}|${baseL}:${base.join(',')}|${matL}:${mat.join(',')}`; }
-  function obsForItem(key, n) { return observations.filter(o => o.item === key && o.actual.length === n && o.base.length === n); }
-  function overridesFor(item) { return obsForItem(item.key, item.stats.length).map(o => ({ baseL: o.baseL, base: o.base, matL: o.matL, mat: o.mat, actual: o.actual })); }
+  // Items with the same refining formula (same stat categories, same starting values, same order) refine
+  // identically, so recorded results are shared between them.
+  function rateSig(rates) { return rates.map(r => `${r.num}/${r.den}`).join(','); }
+  function fKey(rates, baseL, base, matL, mat) { return `${rateSig(rates)}|${baseL}:${base.join(',')}|${matL}:${mat.join(',')}`; }
+  function obsForFormula(item) {
+    const sig = rateSig(item.rates), n = item.stats.length;
+    return observations.filter(o => o.rates && o.actual.length === n && o.base.length === n && rateSig(o.rates) === sig);
+  }
+  function overridesFor(item) { return obsForFormula(item).map(o => ({ baseL: o.baseL, base: o.base, matL: o.matL, mat: o.mat, actual: o.actual })); }
+  function formulaSigOf(statsList, catOf) { return statsList.map(st => { const c = CATS[catOf(st)]; return `${c.num}/${c.den}:${st.value}`; }).join('|'); }
+  let FORMULA_GROUPS = null;
+  function sameFormulaItems(item) {
+    if (!FORMULA_GROUPS) {
+      FORMULA_GROUPS = new Map();
+      for (const it of ITEMS) {
+        const sig = formulaSigOf(Object.entries(it.stats).map(([name, value]) => ({ name, value })), st => metaFor(st.name).cat);
+        if (!FORMULA_GROUPS.has(sig)) FORMULA_GROUPS.set(sig, []);
+        FORMULA_GROUPS.get(sig).push(it);
+      }
+    }
+    const sig = formulaSigOf(item.stats, st => st.cat);
+    return (FORMULA_GROUPS.get(sig) || []).filter(it => it.key !== item.key);
+  }
   function addObservation(item, step, actual) {
     const key = obsKey(item.key, step.base.L, step.base.s, step.mat.L, step.mat.s);
     observations = observations.filter(o => obsKey(o.item, o.baseL, o.base, o.matL, o.mat) !== key);
@@ -1668,6 +1698,12 @@ function createSolver() {
   }
 
   /* ================= item resolution ================= */
+  function sameFormulaHTML(item) {
+    const same = sameFormulaItems(item);
+    if (!same.length) return '';
+    return `<details class="same-formula"><summary><b>Same refining as ${same.length} other item${same.length === 1 ? '' : 's'}</b><small>same plan, same costs; recorded results count for all of them</small></summary>` +
+      `<div class="same-list">${same.map(it => `<button class="example" type="button" data-action="pick" data-key="${it.key}">${iconSVG(it.key)}${esc(it.name)}</button>`).join('')}</div></details>`;
+  }
   function resolveItem() {
     if (!state.item) return null;
     let raw;
@@ -1935,6 +1971,7 @@ function createSolver() {
       </div>
       <div class="stat-list">${rows}</div>
       ${assumed ? `<div class="assumed-note">Dashed category = not listed on the wiki's refining page, best guess. Change it if you know better.</div>` : ''}
+      ${sameFormulaHTML(item)}
       <div class="item-actions">
         <button class="btn small" type="button" data-action="open-picker">Change item</button>
         ${item.page ? `<a class="btn small ghost" href="https://wiki.pixel-odyssey.app/Items/${encodeURIComponent(item.page)}" target="_blank" rel="noopener">Wiki ↗</a>` : `<button class="btn small ghost" type="button" data-action="edit-custom">Edit stats</button>`}
@@ -2112,8 +2149,8 @@ function createSolver() {
   function isMatch(o) { try { return sameVec(o.actual, S.predict('exact', o.base, o.mat, o.rates)); } catch (e) { return false; } }
   function recordStats(list) { const m = list.filter(isMatch).length; return { total: list.length, match: m, diff: list.length - m }; }
   function verdictHTML(item, st) {
-    const key = obsKey(item.key, st.base.L, st.base.s, st.mat.L, st.mat.s);
-    const o = observations.find(x => obsKey(x.item, x.baseL, x.base, x.matL, x.mat) === key);
+    const key = fKey(item.rates, st.base.L, st.base.s, st.mat.L, st.mat.s);
+    const o = observations.slice().reverse().find(x => x.rates && fKey(x.rates, x.baseL, x.base, x.matL, x.mat) === key);
     if (!o) return '';
     return isMatch(o)
       ? `<div class="verdict ok">✓ matched in-game</div>`
@@ -2157,7 +2194,9 @@ function createSolver() {
         `<span class="rec-num">${r.total ? `${pct}%` : '–'}</span>` +
         `<small>${r.total ? `${r.match} matched · ${r.diff} different · ${r.total} tested` : 'nothing tested yet'}</small></div>`;
     };
-    return `<div class="record">${line(esc(item.name), here)}${all.total !== here.total ? line('All items', all) : ''}</div>`;
+    const others = sameFormulaItems(item).length;
+    const label = others ? `${esc(item.name)} <span class="rec-plus">+ ${others} same-formula item${others === 1 ? '' : 's'}</span>` : esc(item.name);
+    return `<div class="record">${line(label, here)}${all.total !== here.total ? line('All items', all) : ''}</div>`;
   }
 
   function obsFormHTML(id, step, item) {
@@ -2197,8 +2236,8 @@ function createSolver() {
     const standard = res.standard;
     const targetPerfect = req.target.every((t, i) => t === item.chain[state.L][i]);
     const tgtText = req.target.map((t, i) => t == null ? null : `${t} ${item.stats[i].short}`).filter(Boolean).join(' · ');
-    const obs = obsForItem(item.key, item.stats.length);
-    const obsKeys = new Set(obs.map(o => obsKey(o.item, o.baseL, o.base, o.matL, o.mat)));
+    const obs = obsForFormula(item);
+    const obsKeys = new Set(obs.map(o => fKey(o.rates, o.baseL, o.base, o.matL, o.mat)));
     const modelInfo = S.models.find(m => m.key === state.m) || S.models[0];
 
     if (!res.ok || !a) {
@@ -2246,7 +2285,7 @@ function createSolver() {
       stepIndex.set(id, st);
       const isDone = done.has(id);
       if (isDone) doneCount++;
-      const observed = obsKeys.has(obsKey(item.key, st.base.L, st.base.s, st.mat.L, st.mat.s));
+      const observed = obsKeys.has(fKey(item.rates, st.base.L, st.base.s, st.mat.L, st.mat.s));
       const verdict = observed ? verdictHTML(item, st) : isRisky(item, st) ? `<div class="verdict risk" title="The formula variants give different results for this refine">⚠ test this: could land ±1 in-game</div>` : '';
       return `<div class="step ${isDone ? 'done' : ''} ${observed ? 'observed' : ''}" data-step-card="${esc(id)}">
           <label class="step-main">
@@ -2430,7 +2469,7 @@ function createSolver() {
         ${recordHTML(item, obs)}
         <div class="lab-intro">After each refine in-game, tap the pencil on its step: <b>✓ Exactly this</b> if it matched, or enter what you got. A different result re-plans your path and helps pin down the exact formula; "Report on GitHub" shares your record.</div>
         ${suggestion}
-        ${rows ? `<div class="list-title">Observations for ${esc(item.name)}</div><div class="obs-list">${rows}</div>` : ''}
+        ${rows ? `<div class="list-title">Recorded refines${sameFormulaItems(item).length ? ' (shared by all same-formula items)' : ''}</div><div class="obs-list">${rows}</div>` : ''}
         <details class="detail" ${total ? 'open' : ''}>
           <summary>Formula variants${total ? ` · matches out of ${total}` : ''}</summary>
           <div class="fit">${fitRows}</div>
@@ -2681,7 +2720,7 @@ function createSolver() {
         `<button class="btn small ghost" type="button" data-action="guide-back">Back</button></div>`;
     } else {
       const st = steps[guide.i], id = stepId(st), isDone = done.has(id), n = st.count;
-      const risky = !obsForItem(item.key, item.stats.length).some(o => obsKey(o.item, o.baseL, o.base, o.matL, o.mat) === obsKey(item.key, st.base.L, st.base.s, st.mat.L, st.mat.s)) && isRisky(item, st);
+      const risky = !obsForFormula(item).some(o => fKey(o.rates, o.baseL, o.base, o.matL, o.mat) === fKey(item.rates, st.base.L, st.base.s, st.mat.L, st.mat.s)) && isRisky(item, st);
       const rName = nodeName(st.result, item), bName = nodeName(st.base, item), mName = nodeName(st.mat, item);
       const uses = sameNode(st.base, st.mat) ? `${n * 2} × ${bName}` : `${n} × ${bName} and ${n} × ${mName}`;
       const say = `${guide.i === steps.length - 1 ? 'Last one! ' : ''}Next, make <b>${n} × ${rName}</b>.` +
