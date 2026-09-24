@@ -314,6 +314,9 @@
 
   /* guide */
   .progress { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+  .charm-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); margin-bottom: 12px; }
+  .charm-row .nm { font-weight: 600; font-size: 14px; }
+  .charm-row .nm small { display: block; color: var(--muted); font-weight: 500; font-size: 12px; }
   .progress .track { flex: 1; height: 8px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
   .progress .fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--good), var(--accent)); transition: width .5s var(--ease); }
   .lvl-group { margin-top: 14px; }
@@ -633,7 +636,7 @@ __SOLVER_JS__
   const MODEL_KEYS = new Set(S.models.map(m => m.key));
 
   /* ================= state ================= */
-  const state = { item: null, custom: null, L: 10, t: {}, o: [], k: {}, stock: 0, view: 'up', m: 'exact' };
+  const state = { item: null, custom: null, L: 10, t: {}, o: [], k: {}, stock: 0, view: 'up', m: 'exact', cf: 0 };
   const ui = {};
   ['itemBody', 'itemHint', 'targetCard', 'targetBody', 'targetHint', 'ownedCard', 'ownedBody', 'resultsBody', 'pickerSheet', 'pickerBody', 'filters', 'searchInput', 'infoSheet', 'toast', 'fx', 'themeBtn', 'infoBtn', 'catGrid', 'dataDate']
     .forEach(id => ui[id] = document.getElementById(id));
@@ -673,6 +676,7 @@ __SOLVER_JS__
     if (state.stock) s.s = state.stock;
     if (state.view !== 'up') s.v = state.view;
     if (state.m !== 'exact') s.m = state.m;
+    if (state.cf > 0) s.cf = state.cf;
     if (forShare && state.item) {
       const ob = observations.filter(o => o.item === state.item).map(o => [o.baseL, o.base, o.matL, o.mat, o.actual]);
       if (ob.length) s.ob = ob;
@@ -691,6 +695,7 @@ __SOLVER_JS__
     state.stock = Math.max(0, Math.min(99999, Number(s.s) || 0));
     state.view = s.v === 'down' || s.v === 'jit' ? s.v : 'up';
     state.m = typeof s.m === 'string' && MODEL_KEYS.has(s.m) ? s.m : 'exact';
+    state.cf = Math.max(0, Math.min(100000, Math.round(Number(s.cf) || 0)));
     if (Array.isArray(s.ob) && state.item) {
       const item = resolveItem();
       for (const row of s.ob) {
@@ -1027,13 +1032,30 @@ __SOLVER_JS__
   // Multi-refine rule (verified in-game): success = base% x charm factor / items in the batch.
   function batchCharm(L, n) { return Math.max(1, Math.ceil(n * 100 / S.SUCCESS[L] - 1e-9)); }
   function perAction(L, factor) { return Math.floor(factor * S.SUCCESS[L] / 100 + 1e-9); }
+  // number of refine actions a card needs under the user's max charm factor (0 = unlimited)
+  function actionsFor(L, n) {
+    if (!(state.cf > 0)) return 1;
+    const per = perAction(L, state.cf);
+    return per >= 1 ? Math.ceil(n / per) : n;
+  }
   function batchMeta(L, n) {
     const whole = batchCharm(L, n);
-    let txt = n > 1 ? `batch of ${n}: ×${whole} charm for 100%` : `×${whole} charm for 100%`;
-    if (n > 1) {
-      const p6 = perAction(L, 6), p30 = perAction(L, 30);
-      if (p6 >= 1 && p6 < n) txt += ` · ×6 covers ${p6} per action`;
-      if (p30 >= 1 && p30 < n && p30 > p6) txt += `, ×30 covers ${p30}`;
+    let txt;
+    if (state.cf > 0) {
+      const per = perAction(L, state.cf);
+      if (per < 1) txt = `<b style="color:var(--bad)">needs ×${batchCharm(L, 1)} per item, above your ×${state.cf} max</b>`;
+      else if (per >= n) txt = `1 action · ×${whole} charm for 100%`;
+      else {
+        const k = Math.ceil(n / per), rest = n - (k - 1) * per;
+        txt = `<b>${k} actions</b>: ${k - 1 > 0 ? `${k - 1} × ${per} items (×${batchCharm(L, per)} charm)` : ''}${k - 1 > 0 && rest ? ' + ' : ''}${rest ? `${rest} item${rest > 1 ? 's' : ''} (×${batchCharm(L, rest)} charm)` : ''}`;
+      }
+    } else {
+      txt = n > 1 ? `batch of ${n}: ×${whole} charm for 100%` : `×${whole} charm for 100%`;
+      if (n > 1) {
+        const p6 = perAction(L, 6), p30 = perAction(L, 30);
+        if (p6 >= 1 && p6 < n) txt += ` · ×6 covers ${p6} per action`;
+        if (p30 >= 1 && p30 < n && p30 > p6) txt += `, ×30 covers ${p30}`;
+      }
     }
     return `<span class="jit-meta">${txt}</span>`;
   }
@@ -1126,15 +1148,18 @@ __SOLVER_JS__
         </div>`;
     };
     let guide;
+    let actionsBatch = a.steps.reduce((t, st) => t + actionsFor(st.L, st.count), 0);
+    let actionsView = actionsBatch;
     if (state.view === 'jit') {
       const seq = jitSequence(res.plan);
       totalSteps = seq.length;
+      actionsView = seq.reduce((t, st) => t + actionsFor(st.L, st.count), 0);
       const seen = new Map();
       guide = `<div class="steps" style="margin-top:12px">${seq.map(st => {
         const base = stepId(st);
         const n = (seen.get(base) || 0) + 1; seen.set(base, n);
         const cf = charmFactor(st.L);
-        const extra = `<span class="jit-meta">L${st.L} · ${fmt(S.GOLD[st.L])}g · ${S.SUCCESS[st.L]}% · ${st.count > 1 ? `batch of ${st.count}: ` : ''}×${batchCharm(st.L, st.count)} charm for 100%</span>`;
+        const extra = `<span class="jit-meta">L${st.L} · ${fmt(S.GOLD[st.L])}g · ${S.SUCCESS[st.L]}%</span>` + batchMeta(st.L, st.count);
         return stepCard(st, `jit:${base}#${n}`, extra);
       }).join('')}</div>`;
     } else guide = levels.map(L => {
@@ -1212,8 +1237,12 @@ __SOLVER_JS__
             <div class="seg"><button type="button" class="${state.view === 'up' ? 'on' : ''}" data-action="view" data-view="up">Batches</button><button type="button" class="${state.view === 'down' ? 'on' : ''}" data-action="view" data-view="down">Top-down</button><button type="button" class="${state.view === 'jit' ? 'on' : ''}" data-action="view" data-view="jit">Just-in-time</button></div>
           </div>
         </div>
+        <div class="charm-row">
+          <div class="nm">Max charm factor per action<small>Multiply the charms you can equip at once, e.g. Clover ×4 and Horseshoe ×5 = 20. Leave empty for no limit.</small></div>
+          <input class="num" type="number" inputmode="numeric" min="1" step="1" placeholder="∞" value="${state.cf > 0 ? state.cf : ''}" data-field="charmmax" aria-label="Maximum charm factor per refine action">
+        </div>
         <div class="progress"><span id="progressText">${doneCount}/${totalSteps} done</span><div class="track"><div class="fill" id="progressFill" style="width:${totalSteps ? (doneCount / totalSteps) * 100 : 0}%"></div></div>${doneCount ? `<button class="mini" type="button" data-action="reset-progress">reset</button>` : ''}</div>
-        <div class="note" style="margin:0 0 4px">${state.view === 'jit' ? `One branch at a time: make the two ingredients, refine them, move on. Keeps your inventory small, but it means <b>${totalSteps} refine actions</b> and charms are spent per action, so Batches (${a.steps.length} actions) needs far fewer charms.` : `Each card is one recipe: <b>base</b> + material → result, grouped so you can multi-refine the whole batch in one action. <b>${a.steps.length} refine actions</b> in total. A batch of N items needs a charm factor of N × 100 ÷ base success, so split a batch if you lack charms.`} Tap to tick off what you have crafted; use the pencil if the game gave you a different result. P = perfect stats, L = below perfect; every chip shows the exact stats to look for.</div>
+        <div class="note" style="margin:0 0 4px">${state.view === 'jit' ? `One branch at a time: make the two ingredients, refine them, move on. Keeps your inventory small, but it means <b>${actionsView} refine actions</b> and charms are spent per action, so Batches (${actionsBatch} actions) needs far fewer charms.` : `Each card is one recipe: <b>base</b> + material → result, grouped so you can multi-refine the whole batch in one action. <b>${actionsBatch} refine actions</b> in total${state.cf > 0 ? ` with batches split to fit a ×${state.cf} charm factor` : '. A batch of N items needs a charm factor of N × 100 ÷ base success; enter your max charm factor below to split batches automatically'}.`} Tap to tick off what you have crafted; use the pencil if the game gave you a different result. P = perfect stats, L = below perfect; every chip shows the exact stats to look for.</div>
         ${guide}
       </div>
 
@@ -1585,6 +1614,12 @@ __SOLVER_JS__
       const o = state.o[Number(el.dataset.idx)]; if (!o) return;
       const v = Math.round(Number(el.value));
       if (v >= 1) { o.q = Math.min(999, v); persist(); scheduleSolve(350); }
+      return;
+    }
+    if (f === 'charmmax') {
+      state.cf = Math.max(0, Math.min(100000, Math.round(Number(el.value)) || 0));
+      persist();
+      clearTimeout(el._t); el._t = setTimeout(() => renderResults(), 250);
       return;
     }
     if (f === 'stock') {
