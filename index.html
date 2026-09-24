@@ -15,9 +15,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%238b7cff'/%3E%3Cstop offset='1' stop-color='%23d16dff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M8 4h16l6 8-14 17L2 12z' fill='url(%23g)'/%3E%3Cpath d='M8 4l4 8 4-8 4 8 4-8M2 12h28M12 12l4 17 4-17' stroke='%23ffffff' stroke-opacity='.55' stroke-width='1.4' fill='none'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=Pixelify+Sans:wght@400..700&family=Press+Start+2P&display=swap" rel="stylesheet">
-<!-- pixel theme digits: Tiny5 subset (Pixelify Sans draws 2/5 like 8/S) -->
-<link href="https://fonts.googleapis.com/css2?family=Tiny5&display=swap&text=0123456789%25" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=Jersey+15&family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
   :root {
     color-scheme: dark;
@@ -654,7 +652,7 @@
   .sheet .row { content-visibility: auto; contain-intrinsic-size: auto 66px; }
   /* =====================================================================================
      Pixel game theme: an option (gamepad button in the header); the modern design above is the default.
-     Follows the DLM pixel theme: "Cartridge" palette, Pixelify Sans body + Press Start 2P display,
+     Follows the DLM pixel theme: "Cartridge" palette, Jersey 15 body (DLM uses Pixelify Sans, whose 2/5/8 read poorly) + Press Start 2P display,
      rounded corners like the modern theme, hard 3-4px drop shadows, buttons that press onto their
      shadow, a 2x2 dither. Frames only on real containers; rows, headers, tabs and segments stay flat.
      ===================================================================================== */
@@ -673,8 +671,8 @@
     --px-w: 3px;
     --px-btn: 3px 3px 0 0 var(--px-shadow);
     --shadow: none;
-    --font: "Tiny5", "Pixelify Sans", "Segoe UI", system-ui, sans-serif;   /* Tiny5 is loaded for digits only */
-    --display: "Press Start 2P", "Tiny5", "Pixelify Sans", monospace;
+    --font: "Jersey 15", "Segoe UI", system-ui, sans-serif;   /* clearest pixel digits (8, 5, 3) of the fonts tried */
+    --display: "Press Start 2P", "Jersey 15", monospace;
     --ease: steps(3, end);
   }
   :root[data-skin="pixel"][data-theme="light"] {
@@ -693,6 +691,7 @@
   }
   :root[data-skin="pixel"] body {
     font-family: var(--font);
+    font-synthesis: none;   /* single-weight pixel fonts: no smeared fake bold */
     background: repeating-conic-gradient(color-mix(in srgb, var(--text) 4%, transparent) 0 25%, transparent 0 50%) 0 0 / 6px 6px, var(--bg);
   }
   :root[data-skin="pixel"] img, :root[data-skin="pixel"] canvas { image-rendering: pixelated; }
@@ -743,7 +742,7 @@
   :root[data-skin="pixel"] .step-num, :root[data-skin="pixel"] .logo { box-shadow: var(--px-btn) !important; }
   :root[data-skin="pixel"] :is(.pill, .chip, .lvl-head .facts span) { border: 2px solid var(--line); }
 
-  /* ---- type: Press Start 2P for titles, eyebrows and big numbers; Pixelify Sans for reading ---- */
+  /* ---- type: Press Start 2P for titles, eyebrows and big numbers; Jersey 15 for reading ---- */
   :root[data-skin="pixel"] :is(h1, h2, .hero-num, .stat-row .val, .lvl-head .lv, .hero-label, .tile b) { font-family: var(--display); font-weight: 400; letter-spacing: 0; line-height: 1.3; }
   :root[data-skin="pixel"] h2 { font-size: 13px; }
   :root[data-skin="pixel"] h3 { font-family: var(--display); font-weight: 400; font-size: 11px; line-height: 1.5; letter-spacing: 0; }
