@@ -2522,6 +2522,22 @@ __SOLVER_JS__
 
   /* ================= misc ui ================= */
   let toastTimer = null;
+  // Undo: a snapshot of the ticks and recorded results taken just before a change; the toast offers to put it back.
+  function undoPoint() {
+    const key = last && last.sig ? doneKey() : null;
+    return { key, done: key ? loadJSON(key, []) : null, obs: JSON.stringify(observations) };
+  }
+  function toastUndo(msg, snap) {
+    toast(`${msg} · tap to undo`, () => {
+      ui.toast.classList.remove('show'); ui.toast.onclick = null;
+      const obsChanged = snap.obs !== JSON.stringify(observations);
+      if (snap.key) saveJSON(snap.key, snap.done);
+      observations = JSON.parse(snap.obs); saveJSON(STORAGE.obs, observations);
+      if (obsChanged) { last = null; renderItem(); renderTarget(); renderOwned(); persist(); scheduleSolve(0); }
+      else { renderResults(); if (!ui.guideSheet.hidden) renderGuide(); }
+      setTimeout(() => toast('Undone'), 50);
+    }, 4500);
+  }
   function toast(msg, action, ms) {
     ui.toast.textContent = msg; ui.toast.classList.add('show');
     ui.toast.classList.toggle('tappable', !!action);
@@ -2645,12 +2661,14 @@ __SOLVER_JS__
       case 'guide-other': guide.other = !guide.other; renderGuide(); break;
       case 'guide-done': case 'guide-match': {
         const st = guideStep(); if (!st || !last) return;
+        const snap = undoPoint();
         if (act === 'guide-match') addObservation(last.item, st, st.result.s.slice());
         setDone(stepId(st), true); haptic(14);
         guide.i++; guide.other = false;
         if (guide.i >= guideSteps().length) burst();
         renderGuide();
-        toast('Nice! Next step');
+        const back = guide.i - 1;
+        toast('Nice! Next step · tap to undo', () => { ui.toast.onclick = null; ui.toast.classList.remove('show'); if (snap.key) saveJSON(snap.key, snap.done); observations = JSON.parse(snap.obs); saveJSON(STORAGE.obs, observations); guide.i = back; renderResults(); renderGuide(); setTimeout(() => toast('Undone'), 50); }, 4500);
         break;
       }
       case 'guide-save': {
@@ -2658,22 +2676,24 @@ __SOLVER_JS__
         const item = last.item;
         const actual = item.stats.map((x, k) => Math.round(Number((ui.guideBody.querySelector(`[data-guide-input="${k}"]`) || {}).value)));
         if (actual.some(v => !(v > 0))) { toast('Enter every stat'); return; }
+        const snap = undoPoint();
         addObservation(item, st, actual);
         carryDone = loadDone(); carryDone.add(stepId(st));
         carryDone.add(stepId(Object.assign({}, st, { result: Object.assign({}, st.result, { s: actual }) })));   // the same refine, now with the real result
         guide.other = false; guide.resync = true; last = null; haptic(14);
         renderItem(); renderTarget(); renderOwned(); persist(); scheduleSolve(0);
         renderGuide();
-        toast(sameVec(actual, st.result.s) ? 'Recorded: matched ✓' : 'Got it, re-planning from your result');
+        toastUndo(sameVec(actual, st.result.s) ? 'Recorded: matched ✓' : 'Got it, re-planning from your result', snap);
         break;
       }
       case 'obs-match': {
         const step = stepIndex.get(el.dataset.step);
         if (!step || !last) return;
+        const snap = undoPoint();
         addObservation(last.item, step, step.result.s.slice());
         openObsForm = null; haptic(14);
         renderResults(); persist();
-        toast('Recorded: matched ✓');
+        toastUndo('Recorded: matched ✓', snap);
         break;
       }
       case 'obs-save': {
@@ -2684,15 +2704,16 @@ __SOLVER_JS__
         const item = last.item;
         const actual = item.stats.map((st, i) => Math.round(Number((form.querySelector(`[data-obs-input="${i}"]`) || {}).value)));
         if (actual.some(v => !(v > 0))) { toast('Enter every stat'); return; }
+        const snap = undoPoint();
         addObservation(item, step, actual);
         carryDone = loadDone();
         if (carryDone.has(el.dataset.step)) carryDone.add(stepId(Object.assign({}, step, { result: Object.assign({}, step.result, { s: actual }) })));
         openObsForm = null; last = null; haptic(14);
         renderItem(); renderTarget(); renderOwned(); persist(); scheduleSolve(0);
-        toast(sameVec(actual, step.result.s) ? 'Recorded: matches the prediction' : 'Recorded — re-planning with your result');
+        toastUndo(sameVec(actual, step.result.s) ? 'Recorded: matches the prediction' : 'Recorded, re-planning with your result', snap);
         break;
       }
-      case 'obs-remove': removeObservation(el.dataset.id); last = null; renderItem(); renderTarget(); renderOwned(); persist(); scheduleSolve(0); break;
+      case 'obs-remove': { const snap = undoPoint(); removeObservation(el.dataset.id); toastUndo('Record removed', snap); } last = null; renderItem(); renderTarget(); renderOwned(); persist(); scheduleSolve(0); break;
       case 'obs-clear': if (confirm('Delete all recorded observations?')) { observations = []; saveJSON(STORAGE.obs, observations); last = null; renderItem(); renderTarget(); renderOwned(); persist(); scheduleSolve(0); } break;
       case 'obs-report': {
         if (!observations.length) return;
@@ -2730,6 +2751,7 @@ __SOLVER_JS__
     if (f === 'cat') { state.k[el.dataset.stat] = el.value; last = null; renderItem(); afterChange(); return; }
     if (f === 'owned-level') { const o = state.o[Number(el.dataset.idx)]; if (o) { o.L = Number(el.value); afterChange(); } return; }
     if (f === 'step') {
+      const snap = undoPoint();
       const set = loadDone();
       if (el.checked) set.add(el.dataset.step); else set.delete(el.dataset.step);
       saveJSON(doneKey(), Array.from(set));
@@ -2740,6 +2762,7 @@ __SOLVER_JS__
       if (pt) pt.textContent = `${done}/${total} done`;
       if (pf) pf.style.width = `${total ? (done / total) * 100 : 0}%`;
       if (done === total && total) { toast('All steps done — enjoy your refined item!'); burst(); }
+      else toastUndo(el.checked ? 'Step done' : 'Step unticked', snap);
       return;
     }
   });
