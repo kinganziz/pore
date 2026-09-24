@@ -15,7 +15,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%238b7cff'/%3E%3Cstop offset='1' stop-color='%23d16dff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M8 4h16l6 8-14 17L2 12z' fill='url(%23g)'/%3E%3Cpath d='M8 4l4 8 4-8 4 8 4-8M2 12h28M12 12l4 17 4-17' stroke='%23ffffff' stroke-opacity='.55' stroke-width='1.4' fill='none'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=VT323&family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
   :root {
     color-scheme: dark;
@@ -634,6 +634,107 @@
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
   }
+
+  /* =====================================================================================
+     Pixel game theme (default look; the HD switch returns to the modern design above).
+     Palette after Sweetie 16. Square panels with notched pixel corners, 2px outlines,
+     inset bevels, a pixel font and buttons that press down.
+     ===================================================================================== */
+  :root[data-skin="pixel"] {
+    --bg: #1a1c2c; --bg-2: #1f2238;
+    --tile: #262b44; --tile-2: #2f3656; --tile-on: #2f3a6e;
+    --surface: #232842; --surface-2: #2c3354; --surface-3: #3a4468;
+    --line: #0d0e1a; --line-2: #566c86;
+    --text: #f4f4f4; --muted: #94b0c2; --soft: #6f86a0;
+    --accent: #3b5dc9; --accent-2: #3b5dc9;
+    --gold: #ffcd75; --gold-ink: #1a1c2c;
+    --good: #a7f070; --warn: #ffcd75; --bad: #ef7d57; --info: #73eff7;
+    --shadow: none;
+    --r: 0px; --r-sm: 0px;
+    --font: "VT323", ui-monospace, monospace;          /* clear pixel digits (Pixelify's 5 reads as S) */
+    --display: "Press Start 2P", ui-monospace, monospace;
+    --px-edge: #94b0c2;                         /* panel outline */
+    --px-hi: rgba(255, 255, 255, .10);          /* bevel light (top-left) */
+    --px-lo: rgba(0, 0, 0, .38);                /* bevel shade (bottom-right) */
+    --px-n: 3px;                                /* notch size of panel corners */
+  }
+  :root[data-skin="pixel"][data-theme="light"] {
+    --bg: #eee2c0; --bg-2: #e6d6ae;
+    --tile: #fbf2d8; --tile-2: #fff8e6; --tile-on: #dfe6ff;
+    --surface: #fbf2d8; --surface-2: #fff8e6; --surface-3: #efe2bf;
+    --line: #3a2a1c; --line-2: #8a7254;
+    --text: #2a1f14; --muted: #6b5a44; --soft: #95826a;
+    --accent: #3b5dc9; --accent-2: #3b5dc9;
+    --good: #257a3e; --warn: #b86a12; --bad: #b13e53; --info: #257179;
+    --px-edge: #3a2a1c; --px-hi: rgba(255, 255, 255, .6); --px-lo: rgba(90, 60, 20, .22);
+  }
+  :root[data-skin="pixel"] body {
+    font-family: var(--font); letter-spacing: .3px;
+    font-size-adjust: .5;   /* evens out the very different pixel fonts (VT323 runs small, Press Start 2P large) */
+    font-synthesis: none;   /* both fonts have a single weight: no smeared fake bold */
+    background: conic-gradient(from 90deg at 2px 2px, transparent 90deg, rgba(255, 255, 255, .025) 0) 0 0 / 4px 4px, var(--bg);
+  }
+  :root[data-skin="pixel"][data-theme="light"] body { background: conic-gradient(from 90deg at 2px 2px, transparent 90deg, rgba(90, 60, 20, .05) 0) 0 0 / 4px 4px, var(--bg); }
+  :root[data-skin="pixel"] .glow, :root[data-skin="pixel"] .hero::before { display: none; }
+  :root[data-skin="pixel"] *, :root[data-skin="pixel"] *::before, :root[data-skin="pixel"] *::after { border-radius: 0 !important; }
+  :root[data-skin="pixel"] *::-webkit-scrollbar-thumb { background: var(--line-2); }
+  :root[data-skin="pixel"] .card, :root[data-skin="pixel"] .topbar { backdrop-filter: none; -webkit-backdrop-filter: none; }
+  :root[data-skin="pixel"] .topbar { background: var(--bg-2); border-bottom: 3px solid var(--line); box-shadow: 0 3px 0 var(--px-lo); }
+
+  /* ---- pixel panels: notched corners, 2-3px outline, inset bevel ---- */
+  :root[data-skin="pixel"] :is(.card, .hero, .btn, .icon-btn, .seg, .chip-btn, .pick-trigger, .stat-row, .mini, .example, .ladder-row,
+      .charm-chip, .charm-total, .step, .filter, .tile-item, .icon-only, .row, .toast, .icon-frame, .safety, .stepper, .search input,
+      .cat-select select, .formula, .table-wrap, .obs-btn, .fit-row) {
+    --n: 2px;
+    border: 2px solid var(--line) !important;
+    box-shadow: inset 2px 2px 0 var(--px-hi), inset -2px -2px 0 var(--px-lo) !important;
+    clip-path: polygon(0 var(--n), var(--n) var(--n), var(--n) 0, calc(100% - var(--n)) 0, calc(100% - var(--n)) var(--n), 100% var(--n),
+      100% calc(100% - var(--n)), calc(100% - var(--n)) calc(100% - var(--n)), calc(100% - var(--n)) 100%, var(--n) 100%,
+      var(--n) calc(100% - var(--n)), 0 calc(100% - var(--n)));
+  }
+  /* big panels: thicker light outline with a dark gap, like a game window */
+  :root[data-skin="pixel"] :is(.card, .hero) {
+    --n: var(--px-n);
+    border: 3px solid var(--px-edge) !important;
+    box-shadow: inset 0 0 0 2px var(--line), inset 4px 4px 0 var(--px-hi), inset -4px -4px 0 var(--px-lo) !important;
+    background: var(--surface); animation: none;
+  }
+  :root[data-skin="pixel"] .hero { border-color: var(--gold) !important; }
+  :root[data-skin="pixel"] .pick-trigger { border-style: dashed !important; clip-path: none; }
+  :root[data-skin="pixel"] .sheet { border: 0; border-top: 3px solid var(--px-edge); box-shadow: none; }
+  @media (min-width: 720px) { :root[data-skin="pixel"] .sheet { border: 3px solid var(--px-edge); } }
+  :root[data-skin="pixel"] .lvl-head { border-bottom: 2px solid var(--line); }
+
+  /* ---- buttons press down ---- */
+  :root[data-skin="pixel"] :is(.btn, .icon-btn, .chip-btn, .example, .mini, .filter, .tile-item, .icon-only, .row, .charm-chip):active {
+    transform: translateY(2px) !important;
+    box-shadow: inset 2px 2px 0 var(--px-lo) !important;
+  }
+  :root[data-skin="pixel"] :is(.btn.primary, .chip-btn.on, .seg.accent button.on, .step-num, .logo, .hd-btn[aria-pressed="true"], .toast.tappable, .filter.on) {
+    background: var(--accent) !important; color: #fff !important;
+  }
+  :root[data-skin="pixel"] .chip-btn.on.gold, :root[data-skin="pixel"] .chip.perfect b { background: var(--gold) !important; color: var(--gold-ink) !important; }
+  :root[data-skin="pixel"] .seg { background: var(--surface); }
+  :root[data-skin="pixel"] .seg button { border-radius: 0; }
+  :root[data-skin="pixel"] .seg button.on { background: var(--text); color: var(--bg); }
+  :root[data-skin="pixel"] .seg.safe button.on { background: var(--good) !important; color: #10231a; }
+  :root[data-skin="pixel"] :is(.tile-item, .icon-only, .row, .charm-chip, .ladder-row).on { border-color: var(--gold) !important; }
+  :root[data-skin="pixel"] .step-num, :root[data-skin="pixel"] .logo { box-shadow: inset -2px -2px 0 var(--px-lo), inset 2px 2px 0 rgba(255, 255, 255, .25) !important; }
+
+  /* ---- type ---- */
+  :root[data-skin="pixel"] :is(h1, h2, h3, .hero-num, .stat-row .val, .lvl-head .lv) { font-family: var(--display); font-weight: 700; letter-spacing: .5px; }
+  :root[data-skin="pixel"] .hero-num { text-shadow: 3px 3px 0 var(--line); letter-spacing: 0; }
+  :root[data-skin="pixel"] .hero-num small { font-family: var(--font); font-size: 22px; text-shadow: none; white-space: nowrap; }
+  :root[data-skin="pixel"] .ring svg { filter: none !important; }
+  :root[data-skin="pixel"] .search svg { z-index: 1; }
+  :root[data-skin="pixel"][data-theme="light"] :is(.brand h1, .hero-num) { text-shadow: 2px 2px 0 rgba(90, 60, 20, .22); }
+  :root[data-skin="pixel"] .brand h1 { text-shadow: 2px 2px 0 var(--line); }
+  :root[data-skin="pixel"] .formula { font-family: var(--font); }
+
+  /* ---- bars and the saving ring: flat pixel colours ---- */
+  :root[data-skin="pixel"] .bar .opt { background: var(--good); }
+  :root[data-skin="pixel"] .progress .fill { background: var(--good); }
+  :root[data-skin="pixel"] .ring circle { stroke-linecap: butt; }
 </style>
 </head>
 <body>
@@ -656,7 +757,7 @@
       <svg class="ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
       <svg class="ico-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
     </button>
-    <button class="icon-btn hd-btn" type="button" data-action="icon-style" aria-pressed="false" aria-label="HD icons" title="HD icons (smooth drawings instead of pixel art)">HD</button>
+    <button class="icon-btn hd-btn" type="button" data-action="icon-style" aria-pressed="false" aria-label="HD look" title="HD look: modern design and smooth icons instead of the pixel game theme">HD</button>
     <button class="icon-btn" id="infoBtn" type="button" aria-label="How PORE works" title="How it works">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17h.01"/></svg>
     </button>
@@ -1549,7 +1650,7 @@ function createSolver() {
   //   pixelhd -> "Pixel" (default): the drawings as 20x20 pixel art (icons/sprite-pixel-modern.svg)
   //   modern  -> "HD":   the smooth vector drawings, one file each (icons/modern/<key>.svg), shown as <img>;
   //   hundreds of these gradient drawings drawn live through <use> left grey, half-painted tiles on Android Chrome.
-  const ICON_STYLES = { pixelhd: { sprite: 'sprite-pixel-modern', label: 'Pixel icons' }, modern: { label: 'HD icons' } };
+  const ICON_STYLES = { pixelhd: { sprite: 'sprite-pixel-modern', label: 'Pixel look' }, modern: { label: 'HD look' } };
   const DEFAULT_ICONS = 'pixelhd';   // "Pixel"
   let iconStyle = DEFAULT_ICONS;
   const ICONS_V = '41f2195f11';   // content hash of the icon files (tools/build.py): new icons never come from a stale cache
@@ -1558,14 +1659,19 @@ function createSolver() {
     if (!sprite) return `<img class="pixel ${cls || ''}" src="icons/modern/${key}.svg?v=${ICONS_V}" alt="" decoding="async" loading="lazy" draggable="false">`;
     return `<svg class="pixel ${cls || ''}" aria-hidden="true"><use href="icons/${sprite}.svg?v=${ICONS_V}#${key}"/></svg>`;
   }
+  // one switch for the whole look: Pixel = pixel game theme + pixel icons, HD = modern design + HD icons
+  function applyLook() {
+    document.documentElement.setAttribute('data-icons', iconStyle);
+    document.documentElement.setAttribute('data-skin', iconStyle === 'modern' ? 'modern' : 'pixel');
+    syncHdButton();
+  }
   function syncHdButton() {
     const b = document.querySelector('[data-action="icon-style"]');
     if (b) b.setAttribute('aria-pressed', String(iconStyle === 'modern'));
   }
   function setIconStyle(style) {
     iconStyle = ICON_STYLES[style] ? style : DEFAULT_ICONS;
-    document.documentElement.setAttribute('data-icons', iconStyle);
-    syncHdButton();
+    applyLook();
     try { localStorage.setItem(STORAGE.icons, iconStyle); } catch (e) { /* ignore */ }
     renderItem(); renderResults();
     if (!ui.pickerSheet.hidden) { renderFilters(); if (picker.type !== 'CUSTOM') renderPickerList(); }
@@ -2514,8 +2620,7 @@ function createSolver() {
     if (!theme) theme = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
     setTheme(theme);
     try { const saved = localStorage.getItem(STORAGE.icons); iconStyle = ICON_STYLES[saved] ? saved : DEFAULT_ICONS; } catch (e) { /* ignore */ }
-    document.documentElement.setAttribute('data-icons', iconStyle);
-    syncHdButton();
+    applyLook();
     ui.catGrid.innerHTML = Object.values(CATS).map(c => `<div><span>${c.label} <b>${c.pct}</b></span><small>${c.who}</small></div>`).join('');
     const date = (ITEM_DB.fetched || '').slice(0, 10);
     ui.dataDate.textContent = `data ${date}`;
