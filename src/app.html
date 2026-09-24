@@ -64,7 +64,8 @@
   *::-webkit-scrollbar { width: 8px; height: 8px; }
   *::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 999px; }
   *::-webkit-scrollbar-track { background: transparent; }
-  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; overscroll-behavior-y: none; }
+  body { overscroll-behavior-y: none; }
   body {
     margin: 0;
     min-height: 100vh;
@@ -678,6 +679,9 @@
       <p><b>P4</b> means a level-4 item with perfect stats. <b>L4</b> means a level-4 item whose stats are below perfect. Every chip shows the exact stats the item must have, so you can check your inventory against it.</p>
       <h3>Data</h3>
       <p>Items, stats and icons come from the <a href="https://wiki.pixel-odyssey.app/" target="_blank" rel="noopener">official Pixel Odyssey wiki</a> (fetched <span class="dataDate"></span>). Refining rules follow the wiki's <a href="https://wiki.pixel-odyssey.app/Mechanics/Refining" target="_blank" rel="noopener">Refining</a> page and the formula the community verified in-game.</p>
+      <h3>App</h3>
+      <p>Pull-to-refresh is turned off so scrolling never reloads the page by accident. Your item, targets, charms and progress are saved on this device. New versions announce themselves with a "New version ready" message; you can also reload here.</p>
+      <div class="btn-row"><button class="btn small" type="button" data-action="reload">Reload app</button><button class="btn small ghost" type="button" data-action="check-update">Check for update</button></div>
     </div>
   </div>
 </div>
@@ -748,7 +752,9 @@ __SOLVER_JS__
   let lastHeroValue = 0, lastSig = null;
   let stepIndex = new Map();      // step id -> step (from the last render)
   let openObsForm = null;         // step id whose observation form is open
-  let revealResults = false;      // scroll the plan into view after the next solve (mobile)
+  let revealResults = false;
+  let swReg = null;               // service worker registration (for manual update checks)
+  let updateFound = false;      // scroll the plan into view after the next solve (mobile)
 
   const esc = s => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
   const fmt = n => Number(n).toLocaleString('en-US');
@@ -1711,6 +1717,13 @@ __SOLVER_JS__
     const act = el.dataset.action;
     switch (act) {
       case 'home': e.preventDefault(); goHome(); break;
+      case 'reload': location.reload(); break;
+      case 'check-update': {
+        if (!swReg) { toast('Reloading'); location.reload(); break; }
+        toast('Checking for updates…');
+        swReg.update().then(() => { setTimeout(() => { if (!updateFound && !swReg.installing && !swReg.waiting) toast('You have the latest version'); }, 1500); }).catch(() => toast('Could not check (offline?)'));
+        break;
+      }
       case 'open-picker': openPicker(); break;
       case 'close-picker': closePicker(); break;
       case 'close-info': ui.infoSheet.hidden = true; document.body.classList.remove('locked'); ui.infoBtn.focus(); break;
@@ -1919,8 +1932,11 @@ __SOLVER_JS__
     if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => {
+          swReg = reg;
           reg.update().catch(() => {});
+          document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
           reg.addEventListener('updatefound', () => {
+            updateFound = true;
             const nw = reg.installing;
             if (!nw) return;
             nw.addEventListener('statechange', () => {
