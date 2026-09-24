@@ -29,7 +29,7 @@ def main() -> None:
     if badges.exists():  # precomputed cheapest-P10 costs (node tools/badges.mjs)
         data["badges"] = json.loads(badges.read_text(encoding="utf-8"))
     for entry in data["items"] + data.get("charms", []):
-        entry.pop("icon", None)  # artwork comes from icons/sprite.svg (PORE's own drawings)
+        entry.pop("icon", None)  # artwork comes from icons/ (PORE's own drawings)
     solver = SOLVER.read_text(encoding="utf-8")
     if "</script" in solver.lower():
         raise SystemExit("solver.js must not contain '</script'")

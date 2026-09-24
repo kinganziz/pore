@@ -207,6 +207,7 @@
   .icon-frame.lg { width: 72px; height: 72px; border-radius: 18px; }
   .icon-frame.sm { width: 40px; height: 40px; border-radius: 11px; }
   .pixel { display: block; flex: 0 0 auto; }
+  img.pixel { pointer-events: none; -webkit-user-drag: none; -webkit-touch-callout: none; }
   :root[data-icons="pixel"] svg.pixel, :root[data-icons="pixelhd"] svg.pixel { shape-rendering: crispEdges; }
   :root[data-icons="pixelhd"] .charm-chip .pixel { width: 36px; height: 36px; margin: -3px 0; }
   :root[data-icons="pixelhd"] .filter .pixel { width: 24px; height: 24px; }
@@ -645,7 +646,7 @@
       <svg class="ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
       <svg class="ico-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
     </button>
-    <button class="icon-btn" type="button" data-action="icon-style" aria-label="Switch icon style: modern, pixel HD, retro pixel" title="Icon style: modern / pixel HD / retro">
+    <button class="icon-btn" type="button" data-action="icon-style" aria-label="Switch icon style: HD, Pixel, Classic" title="Icon style: HD / Pixel / Classic">
       <svg class="ico-modern" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 5.6L20 11l-5.4 2.4L12 19l-2.6-5.6L4 11l5.4-2.4z"/></svg>
       <svg class="ico-pixel" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="5" height="5"/><rect x="10" y="4" width="5" height="5" opacity=".55"/><rect x="4" y="10" width="5" height="5" opacity=".55"/><rect x="10" y="10" width="5" height="5"/><rect x="16" y="16" width="4" height="4"/></svg>
     </button>
@@ -731,7 +732,7 @@
       <h3>Labels</h3>
       <p><b>P4</b> means a level-4 item with perfect stats. <b>L4</b> means a level-4 item whose stats are below perfect. Every chip shows the exact stats the item must have, so you can check your inventory against it.</p>
       <h3>Data</h3>
-      <p>Items and stats come from the <a href="https://wiki.pixel-odyssey.app/" target="_blank" rel="noopener">official Pixel Odyssey wiki</a>; the icons are PORE's own drawings, in three styles: modern, pixel HD and retro pixel (switch with the ✦ button) (fetched <span class="dataDate"></span>). Refining rules follow the wiki's <a href="https://wiki.pixel-odyssey.app/Mechanics/Refining" target="_blank" rel="noopener">Refining</a> page and the formula the community verified in-game.</p>
+      <p>Items and stats come from the <a href="https://wiki.pixel-odyssey.app/" target="_blank" rel="noopener">official Pixel Odyssey wiki</a>; the icons are PORE's own drawings, in three styles: HD, Pixel and Classic (switch with the ✦ button) (fetched <span class="dataDate"></span>). Refining rules follow the wiki's <a href="https://wiki.pixel-odyssey.app/Mechanics/Refining" target="_blank" rel="noopener">Refining</a> page and the formula the community verified in-game.</p>
       <h3>App</h3>
       <p>Pull-to-refresh is turned off so scrolling never reloads the page by accident. Your item, targets, charms and progress are saved on this device. New versions announce themselves with a "New version ready" message. To refresh, tap the PORE logo on the start screen, or use the button here.</p>
       <div class="btn-row"><button class="btn small" type="button" data-action="reload">Reload app</button><button class="btn small ghost" type="button" data-action="check-update">Check for update</button></div>
@@ -1499,13 +1500,20 @@ function createSolver() {
   }
 
   /* ================= rendering: item ================= */
-  // All icons are PORE's own drawings, in three styles:
-  //   modern  (icons/sprite.svg), pixelhd: the modern drawings as 24x24 pixel art (icons/sprite-pixel-modern.svg),
-  //   pixel:  the retro 16x16 set (icons/sprite-pixel.svg)
-  const ICON_STYLES = { modern: { sprite: 'sprite', label: 'Modern icons' }, pixelhd: { sprite: 'sprite-pixel-modern', label: 'Pixel HD icons' }, pixel: { sprite: 'sprite-pixel', label: 'Retro pixel icons' } };
+  // All icons are PORE's own drawings, in three styles (internal key -> name shown to the user):
+  //   modern  -> "HD":      smooth vector drawings, one file each (icons/modern/<key>.svg), shown as <img>
+  //   pixelhd -> "Pixel":   the same drawings as 24x24 pixel art (icons/sprite-pixel-modern.svg)
+  //   pixel   -> "Classic": the retro 16x16 set (icons/sprite-pixel.svg)
+  // The HD drawings use gradients; drawing hundreds of them live through <use> made Android Chrome leave grey,
+  // half-painted tiles in the item grid, so they load as images, which the browser rasterizes once and reuses.
+  const ICON_STYLES = { modern: { label: 'HD icons' }, pixelhd: { sprite: 'sprite-pixel-modern', label: 'Pixel icons' }, pixel: { sprite: 'sprite-pixel', label: 'Classic icons' } };
   const ICON_ORDER = ['modern', 'pixelhd', 'pixel'];
   let iconStyle = 'modern';
-  function iconSVG(key, cls) { return `<svg class="pixel ${cls || ''}" aria-hidden="true"><use href="icons/${ICON_STYLES[iconStyle].sprite}.svg#${key}"/></svg>`; }
+  function iconSVG(key, cls) {
+    const sprite = ICON_STYLES[iconStyle].sprite;
+    if (!sprite) return `<img class="pixel ${cls || ''}" src="icons/modern/${key}.svg" alt="" decoding="async" loading="lazy" draggable="false">`;
+    return `<svg class="pixel ${cls || ''}" aria-hidden="true"><use href="icons/${sprite}.svg#${key}"/></svg>`;
+  }
   function setIconStyle(style) {
     iconStyle = ICON_STYLES[style] ? style : 'modern';
     document.documentElement.setAttribute('data-icons', iconStyle);
