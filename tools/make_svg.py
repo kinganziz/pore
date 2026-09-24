@@ -68,6 +68,38 @@ def main() -> None:
     (ROOT / "icons" / "sprite.svg").write_text(sprite, encoding="utf-8")
     print(f"wrote {len(entries)} SVG icons to {OUT_DIR.relative_to(ROOT)} ({total // 1024} KB total) and icons/sprite.svg ({len(sprite) // 1024} KB)")
 
+    # Modern set: hand-drawn icons in icons/modern/<key>.svg; items not drawn yet fall back to the pixel symbol.
+    modern_dir = ROOT / "icons" / "modern"
+    modern_symbols, drawn = [], 0
+    for (prefix, entry), pixel_symbol in zip(entries, symbols):
+        key = f"{prefix}{entry['id']}"
+        path = modern_dir / f"{key}.svg"
+        if path.exists():
+            modern_symbols.append(modern_symbol(key, path.read_text(encoding="utf-8")))
+            drawn += 1
+        else:
+            modern_symbols.append(pixel_symbol)
+    modern_sprite = '<svg xmlns="http://www.w3.org/2000/svg" style="display:none">' + "".join(modern_symbols) + "</svg>"
+    (ROOT / "icons" / "sprite-modern.svg").write_text(modern_sprite, encoding="utf-8")
+    print(f"wrote icons/sprite-modern.svg: {drawn}/{len(entries)} modern icons drawn, the rest fall back to pixel art")
+
+
+def modern_symbol(key: str, svg: str) -> str:
+    """Turn a standalone hand-drawn SVG into a <symbol>, namespacing ids so gradients cannot collide."""
+    import re
+
+    svg = re.sub(r"<\?xml[^>]*\?>|<!--.*?-->", "", svg, flags=re.S).strip()
+    open_tag = re.match(r"<svg\b[^>]*>", svg, flags=re.S)
+    if not open_tag:
+        raise SystemExit(f"{key}: not an <svg> document")
+    view = re.search(r'viewBox="([^"]+)"', open_tag.group(0))
+    viewbox = view.group(1) if view else "0 0 64 64"
+    inner = svg[open_tag.end():svg.rfind("</svg>")]
+    inner = re.sub(r'\bid="([^"]+)"', lambda m: f'id="{key}-{m.group(1)}"', inner)
+    inner = re.sub(r"url\(#([^)]+)\)", lambda m: f"url(#{key}-{m.group(1)})", inner)
+    inner = re.sub(r'href="#([^"]+)"', lambda m: f'href="#{key}-{m.group(1)}"', inner)
+    return f'<symbol id="{key}" viewBox="{viewbox}">{inner}</symbol>'
+
 
 if __name__ == "__main__":
     main()

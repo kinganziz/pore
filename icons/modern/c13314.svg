@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bone" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff8ea"/><stop offset=".6" stop-color="#e6d6bb"/><stop offset="1" stop-color="#a8977e"/></linearGradient>
+  </defs>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M32 12 C28 26 20 40 12 52" stroke="#3a3440" stroke-width="10"/>
+    <path d="M32 12 C36 26 44 40 52 52" stroke="#3a3440" stroke-width="10"/>
+    <path d="M32 12 C28 26 20 40 12 52" stroke="url(#bone)" stroke-width="6"/>
+    <path d="M32 12 C36 26 44 40 52 52" stroke="url(#bone)" stroke-width="6"/>
+    <path d="M30 18 C28 26 24 33 20 39" stroke="#ffffff" stroke-width="1.6" opacity=".75"/>
+  </g>
+  <path d="M24 10 C24 5 40 5 40 10 C40 15 35 16 32 16 C29 16 24 15 24 10 Z" fill="url(#bone)" stroke="#3a3440" stroke-width="2"/>
+  <circle cx="11" cy="54" r="4.5" fill="url(#bone)" stroke="#3a3440" stroke-width="2"/>
+  <circle cx="53" cy="54" r="4.5" fill="url(#bone)" stroke="#3a3440" stroke-width="2"/>
+</svg>

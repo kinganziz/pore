@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="steel" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#eef3fb"/><stop offset=".45" stop-color="#a9b6c9"/><stop offset="1" stop-color="#5b667a"/></linearGradient>
+  </defs>
+  <path d="M12 56 L12 30 C12 17 21 8 32 8 C43 8 52 17 52 30 L52 56 L41 56 L41 31 C41 25 37 20 32 20 C27 20 23 25 23 31 L23 56 Z" fill="url(#steel)" stroke="#39414f" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M15 30 C15 19 23 11 32 11 C41 11 49 19 49 30" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity=".6"/>
+  <g fill="#39414f">
+    <rect x="15.5" y="36" width="4" height="4" rx="1"/><rect x="15.5" y="46" width="4" height="4" rx="1"/>
+    <rect x="44.5" y="36" width="4" height="4" rx="1"/><rect x="44.5" y="46" width="4" height="4" rx="1"/>
+    <rect x="21" y="18" width="4" height="4" rx="1" transform="rotate(-40 23 20)"/><rect x="39" y="18" width="4" height="4" rx="1" transform="rotate(40 41 20)"/>
+  </g>
+  <rect x="11" y="53" width="13" height="4" rx="1.5" fill="#5b667a"/><rect x="40" y="53" width="13" height="4" rx="1.5" fill="#5b667a"/>
+</svg>
