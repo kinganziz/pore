@@ -21,6 +21,8 @@
     color-scheme: dark;
     --bg: #0a0c12;
     --bg-2: #101324;
+    /* opaque tile colours for the item picker (--surface / --surface-2 / accent tint flattened onto --bg-2) */
+    --tile: #1b1e2e; --tile-2: #232635; --tile-on: #262743;
     --surface: rgba(255, 255, 255, .045);
     --surface-2: rgba(255, 255, 255, .08);
     --surface-3: rgba(255, 255, 255, .13);
@@ -49,6 +51,7 @@
     color-scheme: light;
     --bg: #f2f3f9;
     --bg-2: #e8eaf5;
+    --tile: #fafafd; --tile-2: #fefeff; --tile-on: #efedfd;
     --surface: rgba(255, 255, 255, .78);
     --surface-2: rgba(255, 255, 255, .95);
     --surface-3: rgba(20, 24, 60, .07);
@@ -564,6 +567,15 @@
   .icon-only.on { border-color: var(--accent); background: rgba(139, 124, 255, .1); }
   .icon-only .pixel { width: 40px; height: 40px; }
   :root[data-icons="pixel"] .icon-only .pixel, :root[data-icons="pixelhd"] .icon-only .pixel { width: 48px; height: 48px; }
+  /* Item picker tiles use opaque colours: on some Android GPUs, hundreds of semi-transparent tiles in the
+     scrolling sheet were painted grey or half grey. Phones show the sheet full screen, so the blur behind it
+     is invisible there and is dropped too. */
+  .sheet .row, .tile-item, .icon-only { background: var(--tile); }
+  .sheet .icon-frame { background: var(--tile-2); }
+  .sheet .row.on, .tile-item.on, .icon-only.on { background: var(--tile-on); }
+  @media (hover: hover) { .sheet .row:hover, .tile-item:hover, .icon-only:hover { background: var(--tile-2); } }
+  @media (hover: none) { .sheet .row:hover, .tile-item:hover, .icon-only:hover { background: var(--tile); } .sheet .row.on:hover, .tile-item.on:hover, .icon-only.on:hover { background: var(--tile-on); } }
+  @media (max-width: 719px) { .sheet-backdrop { backdrop-filter: none; -webkit-backdrop-filter: none; background: var(--bg-2); } }
   .row {
     display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; width: 100%; text-align: left;
     padding: 8px 10px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); transition: background .15s, transform .12s;
