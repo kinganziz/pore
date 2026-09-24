@@ -835,6 +835,19 @@
   :root[data-skin="pixel"] .tip-name { font-size: 10px; font-size-adjust: none; }
   @media (prefers-reduced-motion: reduce) { .tip-next { animation: none; } }
   .credit { color: var(--muted); }
+  /* ---------- in-game record ---------- */
+  .btn.good { background: var(--good); border-color: transparent; color: #06231a; font-weight: 700; }
+  .obs-or { margin: 10px 0 6px; font-size: 12px; color: var(--muted); }
+  .verdict { margin: -4px 12px 10px; padding: 4px 10px; border-radius: 8px; font-size: 12px; text-align: center; }
+  .verdict.ok { color: var(--good); background: color-mix(in srgb, var(--good) 12%, transparent); }
+  .verdict.diff { color: var(--info); background: color-mix(in srgb, var(--info) 12%, transparent); }
+  .record { display: grid; gap: 10px; margin: 4px 0 12px; }
+  .rec-line { display: grid; grid-template-columns: minmax(0, 1fr) 42px; grid-template-areas: "label num" "bar bar" "meta meta"; gap: 4px 10px; align-items: center; }
+  .rec-label { grid-area: label; font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rec-num { grid-area: num; text-align: right; font-family: var(--display); font-weight: 700; color: var(--good); }
+  .rec-bar { grid-area: bar; height: 8px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+  .rec-bar i { display: block; height: 100%; border-radius: inherit; background: var(--good); }
+  .rec-line small { grid-area: meta; color: var(--muted); font-size: 12px; }
 </style>
 </head>
 <body>
@@ -2042,12 +2055,37 @@ function createSolver() {
     return `<span class="jit-meta">${txt}</span>`;
   }
 
+  // in-game record: did the game give what the exact formula predicts?
+  function isMatch(o) { try { return sameVec(o.actual, S.predict('exact', o.base, o.mat, o.rates)); } catch (e) { return false; } }
+  function recordStats(list) { const m = list.filter(isMatch).length; return { total: list.length, match: m, diff: list.length - m }; }
+  function verdictHTML(item, st) {
+    const key = obsKey(item.key, st.base.L, st.base.s, st.mat.L, st.mat.s);
+    const o = observations.find(x => obsKey(x.item, x.baseL, x.base, x.matL, x.mat) === key);
+    if (!o) return '';
+    return isMatch(o)
+      ? `<div class="verdict ok">✓ matched in-game</div>`
+      : `<div class="verdict diff">≠ game gave ${o.actual.map((v, i) => `${v} ${item.stats[i].short}`).join(' · ')}</div>`;
+  }
+  function recordHTML(item, obs) {
+    const here = recordStats(obs), all = recordStats(observations);
+    const line = (label, r) => {
+      const pct = r.total ? Math.round(r.match / r.total * 100) : 0;
+      return `<div class="rec-line"><span class="rec-label">${label}</span>` +
+        `<span class="rec-bar"><i style="width:${pct}%"></i></span>` +
+        `<span class="rec-num">${r.total ? `${pct}%` : '–'}</span>` +
+        `<small>${r.total ? `${r.match} matched · ${r.diff} different · ${r.total} tested` : 'nothing tested yet'}</small></div>`;
+    };
+    return `<div class="record">${line(esc(item.name), here)}${all.total !== here.total ? line('All items', all) : ''}</div>`;
+  }
+
   function obsFormHTML(id, step, item) {
     const inputs = item.stats.map((st, i) => `<label>${st.short}<input class="num small" type="number" inputmode="numeric" min="1" step="1" value="${step.result.s[i]}" data-obs-input="${i}"></label>`).join('');
     return `<div class="obs-form" data-obs-form="${esc(id)}">
-      <div class="obs-title">What did the game actually give you?<small>Predicted ${step.result.s.map((v, i) => `${v} ${item.stats[i].short}`).join(' · ')}. Enter the real result of this refine; PORE re-plans with it.</small></div>
+      <div class="obs-title">What did the game give you?<small>PORE predicts ${step.result.s.map((v, i) => `${v} ${item.stats[i].short}`).join(' · ')}. Record every refine you test: matches build the success record, differences re-plan and tune the formula.</small></div>
+      <button class="btn small good block" type="button" data-action="obs-match" data-step="${esc(id)}">✓ Exactly this</button>
+      <div class="obs-or">or it gave something else:</div>
       <div class="obs-inputs">${inputs}</div>
-      <div class="btn-row"><button class="btn small primary" type="button" data-action="obs-save" data-step="${esc(id)}">Save &amp; re-plan</button><button class="btn small ghost" type="button" data-action="obs-cancel">Cancel</button></div>
+      <div class="btn-row"><button class="btn small primary" type="button" data-action="obs-save" data-step="${esc(id)}">Save different result</button><button class="btn small ghost" type="button" data-action="obs-cancel">Cancel</button></div>
     </div>`;
   }
 
@@ -2125,13 +2163,15 @@ function createSolver() {
       const isDone = done.has(id);
       if (isDone) doneCount++;
       const observed = obsKeys.has(obsKey(item.key, st.base.L, st.base.s, st.mat.L, st.mat.s));
+      const verdict = observed ? verdictHTML(item, st) : '';
       return `<div class="step ${isDone ? 'done' : ''} ${observed ? 'observed' : ''}" data-step-card="${esc(id)}">
           <label class="step-main">
             <input type="checkbox" data-field="step" data-step="${esc(id)}" ${isDone ? 'checked' : ''}>
             <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
             <span class="recipe"><span class="mult">×${st.count}</span><span class="op op-blank"></span>${chipHTML(st.base, item, 'base')}<span class="op">+</span>${chipHTML(st.mat, item)}<span class="op">→</span>${chipHTML(st.result, item, 'result', observed)}${extra || ''}</span>
-            <button class="obs-btn" type="button" data-action="obs-open" data-step="${esc(id)}" title="Got a different result in-game? Record it" aria-label="Record actual result"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17z"/><path d="M13.5 6.5l3 3"/></svg></button>
+            <button class="obs-btn" type="button" data-action="obs-open" data-step="${esc(id)}" title="Record the in-game result of this refine" aria-label="Record the in-game result"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17z"/><path d="M13.5 6.5l3 3"/></svg></button>
           </label>
+          ${verdict}
           ${openObsForm === id ? obsFormHTML(id, st, item) : ''}
         </div>`;
     };
@@ -2300,8 +2340,9 @@ function createSolver() {
     })();
     return `
       <div class="card" id="labCard">
-        <div class="section-title"><h3>Formula lab</h3><span class="hint">${total} observation${total === 1 ? '' : 's'} recorded</span></div>
-        <div class="lab-intro">Got a different number in-game? Tap the pencil on that step and enter it. PORE re-plans with the real result and checks which formula variant explains your observations. Sharing the observations (copy below) helps pin down the hidden rule.</div>
+        <div class="section-title"><h3>In-game record</h3><span class="hint">${total} refine${total === 1 ? '' : 's'} tested</span></div>
+        ${recordHTML(item, obs)}
+        <div class="lab-intro">After each refine in-game, tap the pencil on its step: <b>✓ Exactly this</b> if it matched, or enter what you got. A different result re-plans your path and helps pin down the exact formula; "Report on GitHub" shares your record.</div>
         ${suggestion}
         ${rows ? `<div class="list-title">Observations for ${esc(item.name)}</div><div class="obs-list">${rows}</div>` : ''}
         <details class="detail" ${total ? 'open' : ''}>
@@ -2652,6 +2693,15 @@ function createSolver() {
         break;
       }
       case 'obs-cancel': openObsForm = null; renderResults(); break;
+      case 'obs-match': {
+        const step = stepIndex.get(el.dataset.step);
+        if (!step || !last) return;
+        addObservation(last.item, step, step.result.s.slice());
+        openObsForm = null; haptic(14);
+        renderResults(); persist();
+        toast('Recorded: matched ✓');
+        break;
+      }
       case 'obs-save': {
         const id = el.dataset.step;
         const step = stepIndex.get(id);
