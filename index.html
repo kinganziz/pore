@@ -3188,7 +3188,7 @@ function createSolver() {
     if (!state.item && !introSeen('pick')) {
       setTimeout(() => coach(document.querySelector('.pick-trigger'), "Hi, I'm anz! Pick the item you want to refine here, and I'll find the cheapest way to max it.", 'pick'), 900);
     } else if (state.item && introSeen('pick') && !introSeen('guide') && last && last.res) {
-      setTimeout(() => { const b = document.querySelector('.guide-cta'); if (b) coach(b, "Here's your plan. Tap this and I'll walk you through every refine, one step at a time. Your progress is saved as you go.", 'guide'); }, 1800);
+      setTimeout(() => { const b = document.querySelector('.guide-cta'); if (b) coach(b, "Here's your plan! Every step is listed below: scroll down and follow it at your own pace. Or tap here and I'll hand you one refine at a time. Either way, your progress is saved.", 'guide'); }, 1800);
     }
   }
 
