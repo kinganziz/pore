@@ -912,8 +912,7 @@ def ring(ic, metal, style="plain", gem_=None):
     s = []
     if style == "attack":
         d = "M32 8 C39 17 49 25 49 39 C49 49 41 56 32 56 C23 56 15 49 15 39 C15 25 25 17 32 8 Z"
-        s += tube(ic, d, m, 2.8, ic.lgu(m, 15, 8, 49, 56))
-        s.append(line("M21 30 C24 23 27 18 30 15", HL, 2, 0.7))
+        s += tube(ic, d, m, 2.8, ic.lgu(m, 15, 8, 49, 56))   # no inner highlight: it thickened the thin band
         return "".join(s)
     # thin band, the same weight as the amulet cords (tube 2.8); flat and mana rings are a little wider
     width = {"flat": 4.5, "mana": 4}.get(style, 2.8)

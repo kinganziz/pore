@@ -1552,7 +1552,7 @@ function createSolver() {
   const ICON_STYLES = { pixelhd: { sprite: 'sprite-pixel-modern', label: 'Pixel icons' }, modern: { label: 'HD icons' } };
   const DEFAULT_ICONS = 'pixelhd';   // "Pixel"
   let iconStyle = DEFAULT_ICONS;
-  const ICONS_V = '3233ef6e60';   // content hash of the icon files (tools/build.py): new icons never come from a stale cache
+  const ICONS_V = '41f2195f11';   // content hash of the icon files (tools/build.py): new icons never come from a stale cache
   function iconSVG(key, cls) {
     const sprite = ICON_STYLES[iconStyle].sprite;
     if (!sprite) return `<img class="pixel ${cls || ''}" src="icons/modern/${key}.svg?v=${ICONS_V}" alt="" decoding="async" loading="lazy" draggable="false">`;
