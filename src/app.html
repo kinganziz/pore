@@ -15,7 +15,9 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%238b7cff'/%3E%3Cstop offset='1' stop-color='%23d16dff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M8 4h16l6 8-14 17L2 12z' fill='url(%23g)'/%3E%3Cpath d='M8 4l4 8 4-8 4 8 4-8M2 12h28M12 12l4 17 4-17' stroke='%23ffffff' stroke-opacity='.55' stroke-width='1.4' fill='none'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=VT323&family=Press+Start+2P&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=Pixelify+Sans:wght@400..700&family=Press+Start+2P&display=swap" rel="stylesheet">
+<!-- pixel theme digits: Tiny5 subset (Pixelify Sans draws 2/5 like 8/S) -->
+<link href="https://fonts.googleapis.com/css2?family=Tiny5&display=swap&text=0123456789%25" rel="stylesheet">
 <style>
   :root {
     color-scheme: dark;
@@ -140,6 +142,7 @@
   .icon-btn svg { width: 18px; height: 18px; }
   .ico-moon { display: none; }
   .hd-btn { width: auto; min-width: 38px; padding: 0 9px; font-family: var(--display); font-weight: 800; font-size: 12px; letter-spacing: .04em; color: var(--muted); }
+  .skin-btn[aria-pressed="true"] { background: linear-gradient(135deg, var(--accent), var(--accent-2)); border-color: transparent; color: #fff; }
   .hd-btn[aria-pressed="true"] { background: linear-gradient(135deg, var(--accent), var(--accent-2)); border-color: transparent; color: #fff; }
   :root[data-theme="light"] .ico-moon { display: block; }
   :root[data-theme="light"] .ico-sun { display: none; }
@@ -619,11 +622,14 @@
     .topbar { padding-left: 12px; padding-right: 12px; gap: 8px; }
     .topbar .logo { width: 32px; height: 32px; border-radius: 10px; }
     .topbar .logo svg { width: 19px; height: 19px; }
-    .topbar .brand { gap: 8px; }
+    .topbar .brand { gap: 6px; }
     .topbar .brand h1 { font-size: 18px; }
+    :root[data-skin="pixel"] .topbar .brand p { letter-spacing: 0; font-size: 9px; }
     .topbar .brand p { font-size: 10px; }
-    .topbar .topbar-actions { gap: 5px; }
-    .topbar .icon-btn { width: 34px; height: 34px; }
+    .topbar .topbar-actions { gap: 4px; }
+    .topbar .icon-btn { width: 32px; height: 32px; }
+    .topbar .icon-btn svg { width: 16px; height: 16px; }
+    .topbar .hd-btn { min-width: 32px; padding: 0 4px; font-size: 11px; }
     .stat-row { gap: 8px; padding: 10px; }
     .stat-row .val { min-width: 34px; font-size: 18px; }
     .cat-select select { max-width: 104px; font-size: 11px; padding: 6px 22px 6px 8px; }
@@ -636,105 +642,112 @@
   }
 
   /* =====================================================================================
-     Pixel game theme (default look; the HD switch returns to the modern design above).
-     Palette after Sweetie 16. Square panels with notched pixel corners, 2px outlines,
-     inset bevels, a pixel font and buttons that press down.
+     Pixel game theme: an option (gamepad button in the header); the modern design above is the default.
+     Follows the DLM pixel theme: "Cartridge" palette, Pixelify Sans body + Press Start 2P display,
+     notched corners from one-sided box-shadows, hard 3-4px drop shadows, buttons that press onto their
+     shadow, a 2x2 dither. Frames only on real containers; rows, headers, tabs and segments stay flat.
      ===================================================================================== */
   :root[data-skin="pixel"] {
-    --bg: #1a1c2c; --bg-2: #1f2238;
-    --tile: #262b44; --tile-2: #2f3656; --tile-on: #2f3a6e;
-    --surface: #232842; --surface-2: #2c3354; --surface-3: #3a4468;
-    --line: #0d0e1a; --line-2: #566c86;
-    --text: #f4f4f4; --muted: #94b0c2; --soft: #6f86a0;
-    --accent: #3b5dc9; --accent-2: #3b5dc9;
-    --gold: #ffcd75; --gold-ink: #1a1c2c;
-    --good: #a7f070; --warn: #ffcd75; --bad: #ef7d57; --info: #73eff7;
-    --shadow: none;
-    --r: 0px; --r-sm: 0px;
-    --font: "VT323", ui-monospace, monospace;          /* clear pixel digits (Pixelify's 5 reads as S) */
-    --display: "Press Start 2P", ui-monospace, monospace;
-    --px-edge: #94b0c2;                         /* panel outline */
-    --px-hi: rgba(255, 255, 255, .10);          /* bevel light (top-left) */
-    --px-lo: rgba(0, 0, 0, .38);                /* bevel shade (bottom-right) */
-    --px-n: 3px;                                /* notch size of panel corners */
+    --bg: #0b0b1e; --bg-2: #101028;
+    --surface: #161638; --surface-2: #212152; --surface-3: #2c2c66;
+    --tile: #161638; --tile-2: #212152; --tile-on: #2a2150;
+    --text: #f0f0f8; --muted: #9c9cc4; --soft: #7474a0;
+    --accent: #ff6b6b; --accent-2: #ff6b6b; --on-accent: #0b0b1e;
+    --gold: #ffd042; --gold-ink: #0b0b1e;
+    --good: #5be07a; --warn: #ffd042; --bad: #ff5c5c; --info: #7ab8ff;
+    --line: color-mix(in srgb, var(--text) 34%, var(--bg));
+    --line-2: color-mix(in srgb, var(--text) 62%, var(--bg));
+    --px-shadow: color-mix(in srgb, var(--bg) 55%, black);
+    --px-raised: 4px 4px 0 0 var(--px-shadow);
+    --px-w: 3px;
+    --shadow: none; --r: 0px; --r-sm: 0px;
+    --font: "Tiny5", "Pixelify Sans", "Segoe UI", system-ui, sans-serif;   /* Tiny5 is loaded for digits only */
+    --display: "Press Start 2P", "Tiny5", "Pixelify Sans", monospace;
+    --ease: steps(3, end);
   }
   :root[data-skin="pixel"][data-theme="light"] {
-    --bg: #eee2c0; --bg-2: #e6d6ae;
-    --tile: #fbf2d8; --tile-2: #fff8e6; --tile-on: #dfe6ff;
-    --surface: #fbf2d8; --surface-2: #fff8e6; --surface-3: #efe2bf;
-    --line: #3a2a1c; --line-2: #8a7254;
-    --text: #2a1f14; --muted: #6b5a44; --soft: #95826a;
-    --accent: #3b5dc9; --accent-2: #3b5dc9;
-    --good: #257a3e; --warn: #b86a12; --bad: #b13e53; --info: #257179;
-    --px-edge: #3a2a1c; --px-hi: rgba(255, 255, 255, .6); --px-lo: rgba(90, 60, 20, .22);
+    --bg: #f1ecdc; --bg-2: #e9e2cc;
+    --surface: #fffaf0; --surface-2: #efe8d4; --surface-3: #e2d9bf;
+    --tile: #fffaf0; --tile-2: #efe8d4; --tile-on: #ffe3dc;
+    --text: #1b1b33; --muted: #5c5c80; --soft: #8a8aa8;
+    --accent: #e0474f; --accent-2: #e0474f; --on-accent: #fff;
+    --gold: #f0b400; --gold-ink: #1b1b33;
+    --good: #1f9a45; --warn: #b87800; --bad: #d23434; --info: #2f6fd0;
+    --px-shadow: color-mix(in srgb, var(--text) 30%, var(--bg));
   }
   :root[data-skin="pixel"] body {
-    font-family: var(--font); letter-spacing: .3px;
-    font-size-adjust: .5;   /* evens out the very different pixel fonts (VT323 runs small, Press Start 2P large) */
-    font-synthesis: none;   /* both fonts have a single weight: no smeared fake bold */
-    background: conic-gradient(from 90deg at 2px 2px, transparent 90deg, rgba(255, 255, 255, .025) 0) 0 0 / 4px 4px, var(--bg);
+    font-family: var(--font);
+    background: repeating-conic-gradient(color-mix(in srgb, var(--text) 4%, transparent) 0 25%, transparent 0 50%) 0 0 / 6px 6px, var(--bg);
   }
-  :root[data-skin="pixel"][data-theme="light"] body { background: conic-gradient(from 90deg at 2px 2px, transparent 90deg, rgba(90, 60, 20, .05) 0) 0 0 / 4px 4px, var(--bg); }
+  :root[data-skin="pixel"] img, :root[data-skin="pixel"] canvas { image-rendering: pixelated; }
   :root[data-skin="pixel"] .glow, :root[data-skin="pixel"] .hero::before { display: none; }
   :root[data-skin="pixel"] *, :root[data-skin="pixel"] *::before, :root[data-skin="pixel"] *::after { border-radius: 0 !important; }
-  :root[data-skin="pixel"] *::-webkit-scrollbar-thumb { background: var(--line-2); }
-  :root[data-skin="pixel"] .card, :root[data-skin="pixel"] .topbar { backdrop-filter: none; -webkit-backdrop-filter: none; }
-  :root[data-skin="pixel"] .topbar { background: var(--bg-2); border-bottom: 3px solid var(--line); box-shadow: 0 3px 0 var(--px-lo); }
+  :root[data-skin="pixel"] *::-webkit-scrollbar-thumb { background: var(--line); }
+  :root[data-skin="pixel"] :is(.card, .topbar, .sheet-backdrop) { backdrop-filter: none; -webkit-backdrop-filter: none; }
+  :root[data-skin="pixel"] .topbar { background: var(--bg-2); border-bottom: var(--px-w) solid var(--line); }
+  :root[data-skin="pixel"] *:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
-  /* ---- pixel panels: notched corners, 2-3px outline, inset bevel ---- */
-  :root[data-skin="pixel"] :is(.card, .hero, .btn, .icon-btn, .seg, .chip-btn, .pick-trigger, .stat-row, .mini, .example, .ladder-row,
-      .charm-chip, .charm-total, .step, .filter, .tile-item, .icon-only, .row, .toast, .icon-frame, .safety, .stepper, .search input,
-      .cat-select select, .formula, .table-wrap, .obs-btn, .fit-row) {
-    --n: 2px;
-    border: 2px solid var(--line) !important;
-    box-shadow: inset 2px 2px 0 var(--px-hi), inset -2px -2px 0 var(--px-lo) !important;
-    clip-path: polygon(0 var(--n), var(--n) var(--n), var(--n) 0, calc(100% - var(--n)) 0, calc(100% - var(--n)) var(--n), 100% var(--n),
-      100% calc(100% - var(--n)), calc(100% - var(--n)) calc(100% - var(--n)), calc(100% - var(--n)) 100%, var(--n) 100%,
-      var(--n) calc(100% - var(--n)), 0 calc(100% - var(--n)));
+  /* ---- notched frames (one-sided shadows leave the four corner pixels empty) on real containers only ---- */
+  :root[data-skin="pixel"] :is(.card, .hero, .toast, .tile-item, .icon-only, .charm-chip) {
+    border-color: transparent !important; animation: none;
+    box-shadow:
+      calc(-1 * var(--px-w)) 0 0 0 var(--line), var(--px-w) 0 0 0 var(--line),
+      0 calc(-1 * var(--px-w)) 0 0 var(--line), 0 var(--px-w) 0 0 var(--line),
+      var(--px-raised) !important;
   }
-  /* big panels: thicker light outline with a dark gap, like a game window */
-  :root[data-skin="pixel"] :is(.card, .hero) {
-    --n: var(--px-n);
-    border: 3px solid var(--px-edge) !important;
-    box-shadow: inset 0 0 0 2px var(--line), inset 4px 4px 0 var(--px-hi), inset -4px -4px 0 var(--px-lo) !important;
-    background: var(--surface); animation: none;
-  }
-  :root[data-skin="pixel"] .hero { border-color: var(--gold) !important; }
-  :root[data-skin="pixel"] .pick-trigger { border-style: dashed !important; clip-path: none; }
-  :root[data-skin="pixel"] .sheet { border: 0; border-top: 3px solid var(--px-edge); box-shadow: none; }
-  @media (min-width: 720px) { :root[data-skin="pixel"] .sheet { border: 3px solid var(--px-edge); } }
-  :root[data-skin="pixel"] .lvl-head { border-bottom: 2px solid var(--line); }
+  :root[data-skin="pixel"] :is(.tile-item, .icon-only, .charm-chip) { --px-w: 2px; --px-raised: 3px 3px 0 0 var(--px-shadow); }
+  :root[data-skin="pixel"] :is(.card, .hero) { margin: var(--px-w); }
+  :root[data-skin="pixel"] .hero { --line: var(--gold); }
+  :root[data-skin="pixel"] :is(.tile-item, .icon-only, .charm-chip, .row).on { --line: var(--gold); background: var(--tile-on); }
+  :root[data-skin="pixel"] .sheet { border: 0; border-top: var(--px-w) solid var(--line); box-shadow: none; }
+  @media (min-width: 720px) { :root[data-skin="pixel"] .sheet { border: var(--px-w) solid var(--line); box-shadow: 6px 6px 0 0 var(--px-shadow); } }
 
-  /* ---- buttons press down ---- */
-  :root[data-skin="pixel"] :is(.btn, .icon-btn, .chip-btn, .example, .mini, .filter, .tile-item, .icon-only, .row, .charm-chip):active {
-    transform: translateY(2px) !important;
-    box-shadow: inset 2px 2px 0 var(--px-lo) !important;
+  /* ---- flat inside: no frames within frames ---- */
+  :root[data-skin="pixel"] :is(.stat-row, .ladder-row, .charm-total, .step, .icon-frame, .safety, .formula, .table-wrap, .fit-row, .tile) {
+    border-color: transparent !important; box-shadow: none !important; background: var(--surface-2);
   }
-  :root[data-skin="pixel"] :is(.btn.primary, .chip-btn.on, .seg.accent button.on, .step-num, .logo, .hd-btn[aria-pressed="true"], .toast.tappable, .filter.on) {
-    background: var(--accent) !important; color: #fff !important;
+  :root[data-skin="pixel"] .step { background: transparent; border-bottom: 2px solid var(--line) !important; }
+  :root[data-skin="pixel"] .pick-trigger { border: 2px dashed var(--line) !important; background: transparent; box-shadow: none; }
+  :root[data-skin="pixel"] .lvl-head { border-bottom: var(--px-w) solid var(--line); box-shadow: none; }
+  :root[data-skin="pixel"] .seg, :root[data-skin="pixel"] .seg button { box-shadow: none !important; }
+  :root[data-skin="pixel"] .seg { border: 2px solid var(--line); background: transparent; }
+
+  /* ---- buttons: 3px border, hard shadow, press onto the shadow ---- */
+  :root[data-skin="pixel"] :is(.btn, .icon-btn, .chip-btn, .example, .mini, .filter, .row) {
+    border: var(--px-w) solid var(--line) !important; box-shadow: 3px 3px 0 0 var(--px-shadow) !important; transition: none;
   }
-  :root[data-skin="pixel"] .chip-btn.on.gold, :root[data-skin="pixel"] .chip.perfect b { background: var(--gold) !important; color: var(--gold-ink) !important; }
-  :root[data-skin="pixel"] .seg { background: var(--surface); }
-  :root[data-skin="pixel"] .seg button { border-radius: 0; }
+  :root[data-skin="pixel"] :is(.filter, .mini, .chip-btn, .example) { border-width: 2px !important; }
+  :root[data-skin="pixel"] :is(.btn, .icon-btn, .chip-btn, .example, .mini, .filter, .row, .tile-item, .icon-only, .charm-chip):active:not(:disabled) {
+    transform: translate(3px, 3px) !important; box-shadow: none !important;
+  }
+  :root[data-skin="pixel"] :is(.search input, .cat-select select, .stepper, input[type="number"]) {
+    border: var(--px-w) solid var(--line) !important; box-shadow: inset 3px 3px 0 0 var(--px-shadow) !important;
+  }
+  :root[data-skin="pixel"] :is(.btn.primary, .chip-btn.on, .seg.accent button.on, .step-num, .logo, .hd-btn[aria-pressed="true"], .skin-btn[aria-pressed="true"], .toast.tappable, .filter.on) {
+    background: var(--accent) !important; color: var(--on-accent) !important; border-color: var(--accent) !important;
+  }
   :root[data-skin="pixel"] .seg button.on { background: var(--text); color: var(--bg); }
-  :root[data-skin="pixel"] .seg.safe button.on { background: var(--good) !important; color: #10231a; }
-  :root[data-skin="pixel"] :is(.tile-item, .icon-only, .row, .charm-chip, .ladder-row).on { border-color: var(--gold) !important; }
-  :root[data-skin="pixel"] .step-num, :root[data-skin="pixel"] .logo { box-shadow: inset -2px -2px 0 var(--px-lo), inset 2px 2px 0 rgba(255, 255, 255, .25) !important; }
+  :root[data-skin="pixel"] .seg.safe button.on { background: var(--good) !important; color: var(--bg); }
+  :root[data-skin="pixel"] :is(.chip-btn.on.gold, .chip.perfect b) { background: var(--gold) !important; color: var(--gold-ink) !important; border-color: var(--gold) !important; }
+  :root[data-skin="pixel"] .step-num, :root[data-skin="pixel"] .logo { box-shadow: 3px 3px 0 0 var(--px-shadow) !important; }
+  :root[data-skin="pixel"] :is(.pill, .chip, .lvl-head .facts span) { border: 2px solid var(--line); }
 
-  /* ---- type ---- */
-  :root[data-skin="pixel"] :is(h1, h2, h3, .hero-num, .stat-row .val, .lvl-head .lv) { font-family: var(--display); font-weight: 700; letter-spacing: .5px; }
-  :root[data-skin="pixel"] .hero-num { text-shadow: 3px 3px 0 var(--line); letter-spacing: 0; }
-  :root[data-skin="pixel"] .hero-num small { font-family: var(--font); font-size: 22px; text-shadow: none; white-space: nowrap; }
-  :root[data-skin="pixel"] .ring svg { filter: none !important; }
-  :root[data-skin="pixel"] .search svg { z-index: 1; }
-  :root[data-skin="pixel"][data-theme="light"] :is(.brand h1, .hero-num) { text-shadow: 2px 2px 0 rgba(90, 60, 20, .22); }
-  :root[data-skin="pixel"] .brand h1 { text-shadow: 2px 2px 0 var(--line); }
+  /* ---- type: Press Start 2P for titles, eyebrows and big numbers; Pixelify Sans for reading ---- */
+  :root[data-skin="pixel"] :is(h1, h2, .hero-num, .stat-row .val, .lvl-head .lv, .hero-label, .tile b) { font-family: var(--display); font-weight: 400; letter-spacing: 0; line-height: 1.3; }
+  :root[data-skin="pixel"] h2 { font-size: 13px; }
+  :root[data-skin="pixel"] .brand h1 { font-size: 16px; text-shadow: 3px 3px 0 var(--px-shadow); }
+  :root[data-skin="pixel"] .hero-label { font-size: 8px; letter-spacing: .08em; line-height: 1.6; }
+  :root[data-skin="pixel"] .hero-num { font-size: clamp(30px, 9vw, 40px); text-shadow: 4px 4px 0 var(--px-shadow); }
+  :root[data-skin="pixel"] .hero-num small { font-family: var(--font); font-size: 15px; text-shadow: none; white-space: nowrap; }
+  :root[data-skin="pixel"] .stat-row .val { font-size: 14px; }
+  :root[data-skin="pixel"] .lvl-head .lv { font-size: 12px; }
   :root[data-skin="pixel"] .formula { font-family: var(--font); }
 
-  /* ---- bars and the saving ring: flat pixel colours ---- */
-  :root[data-skin="pixel"] .bar .opt { background: var(--good); }
-  :root[data-skin="pixel"] .progress .fill { background: var(--good); }
+  /* ---- bars, meters and motion ---- */
+  :root[data-skin="pixel"] .bar .opt, :root[data-skin="pixel"] .progress .fill { background: var(--good); }
   :root[data-skin="pixel"] .ring circle { stroke-linecap: butt; }
+  :root[data-skin="pixel"] .ring svg { filter: none !important; }
+  :root[data-skin="pixel"] .search svg { z-index: 1; }
 </style>
 </head>
 <body>
@@ -757,7 +770,10 @@
       <svg class="ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
       <svg class="ico-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
     </button>
-    <button class="icon-btn hd-btn" type="button" data-action="icon-style" aria-pressed="false" aria-label="HD look" title="HD look: modern design and smooth icons instead of the pixel game theme">HD</button>
+    <button class="icon-btn skin-btn" type="button" data-action="skin" aria-pressed="false" aria-label="Pixel game theme" title="Pixel game theme">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h12a4 4 0 0 1 4 4v2a4 4 0 0 1-7 2.6L14 16h-4l-1 .6A4 4 0 0 1 2 14v-2a4 4 0 0 1 4-4z"/><path d="M7 11v3M5.5 12.5h3"/><path d="M16 12h.01M18 14h.01"/></svg>
+    </button>
+    <button class="icon-btn hd-btn" type="button" data-action="icon-style" aria-pressed="false" aria-label="HD icons" title="HD icons (smooth drawings instead of pixel art)">HD</button>
     <button class="icon-btn" id="infoBtn" type="button" aria-label="How PORE works" title="How it works">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17h.01"/></svg>
     </button>
@@ -895,7 +911,7 @@ __SOLVER_JS__
   const STAT_NAMES = Array.from(new Set(ITEM_DB.statNames.concat(Object.keys(STAT_META)))).sort();
   const AFF_LABEL = a => a ? a.split('_').map(w => w[0] + w.slice(1).toLowerCase()).join(' + ') : '';
   const EXAMPLES = ['Wooden Sword', 'Soldier Sword', 'Platinum Dagger', 'Purpurite Sword'];
-  const STORAGE = { state: 'pore.state.v3', badges: 'pore.badges.v3', recent: 'pore.recent.v1', theme: 'pore.theme', done: 'pore.done.', obs: 'pore.observations.v1', icons: 'pore.iconstyle.v2' };
+  const STORAGE = { state: 'pore.state.v3', badges: 'pore.badges.v3', recent: 'pore.recent.v1', theme: 'pore.theme', done: 'pore.done.', obs: 'pore.observations.v1', icons: 'pore.iconstyle.v2', skin: 'pore.skin' };
   const CHARM_ITEMS = 'Rabbits Foot ×2 · Lucky Egg ×3 · Wishbone ×3 · Clover ×4 · Starfish ×4 · Horseshoe ×5 · Lucky Rose ×6';
   const REPO_URL = 'https://github.com/kinganziz/pore';
   const MODEL_KEYS = new Set(S.models.map(m => m.key));
@@ -1220,20 +1236,45 @@ __SOLVER_JS__
   //   pixelhd -> "Pixel" (default): the drawings as 20x20 pixel art (icons/sprite-pixel-modern.svg)
   //   modern  -> "HD":   the smooth vector drawings, one file each (icons/modern/<key>.svg), shown as <img>;
   //   hundreds of these gradient drawings drawn live through <use> left grey, half-painted tiles on Android Chrome.
-  const ICON_STYLES = { pixelhd: { sprite: 'sprite-pixel-modern', label: 'Pixel look' }, modern: { label: 'HD look' } };
+  const ICON_STYLES = { pixelhd: { sprite: 'sprite-pixel-modern', label: 'Pixel icons' }, modern: { label: 'HD icons' } };
   const DEFAULT_ICONS = 'pixelhd';   // "Pixel"
   let iconStyle = DEFAULT_ICONS;
-  const ICONS_V = '__ICONS_V__';   // content hash of the icon files (tools/build.py): new icons never come from a stale cache
+  // HD images load eagerly and decode synchronously: a re-rendered list (e.g. a new group filter) then paints its
+  // already-cached icons in the same frame instead of flashing empty tiles.
+  const ICONS_V = '__ICONS_V__';
+  // Re-rendering a list would create fresh <img> elements that flash empty while they load, even from cache.
+  // Loaded HD images are kept in a pool and moved into the new markup instead, so they paint at once.
+  const imgPool = new Map();   // src -> [loaded <img>]
+  function setWithImages(el, html) {
+    el.querySelectorAll('img.pixel').forEach(img => {
+      if (!img.complete || !img.naturalWidth) return;
+      if (!imgPool.has(img.src)) imgPool.set(img.src, []);
+      imgPool.get(img.src).push(img);
+    });
+    el.innerHTML = html;
+    el.querySelectorAll('img.pixel').forEach(img => {
+      const spare = imgPool.get(img.src);
+      const old = spare && spare.pop();
+      if (old) { old.className = img.className; img.replaceWith(old); }
+    });
+  }   // content hash of the icon files (tools/build.py): new icons never come from a stale cache
   function iconSVG(key, cls) {
     const sprite = ICON_STYLES[iconStyle].sprite;
-    if (!sprite) return `<img class="pixel ${cls || ''}" src="icons/modern/${key}.svg?v=${ICONS_V}" alt="" decoding="async" loading="lazy" draggable="false">`;
+    if (!sprite) return `<img class="pixel ${cls || ''}" src="icons/modern/${key}.svg?v=${ICONS_V}" alt="" decoding="sync" draggable="false">`;
     return `<svg class="pixel ${cls || ''}" aria-hidden="true"><use href="icons/${sprite}.svg?v=${ICONS_V}#${key}"/></svg>`;
   }
-  // one switch for the whole look: Pixel = pixel game theme + pixel icons, HD = modern design + HD icons
   function applyLook() {
     document.documentElement.setAttribute('data-icons', iconStyle);
-    document.documentElement.setAttribute('data-skin', iconStyle === 'modern' ? 'modern' : 'pixel');
     syncHdButton();
+  }
+  // The pixel game theme is an option (gamepad button); the modern design is the default.
+  let skin = 'modern';
+  function setSkin(next) {
+    skin = next === 'pixel' ? 'pixel' : 'modern';
+    document.documentElement.setAttribute('data-skin', skin);
+    const b = document.querySelector('[data-action="skin"]');
+    if (b) b.setAttribute('aria-pressed', String(skin === 'pixel'));
+    try { localStorage.setItem(STORAGE.skin, skin); } catch (e) { /* ignore */ }
   }
   function syncHdButton() {
     const b = document.querySelector('[data-action="icon-style"]');
@@ -1856,7 +1897,7 @@ __SOLVER_JS__
       if (rec.length) html += `<div class="list-title">Recent</div><div class="${box}">${rec.map(cell).join('')}</div><div class="list-title">All items</div>`;
     }
     html += list.length ? `<div class="${box}">${list.map(cell).join('')}</div>` : '<div class="empty-note" style="padding:20px;text-align:center">No items match. Try a stat name like "crit" or pick Custom.</div>';
-    ui.pickerBody.innerHTML = html;
+    setWithImages(ui.pickerBody, html);
     ui.pickerBody.scrollTop = 0;
   }
   function renderCustomForm() {
@@ -1988,6 +2029,7 @@ __SOLVER_JS__
     const act = el.dataset.action;
     switch (act) {
       case 'home': e.preventDefault(); goHome(); break;
+      case 'skin': setSkin(skin === 'pixel' ? 'modern' : 'pixel'); toast(skin === 'pixel' ? 'Pixel game theme' : 'Modern theme'); break;
       case 'icon-style': setIconStyle(iconStyle === 'modern' ? 'pixelhd' : 'modern'); toast(ICON_STYLES[iconStyle].label); break;
       case 'reload': location.reload(); break;
       case 'check-update': {
@@ -2191,6 +2233,7 @@ __SOLVER_JS__
     setTheme(theme);
     try { const saved = localStorage.getItem(STORAGE.icons); iconStyle = ICON_STYLES[saved] ? saved : DEFAULT_ICONS; } catch (e) { /* ignore */ }
     applyLook();
+    try { setSkin(localStorage.getItem(STORAGE.skin)); } catch (e) { setSkin('modern'); }
     ui.catGrid.innerHTML = Object.values(CATS).map(c => `<div><span>${c.label} <b>${c.pct}</b></span><small>${c.who}</small></div>`).join('');
     const date = (ITEM_DB.fetched || '').slice(0, 10);
     ui.dataDate.textContent = `data ${date}`;
