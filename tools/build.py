@@ -6,6 +6,7 @@ Usage:
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import pathlib
 
@@ -33,6 +34,12 @@ def main() -> None:
     html = template.replace(DATA_PLACEHOLDER, blob).replace(SOLVER_PLACEHOLDER, solver)
     OUT.write_text(html, encoding="utf-8")
     print(f"wrote {OUT.relative_to(ROOT)} ({OUT.stat().st_size // 1024} KB, {data['count']} items, data fetched {data['fetched']})")
+
+    # Service worker: version = content hash of the built page so every deploy refreshes the shell cache.
+    version = hashlib.sha1(html.encode("utf-8")).hexdigest()[:10]
+    sw = (ROOT / "src" / "sw.js").read_text(encoding="utf-8").replace("__VERSION__", version)
+    (ROOT / "sw.js").write_text(sw, encoding="utf-8")
+    print(f"wrote sw.js (version {version})")
 
 
 if __name__ == "__main__":

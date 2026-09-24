@@ -490,6 +490,7 @@
 
   .toast { position: fixed; left: 50%; bottom: calc(24px + var(--safe-b)); transform: translateX(-50%) translateY(20px); z-index: 60; padding: 10px 16px; border-radius: 999px; background: var(--text); color: var(--bg); font-weight: 600; font-size: 13px; box-shadow: var(--shadow); opacity: 0; transition: opacity .25s, transform .3s var(--ease); pointer-events: none; max-width: calc(100% - 32px); text-align: center; }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.tappable { pointer-events: auto; cursor: pointer; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; }
   .fx { position: fixed; inset: 0; z-index: 40; pointer-events: none; }
 
   @media (prefers-reduced-motion: reduce) {
@@ -1946,9 +1947,11 @@ function createSolver() {
 
   /* ================= misc ui ================= */
   let toastTimer = null;
-  function toast(msg) {
+  function toast(msg, action, ms) {
     ui.toast.textContent = msg; ui.toast.classList.add('show');
-    clearTimeout(toastTimer); toastTimer = setTimeout(() => ui.toast.classList.remove('show'), 2000);
+    ui.toast.classList.toggle('tappable', !!action);
+    ui.toast.onclick = action || null;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { ui.toast.classList.remove('show'); ui.toast.onclick = null; }, ms || 2000);
   }
   let userTouched = false;
   window.addEventListener('pointerdown', e => { if (e.isTrusted) userTouched = true; }, { passive: true, capture: true });
@@ -2135,6 +2138,19 @@ function createSolver() {
     const idle = window.requestIdleCallback || (fn => setTimeout(fn, 1200));
     idle(() => computeBadges());
     window.PORE = { version: '2.0.0', hasWorker: Solver.hasWorker, items: ITEMS.length };
+    if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').then(reg => {
+          reg.addEventListener('updatefound', () => {
+            const nw = reg.installing;
+            if (!nw) return;
+            nw.addEventListener('statechange', () => {
+              if (nw.state === 'installed' && navigator.serviceWorker.controller) toast('New version ready — tap to reload', () => location.reload(), 10000);
+            });
+          });
+        }).catch(() => { /* offline support is optional */ });
+      });
+    }
   })();
 })();
 </script>
