@@ -1239,8 +1239,8 @@ function createSolver() {
   const ui = {};
   ['itemBody', 'itemHint', 'targetCard', 'targetBody', 'targetHint', 'ownedCard', 'ownedBody', 'resultsBody', 'pickerSheet', 'pickerBody', 'filters', 'searchInput', 'infoSheet', 'toast', 'fx', 'themeBtn', 'infoBtn', 'catGrid', 'dataDate']
     .forEach(id => ui[id] = document.getElementById(id));
-  const picker = { q: '', type: 'ALL', sort: 'name', view: 'list' };
-  try { const v = localStorage.getItem('pore.pickerview'); if (v === 'grid' || v === 'icons') picker.view = v; } catch (e) { /* ignore */ }
+  const picker = { q: '', type: 'ALL', sort: 'name', view: 'grid' };   // views: list, grid (icon + name + cost), icons
+  try { const v = localStorage.getItem('pore.pickerview'); if (['list', 'grid', 'icons'].includes(v)) picker.view = v; } catch (e) { /* ignore */ }
   let badges = {};
   let recent = [];
   let observations = [];          // { id, item, itemName, ts, baseL, base, matL, mat, predicted, actual, rates, statNames, model }
@@ -1520,14 +1520,15 @@ function createSolver() {
   // half-painted tiles in the item grid, so they load as images, which the browser rasterizes once and reuses.
   const ICON_STYLES = { modern: { label: 'HD icons' }, pixelhd: { sprite: 'sprite-pixel-modern', label: 'Pixel icons' }, pixel: { sprite: 'sprite-pixel', label: 'Classic icons' } };
   const ICON_ORDER = ['modern', 'pixelhd', 'pixel'];
-  let iconStyle = 'modern';
+  const DEFAULT_ICONS = 'pixelhd';   // "Pixel"
+  let iconStyle = DEFAULT_ICONS;
   function iconSVG(key, cls) {
     const sprite = ICON_STYLES[iconStyle].sprite;
     if (!sprite) return `<img class="pixel ${cls || ''}" src="icons/modern/${key}.svg" alt="" decoding="async" loading="lazy" draggable="false">`;
     return `<svg class="pixel ${cls || ''}" aria-hidden="true"><use href="icons/${sprite}.svg#${key}"/></svg>`;
   }
   function setIconStyle(style) {
-    iconStyle = ICON_STYLES[style] ? style : 'modern';
+    iconStyle = ICON_STYLES[style] ? style : DEFAULT_ICONS;
     document.documentElement.setAttribute('data-icons', iconStyle);
     try { localStorage.setItem(STORAGE.icons, iconStyle); } catch (e) { /* ignore */ }
     renderItem(); renderResults();
@@ -2450,7 +2451,7 @@ function createSolver() {
     try { theme = localStorage.getItem(STORAGE.theme); } catch (e) { /* ignore */ }
     if (!theme) theme = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
     setTheme(theme);
-    try { const saved = localStorage.getItem(STORAGE.icons); iconStyle = ICON_STYLES[saved] ? saved : 'modern'; } catch (e) { /* ignore */ }
+    try { const saved = localStorage.getItem(STORAGE.icons); iconStyle = ICON_STYLES[saved] ? saved : DEFAULT_ICONS; } catch (e) { /* ignore */ }
     document.documentElement.setAttribute('data-icons', iconStyle);
     ui.catGrid.innerHTML = Object.values(CATS).map(c => `<div><span>${c.label} <b>${c.pct}</b></span><small>${c.who}</small></div>`).join('');
     const date = (ITEM_DB.fetched || '').slice(0, 10);
