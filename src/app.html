@@ -2119,7 +2119,11 @@ __SOLVER_JS__
           <div class="tile"><small>Collect</small><b>${fmt(toCollect)}</b><i>${stock ? `${stock} in stock` : 'base items'}</i></div>
         </div>
         <div class="note">Result: ${chipHTML(res.plan.nodes[res.plan.root], item, 'result')}${res.ms > 400 ? ` · solved in ${(res.ms / 1000).toFixed(1)}s` : ''}</div>
-        <button class="btn primary block guide-cta" type="button" data-action="guide-open"><img src="icons/app/anz.png?v=3" alt="" width="124" height="128">Ask anz: guide me step by step</button>
+        ${(() => {
+          const dn = a.steps.filter(st => loadDone().has(stepId(st))).length, tot = a.steps.length;
+          const label = dn && dn < tot ? `Ask anz: continue where you left off (${dn}/${tot})` : dn >= tot && tot ? 'Ask anz: all steps done, review' : 'Ask anz: guide me step by step';
+          return `<button class="btn primary block guide-cta" type="button" data-action="guide-open"><img src="icons/app/anz.png?v=3" alt="" width="124" height="128">${label}</button>`;
+        })()}
         <div class="btn-row" style="margin-top:10px">
           <button class="btn small" type="button" data-action="share">${navigator.share ? 'Share plan' : 'Copy link'}</button>
           <button class="btn small ghost" type="button" data-action="copy-plan">Copy as text</button>
