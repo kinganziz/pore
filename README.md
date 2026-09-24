@@ -54,7 +54,6 @@ data/items.json     equipment + charm database generated from the wiki (names, s
 tools/fetch_wiki.py refreshes data/items.json from the wiki's Obsidian Publish cache
 tools/modern_icons.py draws PORE's equipment icons -> icons/modern/ (charms there are hand-drawn)
 tools/check_icons.py checks every item has a drawing in all three icon styles
-tools/pixel_icons.py draws the Classic pixel-art set natively on a 16x16 grid -> icons/pixel/, icons/sprite-pixel.svg
 tools/pixelate.mjs   redraws the HD icons as 20x20 pixel art ("Pixel") -> icons/pixel-modern/, icons/sprite-pixel-modern.svg
 tools/build.py      injects data + solver into the template -> index.html
 tools/test_solver.mjs  solver regression tests (reference values + brute-force cross-check)
@@ -65,16 +64,14 @@ tools/test_solver.mjs  solver regression tests (reference values + brute-force c
 ```bash
 python tools/fetch_wiki.py     # refresh item + charm data from the wiki (needs network)
 python tools/modern_icons.py   # draw icons for new items (never overwrites hand-edited files)
-python tools/check_icons.py    # every item has an HD, Pixel and Classic icon
-python tools/pixel_icons.py    # redraw the Classic pixel-art icon set
+python tools/check_icons.py    # every item has a Pixel and an HD icon
 npm install && node tools/pixelate.mjs   # redraw the Pixel set from icons/modern/
 python tools/build.py          # rebuild index.html after editing src/
 node tools/test_solver.mjs     # run the solver tests
 ```
 
-All icons are PORE's own drawings, in three styles: HD (vector drawings in icons/modern/), Pixel (the same drawings as 20x20 pixel art)
-and Classic (a hand-built 16x16 pixel-art set); no artwork from the
-game or the wiki is used or stored.
+All icons are PORE's own drawings, in two styles: Pixel (the default: the drawings as 20x20 pixel art)
+and HD (the smooth vector drawings in icons/modern/); no artwork from the game or the wiki is used or stored.
 Charms (with their success multipliers) are read from the wiki too and drive the automatic batch
 splitting in the crafting guide.
 

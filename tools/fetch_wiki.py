@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fetch equippable item and charm data (names, stats, factors) from the Pixel Odyssey wiki.
 
-Artwork is NOT taken from the wiki: PORE uses its own drawings (icons/modern/, icons/pixel-modern/, icons/pixel/).
+Artwork is NOT taken from the wiki: PORE uses its own drawings (icons/modern/, icons/pixel-modern/).
 
 The wiki (https://wiki.pixel-odyssey.app) is an Obsidian Publish site, which
 exposes a JSON index of every vault file plus raw file access:

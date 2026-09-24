@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Check that every equipment item (key i<id>) and charm (key c<id>) has a drawing in each icon style:
 
-    icons/modern/<key>.svg        HD      (tools/modern_icons.py; charms drawn by hand) - loaded by the app as images
-    icons/pixel-modern/<key>.svg  Pixel   (tools/pixelate.mjs)
-    icons/pixel/<key>.svg         Classic (tools/pixel_icons.py)
+    icons/modern/<key>.svg        HD     (tools/modern_icons.py; charms drawn by hand) - loaded by the app as images
+    icons/pixel-modern/<key>.svg  Pixel  (tools/pixelate.mjs, the default style)
 
 Usage:
     python tools/check_icons.py
@@ -16,7 +15,7 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 DATA = ROOT / "data" / "items.json"
-STYLES = {"HD": "modern", "Pixel": "pixel-modern", "Classic": "pixel"}
+STYLES = {"HD": "modern", "Pixel": "pixel-modern"}
 
 
 def main() -> None:
