@@ -547,7 +547,7 @@
 </main>
 
 <footer>
-  Item data and icons from the <a href="https://wiki.pixel-odyssey.app/" target="_blank" rel="noopener">official Pixel Odyssey wiki</a> · <span id="dataDate"></span> · PORE is a fan-made tool
+  Item data and icons from the <a href="https://wiki.pixel-odyssey.app/" target="_blank" rel="noopener">official Pixel Odyssey wiki</a> · <span id="dataDate"></span> · PORE is a fan-made tool · <a href="https://github.com/kinganziz/pore" target="_blank" rel="noopener">source on GitHub</a>
 </footer>
 
 <div class="sheet-backdrop" id="pickerSheet" hidden>
@@ -654,6 +654,7 @@ __SOLVER_JS__
   const EXAMPLES = ['Wooden Sword', 'Soldier Sword', 'Platinum Dagger', 'Purpurite Sword'];
   const STORAGE = { state: 'pore.state.v3', badges: 'pore.badges.v3', recent: 'pore.recent.v1', theme: 'pore.theme', done: 'pore.done.', obs: 'pore.observations.v1', icons: 'pore.icons' };
   const CHARM_ITEMS = 'Rabbits Foot ×2 · Lucky Egg ×3 · Wishbone ×3 · Clover ×4 · Starfish ×4 · Horseshoe ×5 · Lucky Rose ×6';
+  const REPO_URL = 'https://github.com/kinganziz/pore';
   const MODEL_KEYS = new Set(S.models.map(m => m.key));
 
   /* ================= state ================= */
@@ -1379,6 +1380,7 @@ __SOLVER_JS__
           <div class="fit">${fitRows}</div>
         </details>
         <div class="btn-row" style="margin-top:12px">
+          <button class="btn small primary" type="button" data-action="obs-report" ${total ? '' : 'disabled'}>Report on GitHub</button>
           <button class="btn small" type="button" data-action="obs-copy" ${total ? '' : 'disabled'}>Copy observations (JSON)</button>
           ${total ? `<button class="btn small ghost" type="button" data-action="obs-clear">Clear all</button>` : ''}
         </div>
@@ -1626,6 +1628,31 @@ __SOLVER_JS__
       }
       case 'obs-remove': removeObservation(el.dataset.id); last = null; renderItem(); renderTarget(); renderOwned(); persist(); scheduleSolve(0); break;
       case 'obs-clear': if (confirm('Delete all recorded observations?')) { observations = []; saveJSON(STORAGE.obs, observations); last = null; renderItem(); renderTarget(); renderOwned(); persist(); scheduleSolve(0); } break;
+      case 'obs-report': {
+        if (!observations.length) return;
+        const fit = modelFit();
+        const rows = observations.map(o => `| ${o.itemName} | L${o.baseL} (${o.base.join('/')}) + L${o.matL} (${o.mat.join('/')}) | ${o.predicted ? o.predicted.join('/') : '?'} | ${o.actual.join('/')} |`);
+        const body = [
+          'Recorded in PORE (formula lab). Stats are listed in the item\'s order.',
+          '',
+          '| Item | Base + material | Predicted (exact) | Actual in-game |',
+          '|---|---|---|---|',
+          ...rows,
+          '',
+          `Variants matching all ${observations.length}: ${fit.filter(f => f.ok === observations.length).map(f => f.label).join(', ') || 'none'}`,
+          '',
+          '<details><summary>Raw JSON</summary>',
+          '',
+          '```json',
+          JSON.stringify(observations.map(o => ({ item: o.itemName, baseL: o.baseL, base: o.base, matL: o.matL, mat: o.mat, predicted: o.predicted, actual: o.actual, stats: o.statNames })), null, 1),
+          '```',
+          '</details>',
+        ].join('\n');
+        const url = `${REPO_URL}/issues/new?title=${encodeURIComponent(`Refine observations: ${observations[observations.length - 1].itemName}`)}&labels=observations&body=${encodeURIComponent(body)}`;
+        if (url.length > 7500) { copy(body, 'Too many for a link — report copied, paste it into a new issue'); window.open(`${REPO_URL}/issues/new`, '_blank', 'noopener'); }
+        else window.open(url, '_blank', 'noopener');
+        break;
+      }
       case 'obs-copy': copy(JSON.stringify({ app: 'PORE', exported: new Date().toISOString(), observations }, null, 2), 'Observations copied'); break;
     }
   });
