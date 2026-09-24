@@ -12,12 +12,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm ci
       - run: node tools/test_solver.mjs
       - name: generated files are up to date with src/ and data/
         run: |
           node tools/badges.mjs
           python3 tools/build.py
           python3 tools/make_svg.py
-          node tools/pixelate.mjs
+          python3 tools/pixel_icons.py
           git diff --exit-code -- index.html sw.js data/badges.json icons/sprite.svg icons/sprite-pixel.svg icons/pixel

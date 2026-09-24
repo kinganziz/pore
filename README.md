@@ -54,7 +54,7 @@ data/items.json     equipment + charm database generated from the wiki (names, s
 tools/fetch_wiki.py refreshes data/items.json from the wiki's Obsidian Publish cache
 tools/modern_icons.py draws PORE's equipment icons -> icons/modern/ (charms there are hand-drawn)
 tools/make_svg.py   bundles icons/modern/ into icons/sprite.svg
-tools/pixelate.mjs  renders the same drawings as pixel art -> icons/pixel/, icons/sprite-pixel.svg (npm install once)
+tools/pixel_icons.py draws the pixel-art set natively on a 16x16 grid -> icons/pixel/, icons/sprite-pixel.svg
 tools/build.py      injects data + solver into the template -> index.html
 tools/test_solver.mjs  solver regression tests (reference values + brute-force cross-check)
 ```
@@ -65,12 +65,12 @@ tools/test_solver.mjs  solver regression tests (reference values + brute-force c
 python tools/fetch_wiki.py     # refresh item + charm data from the wiki (needs network)
 python tools/modern_icons.py   # draw icons for new items (never overwrites hand-edited files)
 python tools/make_svg.py       # bundle icons/modern/ into icons/sprite.svg
-node tools/pixelate.mjs        # pixel-art style of the same icons (after npm install)
+python tools/pixel_icons.py    # redraw the pixel-art icon set
 python tools/build.py          # rebuild index.html after editing src/
 node tools/test_solver.mjs     # run the solver tests
 ```
 
-All icons are PORE's own drawings, available in a modern and a pixel style; no artwork from the
+All icons are PORE's own drawings, in two sets: modern vector icons and a hand-built 16x16 pixel-art set; no artwork from the
 game or the wiki is used or stored.
 Charms (with their success multipliers) are read from the wiki too and drive the automatic batch
 splitting in the crafting guide.
