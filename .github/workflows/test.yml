@@ -1,0 +1,19 @@
+name: solver tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node tools/test_solver.mjs
+      - name: index.html is up to date with src/ and data/
+        run: |
+          python3 tools/build.py
+          git diff --exit-code -- index.html

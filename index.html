@@ -1663,8 +1663,10 @@ function createSolver() {
         <div class="lab-intro">Got a different number in-game? Tap the pencil on that step and enter it. PORE re-plans with the real result and checks which formula variant explains your observations. Sharing the observations (copy below) helps pin down the hidden rule.</div>
         ${suggestion}
         ${rows ? `<div class="list-title">Observations for ${esc(item.name)}</div><div class="obs-list">${rows}</div>` : ''}
-        <div class="list-title">Formula variants</div>
-        <div class="fit">${fitRows}</div>
+        <details class="detail" ${total ? 'open' : ''}>
+          <summary>Formula variants${total ? ` · matches out of ${total}` : ''}</summary>
+          <div class="fit">${fitRows}</div>
+        </details>
         <div class="btn-row" style="margin-top:12px">
           <button class="btn small" type="button" data-action="obs-copy" ${total ? '' : 'disabled'}>Copy observations (JSON)</button>
           ${total ? `<button class="btn small ghost" type="button" data-action="obs-clear">Clear all</button>` : ''}
@@ -1827,7 +1829,9 @@ function createSolver() {
     ui.toast.textContent = msg; ui.toast.classList.add('show');
     clearTimeout(toastTimer); toastTimer = setTimeout(() => ui.toast.classList.remove('show'), 2000);
   }
-  function haptic(ms) { try { if (navigator.vibrate) navigator.vibrate(ms || 8); } catch (e) { /* ignore */ } }
+  let userTouched = false;
+  window.addEventListener('pointerdown', e => { if (e.isTrusted) userTouched = true; }, { passive: true, capture: true });
+  function haptic(ms) { try { if (userTouched && navigator.vibrate) navigator.vibrate(ms || 8); } catch (e) { /* ignore */ } }
   function setTheme(t) {
     document.documentElement.setAttribute('data-theme', t);
     document.querySelector('meta[name="theme-color"]').setAttribute('content', t === 'light' ? '#f2f3f9' : '#0a0c12');
@@ -1999,6 +2003,7 @@ function createSolver() {
     if (state.item) scheduleSolve(0);
     const idle = window.requestIdleCallback || (fn => setTimeout(fn, 1200));
     idle(() => computeBadges());
+    window.PORE = { version: '2.0.0', hasWorker: Solver.hasWorker, items: ITEMS.length };
   })();
 })();
 </script>
