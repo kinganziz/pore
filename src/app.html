@@ -943,6 +943,8 @@
   .cmp-head .pixel { width: 36px; height: 36px; }
   .cmp-pick { display: grid; justify-items: start; gap: 4px; background: none; border: 0; padding: 0; color: inherit; text-align: left; cursor: pointer; }
   .cmp-foot { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .lvl-all { margin-top: 2px; }
+  .lvl-all.on { color: var(--good); border-color: color-mix(in srgb, var(--good) 45%, var(--line)); }
 </style>
 </head>
 <body>
@@ -2062,10 +2064,13 @@ __SOLVER_JS__
       const n = steps.reduce((x, st) => x + st.count, 0);
       const cf = charmFactor(L);
       const cards = steps.map(st => stepCard(st, stepId(st), batchMeta(st.L, st.count))).join('');
+      const acts = steps.reduce((x, st) => x + actionsFor(st.L, st.count), 0);
+      const allDone = steps.every(st => done.has(stepId(st)));
       return `<div class="lvl-group">
         <div class="lvl-head">
           <span class="lv">Level ${L}</span>
-          <div class="facts"><span>${n} refine${n > 1 ? 's' : ''}</span><span>${fmt(S.GOLD[L])} gold each</span><span>${S.SUCCESS[L]}% base success</span><span class="charm">×${cf} charm per item</span></div>
+          <div class="facts"><span>${n} refine${n > 1 ? 's' : ''} · ${acts} action${acts === 1 ? '' : 's'}</span><span>${fmtGold(S.GOLD[L] * n)} gold (${fmt(S.GOLD[L])} each)</span><span>${S.SUCCESS[L]}% base success</span><span class="charm">×${cf} charm per item</span></div>
+          <button class="mini lvl-all ${allDone ? 'on' : ''}" type="button" data-action="level-done" data-level="${L}">${allDone ? '↺ undo level' : '✓ mark level done'}</button>
         </div>
         <div class="steps">${cards}</div>
       </div>`;
@@ -2790,6 +2795,16 @@ __SOLVER_JS__
         compareKey = null; pickItem(el.dataset.key); break;
       case 'compare-pick': compareMode = true; openPicker(); toast('Pick an item to compare with'); break;
       case 'compare-close': compareKey = null; renderResults(); break;
+      case 'level-done': {
+        if (!last || !last.analysis) break;
+        const L = Number(el.dataset.level), ids = last.analysis.steps.filter(st => st.L === L).map(stepId);
+        const snap = undoPoint(), set = loadDone(), all = ids.every(x => set.has(x));
+        ids.forEach(x => (all ? set.delete(x) : set.add(x)));
+        saveJSON(doneKey(), Array.from(set)); haptic(12);
+        renderResults();
+        toastUndo(all ? `Level ${L} unticked` : `Level ${L} done`, snap);
+        break;
+      }
       case 'use-custom': {
         const c = readCustomForm();
         if (!c.stats.length) { toast('Enter at least one stat'); return; }
