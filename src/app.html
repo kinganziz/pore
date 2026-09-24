@@ -64,7 +64,7 @@
   *::-webkit-scrollbar { width: 8px; height: 8px; }
   *::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 999px; }
   *::-webkit-scrollbar-track { background: transparent; }
-  html { scroll-behavior: smooth; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   body {
     margin: 0;
     min-height: 100vh;
@@ -76,6 +76,11 @@
     overflow-x: hidden;
   }
   body.locked { overflow: hidden; }
+  body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  input, textarea, select, [contenteditable] { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+  svg, img { -webkit-user-drag: none; user-drag: none; }
+  ::selection { background: transparent; }
+  input::selection, textarea::selection { background: rgba(139, 124, 255, .45); }
   button, input, select { font: inherit; color: inherit; }
   button { cursor: pointer; }
   h1, h2, h3, p { margin: 0; }
@@ -96,13 +101,15 @@
     backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
     border-bottom: 1px solid var(--line);
   }
-  .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .brand { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1 1 auto; }
+  .brand > div { min-width: 0; }
   .logo { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center;
     background: linear-gradient(135deg, var(--accent), var(--accent-2)); box-shadow: 0 8px 24px rgba(139, 124, 255, .35); flex: 0 0 auto; }
   .logo svg { width: 22px; height: 22px; }
   .brand h1 { font-family: var(--display); font-size: 20px; letter-spacing: .5px; line-height: 1; }
   .brand p { font-size: 12px; color: var(--muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .topbar-actions { display: flex; gap: 8px; }
+  .topbar-actions { display: flex; gap: 8px; flex: 0 0 auto; }
+  @media (max-width: 400px) { .topbar-actions { gap: 6px; } .topbar .icon-btn { width: 36px; height: 36px; } }
   .icon-btn {
     width: 38px; height: 38px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface);
     display: grid; place-items: center; transition: transform .12s, background .2s; flex: 0 0 auto;
@@ -120,7 +127,9 @@
   /* ---------- layout ---------- */
   .app { position: relative; z-index: 1; width: min(1180px, 100%); margin: 0 auto; padding: 16px 16px calc(40px + var(--safe-b)); display: grid; gap: 14px; }
   .col { display: grid; gap: 14px; align-content: start; min-width: 0; }
-  #resultsBody { display: grid; gap: 14px; }
+  #resultsBody { display: grid; gap: 14px; min-width: 0; }
+  #resultsBody > *, .col > * { min-width: 0; }
+  .app { grid-template-columns: minmax(0, 1fr); }
   @media (min-width: 980px) {
     .app { grid-template-columns: 430px minmax(0, 1fr); gap: 20px; padding-top: 22px; }
   }
@@ -144,6 +153,7 @@
   }
   .btn:hover { background: var(--surface-3); }
   .btn:active { transform: scale(.97); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; transform: none; }
   .btn.primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); border-color: transparent; color: #fff; box-shadow: 0 10px 26px rgba(139, 124, 255, .35); }
   .btn.primary:hover { box-shadow: 0 12px 32px rgba(139, 124, 255, .5); }
   .btn.ghost { background: transparent; }
@@ -153,6 +163,8 @@
   .seg { display: inline-flex; border: 1px solid var(--line-2); border-radius: 999px; overflow: hidden; background: var(--surface); }
   .seg button { border: 0; background: transparent; padding: 7px 12px; font-size: 12px; font-weight: 700; color: var(--muted); transition: background .2s, color .2s; }
   .seg button.on { background: var(--text); color: var(--bg); }
+  .seg-full { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; margin-bottom: 12px; }
+  .seg-full button { padding: 9px 4px; font-size: 13px; }
   .seg.accent button.on { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; }
   .seg.safe button.on { background: linear-gradient(135deg, var(--good), #1fa3c9); color: #06231a; }
 
@@ -186,7 +198,7 @@
   .item-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
 
   .stat-list { display: grid; gap: 8px; margin-top: 14px; }
-  .stat-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); }
+  .stat-row { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, auto); align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); }
   .stat-row .val { font-family: var(--display); font-weight: 700; font-size: 20px; min-width: 44px; }
   .stat-row .nm { font-weight: 600; min-width: 0; }
   .stat-row .nm small { display: block; color: var(--muted); font-weight: 500; font-size: 12px; }
@@ -200,9 +212,10 @@
   .assumed-note { font-size: 12px; color: var(--warn); margin-top: 8px; }
 
   /* ---------- level chips ---------- */
-  .chips { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 5px; padding: 2px; }
+  .chips { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 4px; padding: 2px; }
+  @media (max-width: 350px) { .chips { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
   .chip-btn {
-    min-width: 0; height: 40px; padding: 0 2px; border-radius: 11px; border: 1px solid var(--line); font-size: 13px;
+    min-width: 0; height: 40px; padding: 0; border-radius: 11px; border: 1px solid var(--line); font-size: 13px; letter-spacing: -.2px; overflow: hidden;
     background: var(--surface); font-weight: 700; transition: transform .12s, background .2s, color .2s, box-shadow .2s;
   }
   .chip-btn:active { transform: scale(.94); }
@@ -213,7 +226,7 @@
   .target-summary .big { font-family: var(--display); font-size: 22px; font-weight: 700; }
   .target-summary .stats { color: var(--muted); }
   .target-rows { display: grid; gap: 8px; margin-top: 10px; }
-  .target-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; padding: 8px 10px 8px 12px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); }
+  .target-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 10px 8px 12px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); }
   .target-row .nm { font-weight: 600; font-size: 14px; }
   .target-row .nm small { color: var(--muted); font-weight: 500; margin-left: 6px; }
   .target-row .ctl { display: flex; align-items: center; gap: 6px; }
@@ -230,17 +243,22 @@
   .detail { margin-top: 10px; }
   .detail summary { cursor: pointer; font-size: 13px; color: var(--muted); user-select: none; }
   .detail summary:hover { color: var(--text); }
-  .safety { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); }
+  .safety { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); }
+  .safety .nm { flex: 1 1 160px; min-width: 0; }
+  .safety .seg { flex: 0 0 auto; }
   .safety .nm { font-weight: 600; font-size: 14px; }
   .safety .nm small { display: block; color: var(--muted); font-weight: 500; font-size: 12px; }
 
   /* ---------- owned ---------- */
   .owned-list { display: grid; gap: 8px; }
   .owned-row { display: grid; gap: 8px; padding: 10px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); }
-  .owned-top { display: flex; align-items: center; gap: 8px; }
+  .owned-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .owned-top select { flex: 1 1 96px; min-width: 0; }
   .owned-top select { height: 38px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--surface-2); padding: 0 8px; font-weight: 700; }
-  .owned-stats { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-  .owned-stat { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+  .owned-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+  .owned-stat { display: grid; gap: 4px; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; min-width: 0; }
+  .owned-stat .num { width: 100%; }
+  .owned-hint { font-size: 12px; color: var(--muted); }
   .stepper { display: inline-flex; align-items: center; border: 1px solid var(--line-2); border-radius: 10px; overflow: hidden; margin-left: auto; }
   .stepper button { width: 34px; height: 36px; border: 0; background: var(--surface-2); font-weight: 800; }
   .stepper button:active { background: var(--surface-3); }
@@ -272,8 +290,9 @@
   :root[data-theme="light"] .hero { background: linear-gradient(#fff, #fff) padding-box, linear-gradient(135deg, rgba(139, 124, 255, .7), rgba(209, 109, 255, .2), rgba(55, 211, 154, .6)) border-box; }
   .hero::before { content: ""; position: absolute; inset: -40% -20% auto; height: 60%; background: radial-gradient(circle at 30% 50%, rgba(139, 124, 255, .22), transparent 60%); pointer-events: none; }
   .hero-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-  .hero-label { font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); font-weight: 700; }
-  .hero-body { display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: center; margin-top: 8px; }
+  .hero-label { font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+  .hero-body { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: center; margin-top: 8px; }
+  @media (max-width: 380px) { .ring, .ring svg { width: 84px; height: 84px; } .ring .lbl b { font-size: 19px; } }
   .hero-num { font-family: var(--display); font-size: clamp(46px, 12vw, 64px); font-weight: 700; line-height: 1; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
   .hero-num small { font-size: 16px; font-weight: 600; color: var(--muted); letter-spacing: 0; margin-left: 6px; }
   .hero-sub { color: var(--muted); margin-top: 6px; }
@@ -294,7 +313,8 @@
   .ring .lbl { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; line-height: 1; }
   .ring .lbl b { font-family: var(--display); font-size: 24px; letter-spacing: -.5px; }
   .ring .lbl small { font-size: 9px; text-transform: uppercase; letter-spacing: 1.4px; color: var(--muted); margin-top: 4px; }
-  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 16px; }
+  .tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 16px; }
+  .tile b, .tile i, .tile small { overflow-wrap: anywhere; }
   .tile { padding: 10px 12px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); min-width: 0; }
   .tile small { display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; font-weight: 600; }
   .tile b { display: block; font-family: var(--display); font-size: 19px; margin-top: 2px; }
@@ -305,11 +325,12 @@
 
   .section-title { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
   .section-title h3 { font-family: var(--display); font-size: 17px; }
-  .section-title .right { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+  .section-title .right { margin-left: auto; display: flex; gap: 6px; align-items: center; max-width: 100%; }
+  .section-title .seg { flex-wrap: wrap; }
 
   /* ladder */
   .ladder { display: grid; gap: 6px; }
-  .ladder-row { display: grid; grid-template-columns: 36px 1fr auto; gap: 10px; align-items: center; padding: 6px 8px; border-radius: 12px; border: 1px solid transparent; background: transparent; text-align: left; transition: background .2s, border-color .2s; width: 100%; }
+  .ladder-row { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 6px 8px; border-radius: 12px; border: 1px solid transparent; background: transparent; text-align: left; transition: background .2s, border-color .2s; width: 100%; }
   .ladder-row:hover { background: var(--surface); }
   .ladder-row.on { border-color: var(--line-2); background: var(--surface-2); }
   .ladder-row .lv { font-weight: 800; font-family: var(--display); }
@@ -328,6 +349,8 @@
   .progress { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); margin-bottom: 12px; }
   .charm-box { border-radius: 12px; background: var(--surface); border: 1px solid var(--line); margin-bottom: 12px; }
   .charm-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; }
+  .charm-row .nm, .stock-row .nm { min-width: 0; }
+  .charm-row .num, .stock-row .num { flex: 0 0 auto; }
   .charm-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 0 12px 12px; }
   .charm-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 6px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-2); font-size: 12px; font-weight: 600; transition: transform .12s, background .2s, border-color .2s; }
   .charm-chip:active { transform: scale(.95); }
@@ -351,7 +374,7 @@
   .step { border-radius: 14px; border: 1px solid var(--line); background: var(--surface); transition: background .2s, opacity .3s; }
   .step.done { opacity: .5; }
   .step.observed { border-color: rgba(95, 178, 255, .5); }
-  .step-main { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 10px 8px 10px 12px; cursor: pointer; }
+  .step-main { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 8px 10px 12px; cursor: pointer; }
   .step-main:active { transform: scale(.995); }
   .step.done .recipe { text-decoration: line-through; text-decoration-color: var(--soft); }
   .check { width: 26px; height: 26px; border-radius: 9px; border: 2px solid var(--line-2); display: grid; place-items: center; transition: background .2s, border-color .2s; }
@@ -362,6 +385,13 @@
   .recipe { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; min-width: 0; }
   .recipe .mult { font-family: var(--display); font-weight: 800; font-size: 15px; padding: 2px 8px; border-radius: 8px; background: var(--surface-3); }
   .recipe .op { color: var(--soft); font-weight: 700; }
+  .recipe .op-blank { display: none; }
+  @media (max-width: 700px) {
+    .recipe { display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 5px 6px; align-items: center; justify-items: start; }
+    .recipe .mult, .recipe .jit-meta { grid-column: 1 / -1; }
+    .recipe .op, .recipe .op-blank { display: block; text-align: center; width: 14px; }
+    .step-main { gap: 10px; padding: 10px 8px 10px 10px; }
+  }
   .recipe .jit-meta { flex-basis: 100%; font-size: 11px; color: var(--soft); }
   .obs-btn { width: 32px; height: 32px; border-radius: 9px; border: 1px solid var(--line); background: transparent; color: var(--muted); display: grid; place-items: center; }
   .obs-btn:hover { color: var(--info); border-color: var(--info); }
@@ -371,7 +401,8 @@
   .obs-form .obs-title small { display: block; color: var(--muted); font-weight: 500; }
   .obs-inputs { display: flex; flex-wrap: wrap; gap: 8px; }
   .obs-inputs label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); font-weight: 600; }
-  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px 4px 6px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); font-size: 13px; line-height: 1.2; white-space: nowrap; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px 4px 6px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); font-size: 13px; line-height: 1.2; max-width: 100%; }
+  .chip span { min-width: 0; overflow-wrap: anywhere; }
   .chip b { font-family: var(--display); font-weight: 800; padding: 1px 6px; border-radius: 6px; background: var(--surface-3); }
   .chip.perfect b { background: linear-gradient(135deg, #f6c453, #ff9d3c); color: var(--gold-ink); }
   .chip.perfect { border-color: rgba(246, 196, 83, .45); }
@@ -391,6 +422,7 @@
 
   table.ref { width: 100%; border-collapse: collapse; font-size: 13px; }
   table.ref th, table.ref td { padding: 8px 6px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  table.ref td:nth-child(2) { white-space: normal; }
   table.ref th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .6px; }
   table.ref td.r, table.ref th.r { text-align: right; font-variant-numeric: tabular-nums; }
   table.ref tr.on td { background: rgba(246, 196, 83, .08); }
@@ -453,14 +485,14 @@
   .search input:focus { outline: 2px solid var(--accent); }
   .search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--muted); }
   .search .clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; border-radius: 8px; border: 0; background: var(--surface-3); color: var(--muted); }
-  .filters { display: flex; gap: 6px; overflow-x: auto; padding: 2px 16px 10px; scrollbar-width: none; flex: 0 0 auto; }
+  .filters { display: flex; gap: 6px; overflow-x: auto; padding: 2px 16px 10px; scrollbar-width: none; flex: 0 0 auto; -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent); mask-image: linear-gradient(90deg, #000 88%, transparent); }
   .filters::-webkit-scrollbar { display: none; }
   .filter { flex: 0 0 auto; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: 13px; font-weight: 600; white-space: nowrap; }
   .filter.on { background: var(--text); color: var(--bg); border-color: transparent; }
   .sort-row { display: flex; align-items: center; justify-content: space-between; padding: 0 0 8px; font-size: 12px; color: var(--muted); gap: 8px; }
   .list { display: grid; gap: 6px; }
   .row {
-    display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; width: 100%; text-align: left;
+    display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; width: 100%; text-align: left;
     padding: 8px 10px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); transition: background .15s, transform .12s;
   }
   .row:hover { background: var(--surface-2); }
@@ -568,7 +600,7 @@
     </div>
     <div class="search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-      <input id="searchInput" type="search" placeholder="Search items or stats (e.g. crit, mining)" autocomplete="off" autocorrect="off" spellcheck="false">
+      <input id="searchInput" type="search" placeholder="Search items or stats" autocomplete="off" autocorrect="off" spellcheck="false">
       <button class="clear" type="button" data-action="clear-search" aria-label="Clear search" hidden>×</button>
     </div>
     <div class="filters" id="filters"></div>
@@ -1051,7 +1083,8 @@ __SOLVER_JS__
             </div>
             <button class="x-btn" type="button" data-action="owned-remove" data-idx="${idx}" aria-label="Remove">✕</button>
           </div>
-          <div class="owned-stats">${statInputs}<span class="empty-note">blank = perfect</span></div>
+          <div class="owned-stats">${statInputs}</div>
+          <div class="owned-hint">Leave a stat blank if it is perfect for that level.</div>
         </div>`;
     }).join('');
     ui.ownedBody.innerHTML = `
@@ -1209,7 +1242,7 @@ __SOLVER_JS__
           <label class="step-main">
             <input type="checkbox" data-field="step" data-step="${esc(id)}" ${isDone ? 'checked' : ''}>
             <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
-            <span class="recipe"><span class="mult">×${st.count}</span>${chipHTML(st.base, item, 'base')}<span class="op">+</span>${chipHTML(st.mat, item)}<span class="op">→</span>${chipHTML(st.result, item, 'result', observed)}${extra || ''}</span>
+            <span class="recipe"><span class="mult">×${st.count}</span><span class="op op-blank"></span>${chipHTML(st.base, item, 'base')}<span class="op">+</span>${chipHTML(st.mat, item)}<span class="op">→</span>${chipHTML(st.result, item, 'result', observed)}${extra || ''}</span>
             <button class="obs-btn" type="button" data-action="obs-open" data-step="${esc(id)}" title="Got a different result in-game? Record it" aria-label="Record actual result"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17z"/><path d="M13.5 6.5l3 3"/></svg></button>
           </label>
           ${openObsForm === id ? obsFormHTML(id, st, item) : ''}
@@ -1284,7 +1317,7 @@ __SOLVER_JS__
         <div class="tiles">
           <div class="tile"><small>Refines</small><b>${fmt(a.refines)}</b><i>vs ${fmt(standard - 1)}</i></div>
           <div class="tile"><small>Gold</small><b>${fmtGold(a.gold)}</b><i>vs ${fmtGold(goldStd)}</i></div>
-          <div class="tile"><small>To collect</small><b>${fmt(toCollect)}</b><i>${stock ? `${stock} in stock` : 'base items'}</i></div>
+          <div class="tile"><small>Collect</small><b>${fmt(toCollect)}</b><i>${stock ? `${stock} in stock` : 'base items'}</i></div>
         </div>
         <div class="note">Result: ${chipHTML(res.plan.nodes[res.plan.root], item, 'result')}${res.ms > 400 ? ` · solved in ${(res.ms / 1000).toFixed(1)}s` : ''}</div>
         <div class="btn-row" style="margin-top:14px">
@@ -1300,11 +1333,8 @@ __SOLVER_JS__
       </div>
 
       <div class="card" id="guideCard">
-        <div class="section-title"><h3>Crafting guide</h3>
-          <div class="right">
-            <div class="seg"><button type="button" class="${state.view === 'up' ? 'on' : ''}" data-action="view" data-view="up">Batches</button><button type="button" class="${state.view === 'down' ? 'on' : ''}" data-action="view" data-view="down">Top-down</button><button type="button" class="${state.view === 'jit' ? 'on' : ''}" data-action="view" data-view="jit">Just-in-time</button></div>
-          </div>
-        </div>
+        <div class="section-title"><h3>Crafting guide</h3><span class="hint">${actionsView} refine action${actionsView === 1 ? '' : 's'}</span></div>
+        <div class="seg seg-full"><button type="button" class="${state.view === 'up' ? 'on' : ''}" data-action="view" data-view="up">Batches</button><button type="button" class="${state.view === 'down' ? 'on' : ''}" data-action="view" data-view="down">Top-down</button><button type="button" class="${state.view === 'jit' ? 'on' : ''}" data-action="view" data-view="jit">Just-in-time</button></div>
         <div class="charm-box">
           <div class="charm-row">
             <div class="nm">Charms per refine action<small>Tap the charms you equip at once; the factors multiply. Type a number to override.</small></div>
@@ -1313,7 +1343,7 @@ __SOLVER_JS__
           <div class="charm-chips">${CHARMS.map(c => { const n = state.ch[c.key] || 0; return `<button type="button" class="charm-chip ${n ? 'on' : ''}" data-action="charm" data-key="${c.key}" title="${esc(c.desc || c.name)}">${iconSVG(c.key)}${esc(c.name)}<b>×${c.factor}</b>${n > 1 ? `<i>${n}</i>` : ''}</button>`; }).join('')}<span class="charm-total">${cfMax() > 0 ? `= ×${cfMax()} per action` : 'no limit'}</span></div>
         </div>
         <div class="progress"><span id="progressText">${doneCount}/${totalSteps} done</span><div class="track"><div class="fill" id="progressFill" style="width:${totalSteps ? (doneCount / totalSteps) * 100 : 0}%"></div></div>${doneCount ? `<button class="mini" type="button" data-action="reset-progress">reset</button>` : ''}</div>
-        <div class="note" style="margin:0 0 4px">${state.view === 'jit' ? `One branch at a time: make the two ingredients, refine them, move on. Keeps your inventory small, but it means <b>${actionsView} refine actions</b> and charms are spent per action, so Batches (${actionsBatch} actions) needs far fewer charms.` : `Each card is one recipe: <b>base</b> + material → result, grouped so you can multi-refine the whole batch in one action. <b>${actionsBatch} refine actions</b> in total${cfMax() > 0 ? ` with batches split to fit a ×${cfMax()} charm factor` : '. A batch of N items needs a charm factor of N × 100 ÷ base success; enter your max charm factor below to split batches automatically'}.`} Tap to tick off what you have crafted; use the pencil if the game gave you a different result. P = perfect stats, L = below perfect; every chip shows the exact stats to look for.</div>
+        <div class="note" style="margin:0 0 4px">${state.view === 'jit' ? `One branch at a time: make the two ingredients, refine them, move on. Keeps your inventory small, but it means <b>${actionsView} refine actions</b> and charms are spent per action, so Batches (${actionsBatch} actions) needs far fewer charms.` : `Each card is one recipe: <b>base</b> + material → result, grouped so you can multi-refine the whole batch in one action. <b>${actionsBatch} refine actions</b> in total${cfMax() > 0 ? ` with batches split to fit a ×${cfMax()} charm factor` : '. A batch of N items needs a charm factor of N × 100 ÷ base success; pick your charms above to split batches automatically'}.`} Tap to tick off what you have crafted; use the pencil if the game gave you a different result. P = perfect stats, L = below perfect; every chip shows the exact stats to look for.</div>
         ${guide}
       </div>
 
@@ -1400,8 +1430,9 @@ __SOLVER_JS__
   }
 
   function countUp(el, from, to) {
-    if (!el || reduced) return;
+    if (!el || reduced || document.hidden) return;
     const start = performance.now(), dur = 900;
+    setTimeout(() => { el.textContent = fmt(to); }, dur + 80);
     const tick = t => {
       const k = Math.min(1, (t - start) / dur);
       const e = 1 - Math.pow(1 - k, 3);
@@ -1744,6 +1775,7 @@ __SOLVER_JS__
       return;
     }
   });
+  document.addEventListener('visibilitychange', () => { const el = document.getElementById('heroNum'); if (el && last && last.analysis) el.textContent = fmt(last.analysis.p1); });
   document.addEventListener('keydown', e => {
     if (e.key === 'Enter' && e.target.closest && e.target.closest('[data-obs-form]')) {
       e.preventDefault();
