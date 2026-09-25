@@ -676,7 +676,7 @@
      ===================================================================================== */
   :root[data-skin="pixel"] {
     --bg: #0b0b1e; --bg-2: #101028;
-    --surface: #161638; --surface-2: #212152; --surface-3: #2c2c66;
+    --surface: rgba(22, 22, 56, .8); --surface-2: #212152; --surface-3: #2c2c66;
     --tile: #161638; --tile-2: #212152; --tile-on: #2a2150;
     --text: #f0f0f8; --muted: #9c9cc4; --soft: #7474a0;
     --accent: #ff6b6b; --accent-2: #ff6b6b; --on-accent: #0b0b1e;
@@ -695,7 +695,7 @@
   }
   :root[data-skin="pixel"][data-theme="light"] {
     --bg: #e3d9bd; --bg-2: #dad0b2;
-    --surface: #efe7d1; --surface-2: #e6dcc2; --surface-3: #d9ceb0;
+    --surface: rgba(239, 231, 209, .82); --surface-2: #e6dcc2; --surface-3: #d9ceb0;
     --tile: #efe7d1; --tile-2: #e6dcc2; --tile-on: #f3d6cc;
     --text: #1b1b33; --muted: #5c5c80; --soft: #8a8aa8;
     --accent: #e0474f; --accent-2: #e0474f; --on-accent: #fff;
@@ -1012,7 +1012,7 @@
   :root[data-flavor="game"] .lvr { display: inline; }
   :root[data-flavor="game"][data-skin="pixel"] {
     --bg: #081713; --bg-2: #0b1d18;
-    --surface: #0f241e; --surface-2: #143027; --surface-3: #1b3d31;
+    --surface: rgba(15, 36, 30, .8); --surface-2: #143027; --surface-3: #1b3d31;
     --tile: #0f2a22; --tile-2: #173a2e; --tile-on: #1d4a38;
     --text: #eaf6ee; --muted: #8fb8a2; --soft: #6a917d;
     --accent: #5fd873; --accent-2: #5fd873; --on-accent: #06180f;
@@ -1023,7 +1023,7 @@
   }
   :root[data-flavor="game"][data-skin="pixel"][data-theme="light"] {   /* the sandy daylight of the Step screen */
     --bg: #eadcc2; --bg-2: #e2d2b4;
-    --surface: #f4ead6; --surface-2: #ecdfc4; --surface-3: #dfcfae;
+    --surface: rgba(244, 234, 214, .82); --surface-2: #ecdfc4; --surface-3: #dfcfae;
     --tile: #f4ead6; --tile-2: #ecdfc4; --tile-on: #d8ecd0;
     --text: #1a2a22; --muted: #5a6e62; --soft: #86978c;
     --accent: #2c9a48; --accent-2: #2c9a48; --on-accent: #fff;
@@ -1134,7 +1134,7 @@
   @keyframes talk-more { 50% { transform: translateY(3px); } }
   /* toasts: a dialogue box at the bottom, above the tab bar */
   :root[data-flavor="game"][data-skin="pixel"] .toast { top: auto; bottom: calc(var(--tabbar-h) + 14px); transform: translate(-50%, 12px); 
-    background: var(--surface) !important; color: var(--text) !important; border: 3px solid var(--gold) !important; border-radius: 14px !important;
+    background: var(--surface-2) !important; color: var(--text) !important; border: 3px solid var(--gold) !important; border-radius: 14px !important;
     box-shadow: 4px 4px 0 var(--px-shadow); padding: 12px 30px 12px 16px; text-align: left; font-family: var(--font); font-size: 15px; }
   :root[data-flavor="game"][data-skin="pixel"] .toast.show { transform: translate(-50%, 0); }
   :root[data-flavor="game"][data-skin="pixel"] .toast::after { content: ""; position: absolute; right: 10px; bottom: 9px; width: 8px; height: 5px; background: var(--gold);
@@ -1161,6 +1161,11 @@
   .hb-dots i.on { width: 16px; background: #fff; }
   :root[data-skin="pixel"] .hb-dots i { border-radius: 0; }
   :root[data-flavor="game"] .hb-dots i.on { background: #ffd84a; }
+  /* the landscape shows through the sheets too */
+  .sheet { background: color-mix(in srgb, var(--bg-2) 82%, transparent); }
+  body.locked #scene { display: block; opacity: .75; }   /* behind an open sheet the world shows a little brighter */
+  body.locked :is(main.app, body > footer) { visibility: hidden; }   /* only the world shows through a sheet, not the page under it */
+  .sheet-backdrop { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(4, 6, 12, .35); }
 </style>
 </head>
 <body>
@@ -2250,10 +2255,15 @@ __SOLVER_JS__
     const { ctx: g, W, H } = scene, pal = scenePalette(), P = 360;
     scene.x += dt * 0.012;                                   // walking speed
     const now = performance.now() / 1000;
-    // sky in flat bands
-    const bands = pal.sky.length, top = H * 0.62;
-    pal.sky.forEach((c, i) => { g.fillStyle = c; g.fillRect(0, Math.floor(top * i / bands), W, Math.ceil(top / bands) + 1); });
-    g.fillStyle = pal.sky[bands - 1]; g.fillRect(0, Math.floor(top), W, H - top);
+    // sky: one smooth gradient through the palette's sky colours (flat bands showed as big rectangles)
+    const top = H * 0.62;
+    if (!scene.skyGrad || scene.skyKey !== pal.sky.join() + H) {
+      const gr = g.createLinearGradient(0, 0, 0, top);
+      pal.sky.forEach((c, i) => gr.addColorStop(i / (pal.sky.length - 1 || 1), c));
+      scene.skyGrad = gr; scene.skyKey = pal.sky.join() + H;
+    }
+    g.fillStyle = scene.skyGrad; g.fillRect(0, 0, W, Math.ceil(top));
+    g.fillStyle = pal.sky[pal.sky.length - 1]; g.fillRect(0, Math.floor(top), W, H - Math.floor(top));
     // stars (night) or clouds (day)
     if (pal.star) for (const st of scene.stars) {
       const tw = Math.sin(now * 1.6 + st.p);
@@ -2278,28 +2288,33 @@ __SOLVER_JS__
     }
     g.globalAlpha = 1;
     // three parallax layers
+    // each layer scrolls by whole pixels: a fractional offset made the hill edges shimmer and the trees bob
+    const off = speed => Math.floor(scene.x * speed);
     const layer = (speed, base, amps, color) => {
       g.fillStyle = color;
-      for (let x = 0; x < W; x++) { const h = Math.round(ridge(x + scene.x * speed, P, base, amps, H)); g.fillRect(x, h, 1, H - h); }
+      const o = off(speed);
+      for (let x = 0; x < W; x++) { const h = Math.round(ridge(x + o, P, base, amps, H)); g.fillRect(x, h, 1, H - h); }
     };
     layer(0.35, 0.5, [[0.05, 1, 0.3], [0.035, 2, 1.7], [0.02, 5, 0.9]], pal.far);
     const midSpeed = 0.7, midAmps = [[0.03, 2, 2.2], [0.02, 3, 0.4], [0.01, 7, 1.1]];
     layer(midSpeed, 0.63, midAmps, pal.mid);
     g.fillStyle = pal.tree;                                  // pines on the hills
+    const midOff = off(midSpeed);
     for (const t of scene.trees) {
-      const x = Math.round(((t.x - scene.x * midSpeed) % P + P) % P);
+      const x = ((Math.round(t.x) - midOff) % P + P) % P;
       if (x > W + 6) continue;
-      const base = Math.round(ridge(x + scene.x * midSpeed, P, 0.63, midAmps, H));
+      const base = Math.round(ridge(x + midOff, P, 0.63, midAmps, H));
       for (let k = 0; k < t.h; k++) { const w = Math.max(1, Math.floor((k + 2) / 2.2)); g.fillRect(x - w, base - t.h + k, w * 2 + 1, 1); }
       g.fillRect(x, base, 1, 2);
     }
     const nearSpeed = 1.2, nearAmps = [[0.012, 3, 0.2], [0.008, 8, 2.4]];
     layer(nearSpeed, 0.8, nearAmps, pal.near);
     g.fillStyle = pal.near;                                  // standing stones and broken pillars
+    const nearOff = off(nearSpeed);
     for (const rk of scene.rocks) {
-      const x = Math.round(((rk.x - scene.x * nearSpeed) % P + P) % P);
+      const x = ((Math.round(rk.x) - nearOff) % P + P) % P;
       if (x > W + 8) continue;
-      const base = Math.round(ridge(x + scene.x * nearSpeed, P, 0.8, nearAmps, H));
+      const base = Math.round(ridge(x + nearOff, P, 0.8, nearAmps, H));
       g.fillRect(x, base - rk.h, rk.w, rk.h + 1);
       g.fillRect(x - 1, base - rk.h, rk.w + 2, 1);
     }
@@ -2323,9 +2338,8 @@ __SOLVER_JS__
     if (!scene.raf) { scene.last = 0; scene.raf = requestAnimationFrame(sceneLoop); }
   }
   function sceneHide() { if (scene.raf) cancelAnimationFrame(scene.raf); scene.raf = 0; }
-  function sceneStill() { sceneHide(); if (sceneSetup()) sceneDraw(0); }   // plan screens: the same world, not moving
-  document.addEventListener('visibilitychange', () => { if (document.hidden) sceneHide(); else if (!state.item) sceneShow(); });
-  addEventListener('resize', () => { if (!scene.el) return; scene.W = 0; if (state.item) sceneStill(); else sceneShow(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) sceneHide(); else sceneShow(); });
+  addEventListener('resize', () => { if (!scene.el) return; scene.W = 0; sceneShow(); });
 
   /* ================= tab bar: Home, Items, Plan, Guide, Help (like the game's bottom bar) ================= */
   const TAB_HOME = '<svg class="tab-glyph" viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M7 1h2v1h1v1h1v1h1v1h1v1h1v1h1v2h-1v6H9v-4H7v4H2V9H1V7h1V6h1V5h1V4h1V3h1V2h1z"/></svg>';
@@ -2475,7 +2489,7 @@ __SOLVER_JS__
 
   function renderResults() {
     const item = last ? last.item : resolveItem();
-    if (item) sceneStill();
+    if (item) sceneShow();   // the same world keeps moving behind the plan, dimmed
     if (ui.tabbar && !ui.tabbar.childElementCount) renderTabbar(); else syncTabbar();
     if (!item) {
       ui.resultsBody.innerHTML = homeHTML();
