@@ -28,11 +28,11 @@ o #46291a
 ..............baabbbcb..
 .............bcbbbbbbcb.
 .........ddbbefbbbbbefb.
-.....bbbdghhecceeeeecfb.
+.....bbbdggcecceeeeecfb.
 ...bbeeeehiihccccccccfb.
 ..beeccchijihccccccccfb.
 .becccccchikhccccccccfb.
-.bllllllllhhllllllllllb.
+.bclllllllhhlllllllllfb.
 lmmmmmmmmmngmmmmmmmmmnl.
 lnnnnnnnnnnmnnnnnnnnnol.
 .lnooooooooooooonnnnool.

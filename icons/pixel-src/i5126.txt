@@ -18,12 +18,12 @@ h #a0a6b4
 .......abcccccccccca....
 ......abcccccccccccca...
 ......abcccccccccddda...
-.....abcccccccccdaaeeae.
+.....abcccccccccdaaccae.
 .....abcccccccccdaefffge
 ....abccccccccccccefgghe
 ....abcccccccccccdefgghe
 ....abceeeeeeeeeedaghhhe
-....aeefffffffffgeeeeee.
+....acefffffffffgeceeee.
 ...efffggggggggggffge...
 ..efggggggggggggggggge..
 ..eggggggggggggggggghe..

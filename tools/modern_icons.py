@@ -1101,12 +1101,12 @@ def glove(ic, pal, pattern=None, cuff=None):
     return "".join(s)
 
 def broom(ic):
-    s = tube(ic, "M10 6 L40 40", PAL["darkwood"], 3.6)
-    s.append(shape(ic, "M38 36 L46 30 L60 50 C58 56 52 60 46 58 Z", PAL["sand"]))
-    s.append(line("M44 36 L52 54 M48 34 L56 50 M41 40 L48 56", PAL["sand"][2], 1.2, 0.7))
-    s.append(f'<rect x="36" y="32" width="10" height="6" rx="2" transform="rotate(-37 41 35)" fill="{PAL["red"][1]}" stroke="#2c0608" stroke-width="1.2"/>')
-    return "".join(s)
-
+    # drawn upright and turned by exactly 45 degrees, so the handle is a clean diagonal in pixels too
+    s = tube(ic, "M32 -2 L32 40", PAL["darkwood"], 3.6)
+    s.append(shape(ic, "M26.5 44 L37.5 44 L43 60 C39 63 25 63 21 60 Z", PAL["sand"], ic.lg(PAL["sand"], 0, 0, 1, 0)))
+    s.append(line("M29 47 L27 59 M32 47 L32 60 M35 47 L37 59", PAL["sand"][2], 1.3, 0.7))
+    s.append(f'<rect x="27" y="38.5" width="10" height="6.5" rx="2" fill="{ic.lg(PAL["red"], 0, 0, 0, 1)}" stroke="#2c0608" stroke-width="1.4"/>')
+    return rot(s)
 
 def lantern(ic):
     s = [line("M26 10 C26 2 38 2 38 10", "#3a3440", 2.6)]
@@ -1133,12 +1133,13 @@ def torch(ic):
 def telescope(ic):
     s = [f'<rect x="4" y="24" width="26" height="16" rx="3" fill="{ic.lg(PAL["gold"], 0, 0, 0, 1)}" stroke="#3a1e06" stroke-width="2"/>',
          f'<rect x="28" y="26" width="22" height="12" rx="3" fill="{ic.lg(PAL["crimson"], 0, 0, 0, 1)}" stroke="#2a0814" stroke-width="2"/>',
-         f'<rect x="48" y="28" width="12" height="8" rx="2" fill="{ic.lg(PAL["gold"], 0, 0, 0, 1)}" stroke="#3a1e06" stroke-width="2"/>',
+         f'<rect x="48" y="26.7" width="11" height="10.6" rx="2" fill="{ic.lg(PAL["gold"], 0, 0, 0, 1)}" stroke="#3a1e06" stroke-width="2"/>',
+         f'<rect x="56.5" y="25.8" width="4.2" height="12.4" rx="1.5" fill="{PAL["gold"][2]}" stroke="#3a1e06" stroke-width="1.4"/>',   # eyepiece cap
          f'<rect x="8" y="23" width="4" height="18" rx="1.5" fill="{PAL["gold"][2]}" stroke="#3a1e06" stroke-width="1.4"/>',
          f'<ellipse cx="4.5" cy="32" rx="2.5" ry="7" fill="#bfe6ff" stroke="#3a1e06" stroke-width="1.6"/>']
     s.append(line("M14 27 L28 27", HL, 1.8, 0.6))
     s.append(line("M31 29 L46 29", HL, 1.6, 0.5))
-    return rot(s, -35)
+    return rot(s, -45)   # exactly diagonal: clean steps in pixels
 
 
 def skull(ic, pal, eyes="#e6e04a", cracks=None):

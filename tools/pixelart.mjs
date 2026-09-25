@@ -269,6 +269,8 @@ function compile(svg) {
   // visors, gems): the pixels of the part below that touch them take their ink
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
     const li = own[y][x]; if (li < 0) continue;
+    // never on the silhouette's edge: a 1-pixel rim there (shield borders) would vanish under two dark lines
+    if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => { const nx = x + dx, ny = y + dy; return nx < 0 || ny < 0 || nx >= N || ny >= N || own[ny][nx] < 0; })) continue;
     let rim = -1;
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
       const nx = x + dx, ny = y + dy;
