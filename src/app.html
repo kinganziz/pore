@@ -1779,6 +1779,14 @@
   .lib-grid .pt-face { width: 52px; height: 52px; } .lib-grid.bare .pt-face { width: 48px; height: 48px; }
   .lib-page .lib-body { padding: 0 4px; font-size: 14px; }
   .obol-b { border: 0; padding: 0; background: none; cursor: pointer; line-height: 0; } .obol-b:active { transform: scale(.92); }
+  .lib-steps { border-collapse: collapse; margin: 2px 0 6px; font-size: 12px; } .lib-steps th, .lib-steps td { padding: 1px 10px 1px 0; text-align: left; } .lib-steps th { color: var(--soft); font-weight: normal; }
+  .lib-steps td:last-child { color: var(--gold); } .lib-body p b { color: var(--gold); font-weight: normal; }
+  .lib-note { font-size: 12px; opacity: .8; }
+  .lib-pages { display: flex; align-items: center; gap: 8px; margin: 2px 0 8px; } .lib-pages span { color: var(--soft); font-size: 13px; }
+  .lib-pages button { min-width: 36px; height: 32px; border: 0; border-radius: 8px; background: rgba(255, 255, 255, .08); color: var(--text); font: inherit; font-size: 18px; cursor: pointer; }
+  .lib-pages b { min-width: 56px; text-align: center; font-size: 17px; color: var(--gold); font-weight: normal; }
+  .lib-left { font-size: 13px; color: var(--soft); margin: 0 2px 8px; line-height: 1.5; } .lib-left i { font-style: normal; opacity: .75; }
+  .lib-grid .place-tile { position: relative; } .place-tile .pt-badge { position: absolute; top: 0; right: 14%; font-size: 11px; line-height: 1; padding: 2px 4px; border-radius: 6px; background: rgba(10, 8, 22, .8); color: var(--gold); }
 </style>
 </head>
 <body>
@@ -2574,12 +2582,14 @@ __SOLVER_JS__
       if (old) { old.className = img.className; img.replaceWith(old); }
     });
   }   // content hash of the icon files (tools/build.py): new icons never come from a stale cache
-  // Two icon sheets: the item icons, and the NPC / monster / boss portraits (a second sheet, so items show sooner).
-  // Each is fetched once (the first one already started in <head>) and put into the page; icons point at it from
-  // the start and fill in the moment it arrives (only if loading fails do they fall back to the files).
+  // Two icon sheets: the item icons, and the NPC / monster / boss portraits and Library icons (a second sheet, so
+  // items show sooner). Each is fetched once (the first one already started in <head>) and put into the page; icons
+  // point at it from the start and fill in the moment it arrives (only if loading fails do they fall back to the
+  // files). The second sheet is fetched the first time one of its icons is drawn, or a few seconds after start
+  // (so it is ready offline too), whichever comes first.
   const failed = {};
   const sheetOf = key => /^[nmbl]-/.test(key) ? 'sprite-portraits' : ICON_STYLES.pixelhd.sprite;
-  (function inlineSprites() {
+  const needSheet = (function inlineSprites() {
     const load = sheet => fetch(`icons/${sheet}.svg?v=${ICONS_V}`).then(r => r.ok ? r.text() : Promise.reject()).then(t => {
       const box = document.createElement('div'); box.innerHTML = t;
       const svg = box.firstElementChild; if (!svg) return;
@@ -2590,12 +2600,16 @@ __SOLVER_JS__
       failed[sheet] = true;
       document.querySelectorAll('svg.pixel use').forEach(u => { const k = (u.getAttribute('href') || '').replace(/^#/, ''); if (k && sheetOf(k) === sheet) u.setAttribute('href', `icons/${sheet}.svg?v=${ICONS_V}#${k}`); });
     });
-    load(ICON_STYLES.pixelhd.sprite).finally(() => load('sprite-portraits'));
+    const first = load(ICON_STYLES.pixelhd.sprite), asked = {};
+    const need = sheet => { if (!asked[sheet]) { asked[sheet] = true; first.finally(() => load(sheet)); } };
+    addEventListener('load', () => setTimeout(() => need('sprite-portraits'), 6000));
+    return need;
   })();
   function iconSVG(key, cls) {
     const sprite = ICON_STYLES[iconStyle].sprite;
     if (!sprite) return `<img class="pixel ${cls || ''}" src="icons/modern/${key}.svg?v=${ICONS_V}" alt="" decoding="sync" draggable="false">`;
     const sheet = sheetOf(key);
+    if (sheet === 'sprite-portraits') needSheet(sheet);
     return `<svg class="pixel ${cls || ''}" aria-hidden="true"><use href="${failed[sheet] ? `icons/${sheet}.svg?v=${ICONS_V}` : ''}#${key}"/></svg>`;
   }
   function applyLook() {
@@ -5274,7 +5288,10 @@ __SOLVER_JS__
   let invView = 'grid';   // like the item list: 'grid' (tiles with names), 'list' (rows) or 'icons'
   try { invView = localStorage.getItem('pore.invview.v2') || 'grid'; } catch (e) { /* ignore */ }
   // Maps, NPCs, Monsters and World bosses keep their own view: a list by default, which shows the most about each
-  let libView = 'list', invLib = null;   // the Library's own view (rows, tiles or icons only) and the entry open on its page
+  let libPages = loadJSON('pore.pages.v1', {});   // book name -> how many of its pages you have found
+  const pagesOf = b => Math.min(libPages[b.name] || 0, b.pages);
+  const booksLeft = () => ((ITEM_DB.library || {}).books || []).filter(b => b.pages && pagesOf(b) < b.pages);
+  let libView = 'list', invLib = null, libKeepOpen = new Set();   // libKeepOpen: rows to keep open over a redraw   // the Library's own view (rows, tiles or icons only) and the entry open on its page
   try { libView = localStorage.getItem('pore.libview.v1') || 'list'; } catch (e) { /* ignore */ }
   let placeView = 'list';
   try { placeView = localStorage.getItem('pore.placeview.v1') || 'list'; } catch (e) { /* ignore */ }
@@ -5364,9 +5381,20 @@ __SOLVER_JS__
       const E = (name, sub, body) => ({ name, sub, body });
       const spells = (L.spells || []).filter(x => invLib || has(`${x.name} ${x.element}`)).map(x => E(x.name, `${x.element ? esc(ELEMENT(x.element)) + ' · ' : ''}${x.mana} mana · ${x.cooldown}s cooldown`,
         `<ol>${x.levels.map(l => `<li>${esc(l)}</li>`).join('')}</ol>` + (x.sold.length ? `<p>Sold by ${x.sold.map(([n, pr]) => `${NPCS.has(n) ? `<button type="button" class="ip-map" data-action="inv-place" data-q="${esc(n)}">${esc(n)}</button>` : esc(n)} for ${fmtGold(pr)} gold`).join(', ')}</p>` : '')));
-      const talents = (L.talents || []).filter(x => invLib || has(x.name)).map(x => E(x.name, x.level ? `unlocks at level ${x.level}` : 'from the start', `<p>${esc(x.desc)}</p>`));
-      const books = (L.books || []).filter(x => invLib || has(x.name)).map(x => E(x.name, `${x.pages ? x.pages + ' pages' : 'book'}${x.where.length ? ' · ' + x.where.length + ' maps' : ''}`,
-        x.where.length ? `<p>Pages drop in ${x.where.map(place).join(', ')}.</p>` : '<p>The wiki does not say where its pages drop.</p>'));
+      const pctOf = x => /% per level/.test(x.desc) ? '%' : '';
+      const talents = (L.talents || []).filter(x => invLib || has(x.name)).map(x => E(x.name, (x.level ? `unlocks at level ${x.level}` : 'from the start') + (x.max ? ` · max level ${fmt(x.max)}` : ''),
+        `<p>${esc(x.desc)}</p>` +
+        (x.steps ? `<table class="lib-steps"><tr><th>Levels</th><th>Each level</th><th>Total</th></tr>${x.steps.map((st, i) => `<tr><td>${i ? x.steps[i - 1][0] + 1 : 1}–${fmt(st[0])}</td><td>+${st[1]}${pctOf(x)}</td><td>+${fmt(st[2])}${pctOf(x)}</td></tr>`).join('')}</table>` : '') +
+        (x.top ? `<p>At max level: <b>+${fmt(x.top)}${pctOf(x)}</b></p>` : '') +
+        (x.nonum ? '<p class="lib-note">The wiki gives no number for this one yet.</p>' : '')));
+      const books = (L.books || []).filter(x => invLib || has(x.name)).map(x => { const got = pagesOf(x), done = x.pages && got >= x.pages;
+        return Object.assign(E(x.name, x.pages ? (done ? 'all pages found ✓' : `${got} of ${x.pages} pages found`) + (x.where.length && !done ? ` · ${x.where.length} maps` : '') : `book${x.where.length ? ' · ' + x.where.length + ' maps' : ''}`,
+          (x.pages ? `<div class="lib-pages"><span>Pages found</span><button type="button" data-action="lib-page" data-q="${esc(x.name)}" data-d="-1" aria-label="One fewer">−</button><b>${got} / ${x.pages}</b><button type="button" data-action="lib-page" data-q="${esc(x.name)}" data-d="1" aria-label="One more">+</button></div>` : '') +
+          (done ? '<p>You have every page: no need to look for more.</p>' : x.where.length ? `<p>Pages drop in ${x.where.map(place).join(', ')}.</p>` : '<p>The wiki does not say where its pages drop.</p>')),
+          { badge: x.pages ? (done ? '✓' : `${got}/${x.pages}`) : '' }); });
+      const left = booksLeft(), leftMaps = new Map();
+      for (const b of left) for (const l of b.where) leftMaps.set(l, (leftMaps.get(l) || 0) + 1);
+      const booksTop = books.length && left.length && leftMaps.size && !q ? `<p class="lib-left">Maps with pages you still need: ${[...leftMaps].sort((a, b) => b[1] - a[1] || mapAt(a[0]) - mapAt(b[0])).map(([l, n]) => place(l) + (n > 1 ? ` <i>(${n} books)</i>` : '')).join(', ')}</p>` : '';
       const obolAll = L.obols || [], obolList = obolAll.filter(x => has(`${x.name} ${x.stat} ${x.tier}`));
       const one = invLib && ([...spells, ...talents, ...books].find(e => e.name === invLib) || (o => o && E(o.name, `+${o.value} ${esc(o.stat)} · ${esc(o.tier)}`,
         `<p>An obol adds +${o.value} ${esc(o.stat)}. Its material sets how much (iron +1 up to bismuth +14), its symbol which stat.</p>`))(obolAll.find(o => o.name === invLib)));
@@ -5382,11 +5410,11 @@ __SOLVER_JS__
       const obols = obolList.length ? `<h3 class="lib-h">Obols <small>${obolList.length}</small></h3><table class="obol-t"><thead><tr><th></th>${oStats.map(st => `<th>${esc(st === 'hp' ? 'HP' : st)}</th>`).join('')}</tr></thead><tbody>` +
         oTiers.map(t => `<tr><th>${esc(t)}<small>+${obolList.find(x => x.tier === t).value}</small></th>${oStats.map(st => oCell(t, st)).join('')}</tr>`).join('') +
         '</tbody></table><p class="obol-note">An obol adds its number to one stat: the material sets how much, the symbol which stat.</p>' : '';
-      const row = e => `<details class="lib-row"${e.name.toLowerCase() === q ? ' open' : ''}><summary>${iconSVG(libKey(e.name), 'lib-ic')}<b>${esc(e.name)}</b><small>${e.sub}</small></summary><div class="lib-body">${e.body}</div></details>`;
-      const tile = e => `<button type="button" class="place-tile" data-action="inv-lib" data-q="${esc(e.name)}" title="${esc(e.name)}"><span class="pt-pic">${iconSVG(libKey(e.name), 'pt-face')}</span>${libView === 'icons' ? '' : `<span class="pt-name">${esc(e.name)}</span>`}</button>`;
-      const sec = (title, list) => !list.length ? '' : `<h3 class="lib-h">${title} <small>${list.length}</small></h3>` +
+      const row = e => `<details class="lib-row" data-name="${esc(e.name)}"${e.name.toLowerCase() === q || libKeepOpen.has(e.name) ? ' open' : ''}><summary>${iconSVG(libKey(e.name), 'lib-ic')}<b>${esc(e.name)}</b><small>${e.sub}</small></summary><div class="lib-body">${e.body}</div></details>`;
+      const tile = e => `<button type="button" class="place-tile" data-action="inv-lib" data-q="${esc(e.name)}" title="${esc(e.name)}"><span class="pt-pic">${iconSVG(libKey(e.name), 'pt-face')}</span>${e.badge ? `<small class="pt-badge">${e.badge}</small>` : ''}${libView === 'icons' ? '' : `<span class="pt-name">${esc(e.name)}</span>`}</button>`;
+      const sec = (title, list, top) => !list.length ? '' : `<h3 class="lib-h">${title} <small>${list.length}</small></h3>${top || ''}` +
         (libView === 'list' ? list.map(row).join('') : `<div class="place-grid lib-grid ${libView === 'icons' ? 'bare' : ''}">${list.map(tile).join('')}</div>`);
-      const html = sec('Spells', spells) + sec('Talents', talents) + obols + sec('Books', books);
+      const html = sec('Spells', spells) + sec('Talents', talents) + obols + sec('Books', books, booksTop);
       box.innerHTML = (html || '<p class="inv-hint">Nothing matches.</p>') + `<p class="inv-hint">From the wiki. Tap an entry to ${libView === 'list' ? 'open it' : 'see it'}.</p>`;
       invRenderPop();
       return;
@@ -5484,6 +5512,8 @@ __SOLVER_JS__
     const hint = invTab.startsWith('g:') ? 'Tap an item to see where to get it and set how many you own.' : { all: 'Tap anything to see where to get it and set how many you own. Search finds places too.', charms: 'Tap a charm to set your stock or keep it out of plans.', coins: 'Gold pays fees, world boss (WB) tokens pay boss weapons.' }[invTab] || 'Tap an item to see it and set how many base (P1) copies you own.';
     const mp = onMap && MAPS.find(m => m.name === invMap);
     const np = onNpc && NPCS.get(invNpc), mb = onMob && MOBS.get(invMob);
+    const booksHere = m => { const bs = ((ITEM_DB.library || {}).books || []).filter(b => b.pages && b.where.includes(m)); if (!bs.length) return '';
+      return `<p class="map-ores">Book pages: ${bs.map(b => `<button type="button" class="ip-map" data-action="inv-place" data-q="${esc(b.name)}">${esc(b.name)}</button> <i>(${pagesOf(b) >= b.pages ? 'all found ✓' : `${pagesOf(b)}/${b.pages}`})</i>`).join(' · ')}</p>`; };
     const npcSpells = onNpc ? ((ITEM_DB.library || {}).spells || []).flatMap(sp => sp.sold.filter(([n]) => n === invNpc).map(([, pr]) => [sp, pr])).sort((a, b) => a[1] - b[1]) : [];
     const mobStats = m => [['Power', m.power], ['HP', m.hp], ['Attack', m.atk], ['Defense', m.def], ['Speed', m.spd], ['Luck', m.luck]].filter(x => x[1]);
     const ch = onChest && CHESTS.get(invChest), en = onEnc && ENCS.get(invEnc);
@@ -5501,7 +5531,7 @@ __SOLVER_JS__
       (onMap ? `<button type="button" class="inv-back" data-action="inv-map-back">‹ All maps</button>` +
       (mp ? `<div class="map-head"><img class="map-pic" src="${bgThumb(MAP_BG[mp.kind] || 'hills', MAP_NIGHT.has(mp.kind) ? 'night' : 'day')}" alt="" draggable="false">` +   // the landscape alone: its items are listed below
         `<div><small>${mp.steps ? fmt(mp.steps) + ' steps to unlock' : 'where it starts'} · ${onMap.size} items</small>${mp.desc ? `<p>${esc(mp.desc)}</p>` : ''}` +
-        `${(MAP_ORES.get(mp.name) || []).length ? `<p class="map-ores">Ores: ${MAP_ORES.get(mp.name).map(([k, pw]) => `${esc(((anyItem(k) || {}).name || '').replace(/ Node$/, ''))}${pw ? ` <i>(power ${pw})</i>` : ''}`).join(' · ')}</p>` : ''}</div></div>` : '') : '') +
+        `${booksHere(mp.name)}${(MAP_ORES.get(mp.name) || []).length ? `<p class="map-ores">Ores: ${MAP_ORES.get(mp.name).map(([k, pw]) => `${esc(((anyItem(k) || {}).name || '').replace(/ Node$/, ''))}${pw ? ` <i>(power ${pw})</i>` : ''}`).join(' · ')}</p>` : ''}</div></div>` : '') : '') +
       (rows.length ? html : '<p class="inv-hint">Nothing matches.</p>') + `<p class="inv-hint">${onMap ? `Everything you can get in ${esc(invMap)}. Tap an item for where exactly.` : onNpc ? `What ${esc(invNpc)} sells, cheapest first.` : onMob ? `What ${esc(invMob)} drops, likeliest first.` : onChest ? `What the ${esc(invChest)} gives, common first.` : onEnc ? `What ${esc(invEnc)} gives, likeliest first.` : hint}</p>`;
     invRenderPop();
   }
@@ -5722,6 +5752,15 @@ __SOLVER_JS__
       case 'inv-map-back': invMap = null; invSel = null; haptic(6); renderCharms(); break;
       case 'inv-npc': invNpc = el.dataset.npc; invQ = ''; invSel = null; haptic(6); renderCharms(); { const b = document.getElementById('charmsBody'); if (b) b.scrollTop = 0; } break;
       case 'inv-lib': invLib = el.dataset.q; invSel = null; haptic(6); renderCharms(); { const b = document.getElementById('charmsBody'); if (b) b.scrollTop = 0; } break;
+      case 'lib-page': {   // a book page found (or one less): the count, then the same screen drawn again
+        const b = ((ITEM_DB.library || {}).books || []).find(x => x.name === el.dataset.q); if (!b) break;
+        const n = Math.max(0, Math.min(b.pages, pagesOf(b) + Number(el.dataset.d))); if (n) libPages[b.name] = n; else delete libPages[b.name];
+        saveJSON('pore.pages.v1', libPages); haptic(5);
+        if (n === b.pages && Number(el.dataset.d) > 0) toast(`${b.name}: every page found`);
+        const body = document.getElementById('charmsBody'), y = body ? body.scrollTop : 0;
+        libKeepOpen = new Set([...document.querySelectorAll('.lib-row[open]')].map(d => d.dataset.name));
+        renderCharms(); libKeepOpen = new Set(); if (body) body.scrollTop = y; break;
+      }
       case 'inv-lib-back': invLib = null; invSel = null; haptic(6); renderCharms(); break;
       case 'inv-npc-back': invNpc = null; invSel = null; haptic(6); renderCharms(); break;
       case 'inv-chest': invChest = el.dataset.chest; invQ = ''; invSel = null; haptic(6); renderCharms(); { const b = document.getElementById('charmsBody'); if (b) b.scrollTop = 0; } break;

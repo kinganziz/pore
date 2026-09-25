@@ -293,6 +293,51 @@ def encounters_of(index):
     return out
 
 
+def talent_numbers(fm):
+    """A talent's description with its real numbers filled in (per level), its max level, and for tiered talents
+    the total at the end of each tier. The wiki writes {{value}} (and {{value2}}, a count from your profile)."""
+    sc = fm.get("scaling") if isinstance(fm.get("scaling"), dict) else {}
+    kind, per = sc.get("type") or ("linear" if "perLevel" in sc else ""), None
+    g = lambda v: ("%g" % v)
+    steps = []
+    if kind == "linear":
+        per = g(sc["perLevel"])
+    elif kind == "tiered" and sc.get("tiers"):
+        per = g(sc["tiers"][0]["perLevel"])
+        total = 0
+        for t in sc["tiers"]:
+            a, b = t["range"]
+            total += (b - a + 1) * t["perLevel"]
+            steps.append([b, t["perLevel"], round(total, 2)])
+    elif kind in ("playerFieldMultiply", "playerFieldConditional"):
+        f = sc.get("baseFactor") if kind == "playerFieldConditional" else next((x["baseFactor"] for x in sc.get("factors", []) if "baseFactor" in x), None)
+        per = g(f) if f is not None else None
+    elif kind == "mastery":
+        per = "1"
+    text = str(fm.get("description") or "")
+    if per is not None:
+        text = text.replace("{{value}}%", per + "% per level").replace("{{value}}", per + " per level")
+    text = re.sub(r"\{\{value\}\}", "X", text)
+    text = re.sub(r"\{\{value\d+\}\}", "X", text).strip()
+    out = {"desc": text}
+    if per is None:
+        out["nonum"] = True
+    elif kind == "linear" and fm.get("maxLevel"):
+        out["top"] = round(sc["perLevel"] * num_(fm.get("maxLevel")), 2)   # what the last level gives
+    if fm.get("maxLevel"):
+        out["max"] = num_(fm.get("maxLevel"))
+    if steps:
+        out["steps"] = steps
+    return out
+
+
+def num_(v):
+    try:
+        return int(float(v))
+    except (TypeError, ValueError):
+        return 0
+
+
 def library_of(index):
     """Spells (who sells them), talents, obols and books (which maps drop their pages), for the Library."""
     import ast
@@ -320,7 +365,7 @@ def library_of(index):
         spells.append({"name": fm.get("name"), "element": str(fm.get("element") or ""), "mana": num(fm.get("manaCost")), "cooldown": num(fm.get("cooldown")),
                        "levels": [str(levels[k]) for k in sorted(levels, key=lambda x: int(x) if str(x).isdigit() else 0)] if isinstance(levels, dict) else [],
                        "sold": sold.get(fm.get("name"), [])})
-    talents = [{"name": fm.get("name"), "desc": re.sub(r"\{\{value\d*\}\}", "X", str(fm.get("description") or "")).strip(), "level": num(fm.get("unlockLevel"))}
+    talents = [dict({"name": fm.get("name"), "level": num(fm.get("unlockLevel"))}, **talent_numbers(fm))
                for fm in by.get("talent", []) if fm.get("name")]
     obols = [{"name": fm.get("name"), "stat": str(fm.get("stat") or "").replace("_", " "), "tier": str(fm.get("tier") or ""), "value": num(fm.get("statValue"))}
              for fm in by.get("obol", []) if fm.get("name")]
