@@ -1256,6 +1256,9 @@
   #projectsBody .projects > .section-title { display: none; }   /* the sheet already says My projects */
   .proj-empty { padding: 24px 8px; text-align: center; display: grid; gap: 8px; justify-items: center; }
   .settings-body > .app-actions { margin-top: 4px; }
+  .tab.update .tab-icon::after { content: ""; position: absolute; top: -2px; right: -4px; width: 9px; height: 9px; border-radius: 50%; background: var(--good, #5be07a);
+    box-shadow: 0 0 0 2px var(--bg-2), 0 0 8px var(--good, #5be07a); animation: upd-pulse 1.6s ease-in-out infinite; }
+  @keyframes upd-pulse { 50% { transform: scale(1.35); } }
 </style>
 </head>
 <body>
@@ -3307,8 +3310,10 @@ function createSolver() {
     return !ui.pickerSheet.hidden ? 'items' : !ui.infoSheet.hidden ? 'help' : !ui.projectsSheet.hidden ? 'projects' : !ui.settingsSheet.hidden ? 'settings'
       : (state.item || !ui.guideSheet.hidden) ? 'projects' : 'home';
   }
+  let updateWaiting = false;   // a new version is installed and waits for a reload
   function syncTabbar() {
     if (!ui.tabbar) return;
+    const st = ui.tabbar.querySelector('[data-tab="settings"]'); if (st) st.classList.toggle('update', updateWaiting);
     const on = currentTab();
     ui.tabbar.querySelectorAll('.tab').forEach(b => {
       const was = b.classList.contains('on'), now = b.dataset.tab === on;
@@ -4534,7 +4539,7 @@ function createSolver() {
       }
       case 'font': setFont(el.dataset.font); toast(readFont === 'vt323' ? 'Font: VT323' : 'Font: Jersey 15'); break;
       case 'check-update': {
-        if (!swReg) { toast('Reloading'); location.reload(); break; }
+        if (!swReg || updateWaiting) { toast(updateWaiting ? 'Updating…' : 'Reloading'); location.reload(); break; }   // a waiting update: take it now
         toast('Checking for updates…');
         swReg.update().then(() => { setTimeout(() => { if (!updateFound && !swReg.installing && !swReg.waiting) toast('You have the latest version'); }, 1500); }).catch(() => toast('Could not check (offline?)'));
         break;
@@ -4930,7 +4935,11 @@ function createSolver() {
             const nw = reg.installing;
             if (!nw) return;
             nw.addEventListener('statechange', () => {
-              if (nw.state === 'installed' && navigator.serviceWorker.controller) toast('New version ready — tap to reload', () => location.reload(), 10000);
+              if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+                // hard to miss: the message stays 30 s, and the Settings tab keeps a dot until the app reloads
+                updateWaiting = true; syncTabbar();
+                toast('New version ready — tap to reload', () => location.reload(), 30000);
+              }
             });
           });
         }).catch(() => { /* offline support is optional */ });
