@@ -1245,7 +1245,7 @@
   .in-help .bg-thumb { flex: 1 1 0; width: auto; min-width: 0; max-width: 60px; height: 40px; }   /* one row: the pictures share the width */
   .in-help .bg-thumb.icon { color: var(--text); background: var(--surface-2); }
   /* ---------- the start screen is only the title screen, filling the space between the bars ---------- */
-  body:not(.has-item) .fresh > .home-hero { min-height: calc(100svh - var(--topbar-h, 62px) - var(--tabbar-h) - 34px); display: grid; align-content: center; }
+  body:not(.has-item) .home-hero { min-height: calc(100svh - var(--tabbar-h) - 56px - var(--safe-b, 0px)); display: grid; align-content: center; }   /* Home: centred between the top and the tab bar */
   .tab-icon { position: relative; }
   .tab-badge { position: absolute; top: -4px; right: -8px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--accent); color: var(--on-accent, #fff);
     font: 700 11px/16px var(--font); font-style: normal; text-align: center; box-shadow: 1px 1px 0 rgba(0, 0, 0, .4); }
@@ -1651,9 +1651,6 @@
   </div>
 </main>
 
-<footer>
-  Item data from the <a href="https://wiki.pixel-odyssey.app/" target="_blank" rel="noopener">official Pixel Odyssey wiki</a> · icons drawn for PORE · <span id="dataDate"></span> · PORE is a fan-made tool by anz · <a href="https://github.com/kinganziz/pore" target="_blank" rel="noopener">source on GitHub</a>
-</footer>
 
 <div class="sheet-backdrop" id="pickerSheet" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="pickerTitle">
@@ -1780,7 +1777,7 @@
       <h3>Labels</h3>
       <p><b>P4</b> means a level-4 item with perfect stats. <b>L4</b> means a level-4 item whose stats are below perfect. Every chip shows the exact stats the item must have, so you can check your inventory against it. <b>⚠ test this</b> marks a refine that sits on a rounding boundary: the plausible formula variants disagree there, so the game could give ±1. Test those first and record the result with the pencil.</p>
       <h3>Data</h3>
-      <p>Items and stats come from the <a href="https://wiki.pixel-odyssey.app/" target="_blank" rel="noopener">official Pixel Odyssey wiki</a>; the icons are PORE's own drawings, as pixel art or smooth HD drawings (switch with the HD button) (fetched <span class="dataDate"></span>). Refining rules follow the wiki's <a href="https://wiki.pixel-odyssey.app/Mechanics/Refining" target="_blank" rel="noopener">Refining</a> page and the formula the community verified in-game.</p>
+      <p>Items and stats come from the <a href="https://wiki.pixel-odyssey.app/" target="_blank" rel="noopener">official Pixel Odyssey wiki</a>; the icons are PORE's own pixel art (data fetched <span class="dataDate"></span>). Refining rules follow the wiki's <a href="https://wiki.pixel-odyssey.app/Mechanics/Refining" target="_blank" rel="noopener">Refining</a> page and the formula the community verified in-game. PORE is a fan-made tool by anz · <a href="https://github.com/kinganziz/pore" target="_blank" rel="noopener">source on GitHub</a>.</p>
       <p class="credit">Made by <b>anz</b>, a Pixel Odyssey player. Say hi if you meet in town.</p>
       <h3>App</h3>
       <p>Pull-to-refresh is turned off so scrolling never reloads the page by accident. Your item, targets, charms and progress are saved on this device. New versions announce themselves with a "New version ready" message. To refresh, use the buttons at the top of this page or tap the PORE logo on the start screen.</p>
@@ -3789,12 +3786,12 @@ function createSolver() {
         for (let wy = fy - b.h + 3; wy < fy + 6; wy += 4) for (let wx = x + 2; wx < x + b.w - 1; wx += 3) if ((((wx - x) * 7 + (wy - fy + b.h) * 13 + Math.floor(b.wins * 97)) % 5) === 0) g.fillRect(wx, wy, 1, 1);
         g.globalAlpha = 1;
       });
-      each([{ x: 200 }], 0.2, 12, W, (t, x) => { g.fillStyle = pal.far; g.fillRect(x - 4, fy - 58, 9, 70); for (let k = 0; k < 8; k++) g.fillRect(x - 4 + Math.floor(k / 2), fy - 66 + k, 9 - Math.floor(k / 2) * 2, 1); g.fillStyle = pal.lamp; g.fillRect(x - 2, fy - 52, 5, 5); g.fillStyle = pal.far; g.fillRect(x, fy - 51, 1, 2); g.fillRect(x, fy - 50, 2, 1); });
+      each([{ x: 200 }], 0.2, 12, W, (t, x) => { g.fillStyle = pal.far; g.fillRect(x - 4, fy - 58, 9, 70); for (let k = 0; k < 8; k++) { const inset = Math.floor((7 - k) / 2); g.fillRect(x - 4 + inset, fy - 66 + k, 9 - inset * 2, 1); }   /* the spire: a point on top */ g.fillStyle = pal.lamp; g.fillRect(x - 2, fy - 52, 5, 5); g.fillStyle = pal.far; g.fillRect(x, fy - 51, 1, 2); g.fillRect(x, fy - 50, 2, 1); });
       // near houses: pitched roofs, chimneys, windows lighting up and going dark
       each(scene.st.houses, 0.6, 32, W, (h, x) => {
         const top = gy - h.h;
         g.fillStyle = pal.house; g.fillRect(x, top, h.w, h.h);
-        if (h.roof) { g.fillStyle = pal.roof; const half = Math.ceil(h.w / 2) + 1; for (let k = 0; k < half; k++) g.fillRect(x - 1 + k, top - half + k + 1, h.w + 2 - k * 2, 1); }
+        if (h.roof) { g.fillStyle = pal.roof; const half = Math.ceil(h.w / 2) + 1; for (let k = 0; k < half; k++) { const inset = half - 1 - k; g.fillRect(x - 1 + inset, top - half + k + 1, h.w + 2 - inset * 2, 1); } }   // a pitched roof: a point on top, widening down to the walls
         else { g.fillStyle = pal.roof; g.fillRect(x - 1, top - 2, h.w + 2, 2); }
         if (h.chim) { g.fillStyle = pal.house; g.fillRect(x + h.w - 5, top - (h.roof ? Math.ceil(h.w / 2) - 1 : 5), 3, 5); }
         for (let wy = top + 3, j = 0; wy < gy - 4; wy += 6, j++) for (let wx = x + 3, i = 0; wx < x + h.w - 3; wx += 5, i++) {
@@ -4055,7 +4052,6 @@ function createSolver() {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></svg>
             Choose an item
           </button>
-          <span class="home-hint">${ITEMS.length} items from the wiki, or your own stats</span>
         </div>
       </section>`;
     const dealRow = deals.length ? `<section class="card home-panel home-deals">
@@ -5776,7 +5772,7 @@ function createSolver() {
     try { setFont(localStorage.getItem(STORAGE.font)); } catch (e) { setFont('vt323'); }
     ui.catGrid.innerHTML = Object.values(CATS).map(c => `<div><span>${c.label} <b>${c.pct}</b></span><small>${c.who}</small></div>`).join('');
     const date = (ITEM_DB.fetched || '').slice(0, 10);
-    ui.dataDate.textContent = `data ${date}`;
+    if (ui.dataDate) ui.dataDate.textContent = `data ${date}`;
     document.querySelectorAll('.dataDate').forEach(el => el.textContent = date);
     projects = loadJSON(STORAGE.projects, []);
     charmStock = loadJSON(STORAGE.cstock, {}) || {};
