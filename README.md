@@ -1,9 +1,13 @@
-# PORE · Pixel Odyssey Refinement Engine
+# PORE · Plan Once, Reclaim Evenings
 
-A mobile-first planner that finds the **cheapest refinement path** for any equippable item in
-[Pixel Odyssey](https://wiki.pixel-odyssey.app/). A perfect P10 normally costs 512 base items
-(1 → 2 → 4 → … → 512). PORE finds paths that reach the same stats with far fewer, and walks you
-through the refines step by step.
+**Less grind, more life.** PORE is not here to promote any game. Games quietly take hours worth more
+than any item in them, so PORE does the slow parts for players of
+[Pixel Odyssey](https://wiki.pixel-odyssey.app/): it finds the refinement path that needs the fewest
+base items (a perfect P10 normally costs 512: 1 → 2 → 4 → … → 512), shows where every item comes from
+and what it is used for, and keeps count of what you own.
+
+PORE used to stand for "Pixel Odyssey Refinement Engine". It now stands for **Plan Once, Reclaim
+Evenings**.
 
 Live app: the repository root is a static site — enable GitHub Pages on the `main` branch (root)
 and open `index.html`.

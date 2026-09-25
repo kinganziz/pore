@@ -1658,6 +1658,10 @@
   .info-body .why-h { margin-top: 0; }
   .proj-saved { margin: 14px 4px 0; text-align: center; color: var(--soft); font-size: 14px; }
   .proj-saved b { color: var(--good, #37d39a); font-size: 18px; }
+  .home-saved { margin: 0; font-size: 13px; color: rgba(255, 255, 255, .8); text-shadow: 1px 1px 0 rgba(0, 0, 0, .7); }
+  .home-saved b { color: #7ee07a; }
+  :root[data-sky="day"] .home-saved { color: #2c3350; text-shadow: 0 0 8px rgba(255, 255, 255, .8); }
+  .info-body .why-name { font-size: 13px; color: var(--soft); }
 </style>
 </head>
 <body>
@@ -1681,7 +1685,7 @@
       </div>
       <div>
         <h1>PORE</h1>
-        <p><span>Pixel Odyssey</span> <span>Refinement Engine</span></p>
+        <p><span>Plan Once,</span> <span>Reclaim Evenings</span></p>
       </div>
     </a>
     <div class="pm-list">
@@ -1819,6 +1823,7 @@
         <p><b>PORE is not here to promote Pixel Odyssey, or any game.</b> Games quietly take hours that are worth more than any item in them.</p>
         <p>So PORE does the slow parts for you: it works out the cheapest way to refine your gear, tells you where every item comes from and what it is used for, and keeps count of what you already have. Less time farming and looking things up; more time for everything else.</p>
         <p>If PORE saves you an evening, spend it away from the screen.</p>
+        <p class="why-name"><b>PORE</b> now stands for <b>Plan Once, Reclaim Evenings</b>. (It used to be short for "Pixel Odyssey Refinement Engine"; the new name says what it is for.) And fittingly, to <i>pore over</i> something is to study it for hours: PORE pores over the wiki, the maps and the numbers, so you don't have to.</p>
       </div>
       <h3>How it works</h3>
       <p>Refining combines two copies of the same item. The <b>base</b> item goes up one level and gains stats from the <b>material</b> item. A "perfect" refine uses two identical items, so a perfect P10 normally eats 512 base items (1 → 2 → 4 → … → 512).</p>
@@ -3780,6 +3785,7 @@ __SOLVER_JS__
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></svg>
             Choose an item
           </button>
+          ${(() => { const n = projects.reduce((t, pr) => t + (pr.saved || 0), 0); return n > 0 ? `<p class="home-saved"><b>${fmt(n)}</b> base items spared so far</p>` : ''; })()}
         </div>
       </section>`;
     const dealRow = deals.length ? `<section class="card home-panel home-deals">
