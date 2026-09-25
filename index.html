@@ -20,9 +20,9 @@
     // one interface (dark, like a game's HUD); the sun/moon button only turns the world to day or night
     d.setAttribute('data-theme', 'dark');
     d.setAttribute('data-sky', g('pore.theme') === 'light' ? 'day' : 'night');
-    var sk = g('pore.skin.chosen') ? g('pore.skin') : 'pixel'; if (sk === 'test') sk = 'retro';   // Pixel (the PORE look) unless someone picked another
-    d.setAttribute('data-skin', 'modern');
-    if (sk === 'retro' || sk === 'pixel' || sk === 'game') { d.setAttribute('data-flavor', sk); d.setAttribute('data-finish', 'retro'); }
+    var sk = g('pore.skin.chosen') ? g('pore.skin') : 'pixel';   // Pixel (the PORE look) unless someone picked another
+    d.setAttribute('data-skin', 'modern'); d.setAttribute('data-finish', 'retro');   // every look has the 3D finish
+    if (sk === 'pixel' || sk === 'game') d.setAttribute('data-flavor', sk);
     d.setAttribute('data-font', g('pore.font') === 'jersey' ? 'jersey' : 'vt323');   // VT323 is the default reading font
   })();
 </script>
@@ -678,9 +678,9 @@
   :root[data-flavor="pixel"] {
     --bg: #0b0b1e;
     --bg-2: #101028;
-    --surface: rgba(22, 22, 56, .8);
-    --surface-2: #212152;
-    --surface-3: #2c2c66;
+    --surface: rgba(170, 170, 255, .06);
+    --surface-2: rgba(170, 170, 255, .1);
+    --surface-3: rgba(170, 170, 255, .16);
     --tile: #161638;
     --tile-2: #212152;
     --tile-on: #2a2150;
@@ -1002,7 +1002,7 @@
   :root[data-flavor="game"] .lvr { display: inline; }
   :root[data-flavor="game"] {
     --bg: #081713; --bg-2: #0b1d18;
-    --surface: rgba(15, 36, 30, .8); --surface-2: #143027; --surface-3: #1b3d31;
+    --surface: rgba(150, 255, 190, .05); --surface-2: rgba(150, 255, 190, .09); --surface-3: rgba(150, 255, 190, .14);
     --tile: #0f2a22; --tile-2: #173a2e; --tile-on: #1d4a38;
     --text: #eaf6ee; --muted: #8fb8a2; --soft: #6a917d;
     --accent: #2f9e57; --accent-2: #2f9e57; --on-accent: #f0fff4;
@@ -1337,7 +1337,7 @@
         <button class="btn small" type="button" data-action="check-update"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Check for update</button>
       </div>
       <div class="font-pick theme-pick"><span>Look</span><div class="seg" role="group" aria-label="Look">
-        <button type="button" data-action="skin-pick" data-skin="modern">Modern</button><button type="button" data-action="skin-pick" data-skin="retro">Retro</button><button type="button" data-action="skin-pick" data-skin="pixel">Pixel</button><button type="button" data-action="skin-pick" data-skin="game">Game</button>
+        <button type="button" data-action="skin-pick" data-skin="modern">Modern</button><button type="button" data-action="skin-pick" data-skin="pixel">Pixel</button><button type="button" data-action="skin-pick" data-skin="game">Game</button>
       </div></div>
       <div class="font-pick theme-pick bg-pick"><span>Background</span><div class="bg-strip in-help" data-none="1" role="group" aria-label="Background"></div></div>
       <div class="font-pick theme-pick"><span>Motion <small>(saves battery when off)</small></span><div class="seg" role="group" aria-label="Background motion">
@@ -2298,17 +2298,16 @@ function createSolver() {
     syncTopbar();
   }
   // Three looks: modern (default), pixel, and game (the pixel look in Pixel Odyssey's own colours and level badges)
-  // Four looks on one structure (Modern's): Retro adds the pixel finish (hard shadows, bevelled buttons, pixel gem),
-  // Pixel and Game add their own colours on top of that, and Game its extras (Roman levels, quest cards, dialogue)
-  const SKINS = { modern: 'Modern theme', retro: 'Retro theme', pixel: 'Pixel theme', game: 'Game theme' };
+  // Three looks on one structure with the same 3D finish (hard shadows, bevelled buttons, pixel gem): Modern, and
+  // Pixel and Game with their own colours (Game also its extras: Roman levels, quest cards, dialogue)
+  const SKINS = { modern: 'Modern theme', pixel: 'Pixel theme', game: 'Game theme' };
   let skin = 'modern';
   function setSkin(next) {
-    if (next === 'test') next = 'retro';
+    if (next === 'test' || next === 'retro') next = 'modern';   // the old Retro look is Modern now
     skin = SKINS[next] ? next : 'pixel';
     const d = document.documentElement;
-    d.setAttribute('data-skin', 'modern');
-    if (skin === 'modern') { d.removeAttribute('data-flavor'); d.removeAttribute('data-finish'); }
-    else { d.setAttribute('data-flavor', skin); d.setAttribute('data-finish', 'retro'); }
+    d.setAttribute('data-skin', 'modern'); d.setAttribute('data-finish', 'retro');
+    if (skin === 'modern') d.removeAttribute('data-flavor'); else d.setAttribute('data-flavor', skin);
     syncTopbar();
     if (scene.ctx) { scene.skyKey = ''; scene.measured = false; sceneShow(); refreshBgStrips(); }
     const b = document.querySelector('[data-action="skin"]');
@@ -4440,7 +4439,7 @@ function createSolver() {
     const act = el.dataset.action;
     switch (act) {
       case 'home': e.preventDefault(); if (ui.pickerSheet.hidden && ui.infoSheet.hidden && ui.guideSheet.hidden) goHome(); else closeSheets(); break;
-      case 'skin': try { localStorage.setItem('pore.skin.chosen', '1'); } catch (e) { /* ignore */ } setSkin({ modern: 'retro', retro: 'pixel', pixel: 'game', game: 'modern' }[skin]); toast(SKINS[skin]); break;
+      case 'skin': try { localStorage.setItem('pore.skin.chosen', '1'); } catch (e) { /* ignore */ } setSkin({ modern: 'pixel', pixel: 'game', game: 'modern' }[skin]); toast(SKINS[skin]); break;
       case 'skin-pick': try { localStorage.setItem('pore.skin.chosen', '1'); } catch (e) { /* ignore */ } setSkin(el.dataset.skin); toast(SKINS[skin]); break;
       case 'bg-pick': setBg(el.dataset.bg); toast(`Background: ${BG_NAMES[bgPref]}${bgPref === 'auto' ? ' (a new one each time you open PORE)' : ''}`); break;
       case 'bg-motion': setBgMotion(el.dataset.motion === 'on'); toast(bgMotion ? 'Background moves' : 'Background still: saves battery'); break;
@@ -4468,7 +4467,7 @@ function createSolver() {
         t.scrollTo({ left: i * w, behavior: reduced ? 'auto' : 'smooth' }); haptic(6);
         break;
       }
-      case 'open-picker': if (el.classList.contains('home-cta')) burst('pop', el); openPicker(); break;
+      case 'open-picker': openPicker(); break;
       case 'tab': tabGo(el.dataset.tab); break;
       case 'browse': picker.type = el.dataset.type; picker.q = ''; openPicker(); break;
       case 'close-picker': closePicker(); break;
@@ -4478,7 +4477,6 @@ function createSolver() {
       case 'sort': picker.sort = el.dataset.sort; renderPickerList(); break;
       case 'picker-view': picker.view = ['grid', 'icons'].includes(el.dataset.view) ? el.dataset.view : 'list'; try { localStorage.setItem('pore.pickerview', picker.view); } catch (e2) { /* ignore */ } renderPickerList(); break;
       case 'pick':
-        if (el.classList.contains('home-best')) burst('star', el.querySelector('.hb-icon') || el);
         haptic();
         if (compareMode) {
           compareMode = false;
