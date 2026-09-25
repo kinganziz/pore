@@ -4116,18 +4116,24 @@ function createSolver() {
     document.querySelectorAll(MQ_SEL).forEach(el => {
       if (!el.offsetParent) return;
       let inner = el.firstElementChild && el.firstElementChild.classList.contains('mq-in') ? el.firstElementChild : null;
-      const d = (inner ? inner.scrollWidth : el.scrollWidth) - el.clientWidth;
-      if (d > 2) {
+      // the text's own width against the room inside the box, to the fraction of a pixel; text that only just
+      // overflows (a few px of rounding or glyph overhang) stays still instead of twitching back and forth
+      const cs = getComputedStyle(el), room = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      let natural;
+      if (inner) natural = inner.getBoundingClientRect().width;
+      else { const r = document.createRange(); r.selectNodeContents(el); natural = r.getBoundingClientRect().width; }
+      const d = Math.ceil(natural - room);
+      if (d > 16) {
         if (!inner) { inner = document.createElement('span'); inner.className = 'mq-in'; while (el.firstChild) inner.appendChild(el.firstChild); el.appendChild(inner); }
         el.classList.add('mq'); el.style.setProperty('--mq', -d + 'px'); el.style.setProperty('--mqt', (2.5 + d / 22).toFixed(1) + 's');
-      } else if (inner) el.classList.remove('mq');
+      } else if (inner) { el.classList.remove('mq'); el.style.removeProperty('--mq'); }
     });
     const cv = marquee.cv || (marquee.cv = document.createElement('canvas').getContext('2d'));
     document.querySelectorAll('input[type="search"][placeholder]').forEach(inp => {
       if (!inp.offsetParent) return;
-      const cs = getComputedStyle(inp); cv.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+      const cs = getComputedStyle(inp); cv.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`; try { cv.letterSpacing = cs.letterSpacing; } catch (e) { /* older browsers */ }
       const d = cv.measureText(inp.placeholder).width - (inp.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight));
-      const on = d > 2 && !inp.value && document.activeElement !== inp;
+      const on = d > 16 && !inp.value && document.activeElement !== inp;
       inp.classList.toggle('mq-ph', on);
       if (on) { inp.style.setProperty('--mq', -Math.ceil(d + 4) + 'px'); inp.style.setProperty('--mqt', (2.5 + d / 22).toFixed(1) + 's'); }
     });
