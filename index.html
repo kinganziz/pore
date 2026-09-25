@@ -1192,14 +1192,14 @@
   :root .home-hero .btn.home-cta.home-cta.home-cta svg { width: 24px; height: 24px; filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, .55)); }
   :root .home-hero .btn.home-cta.home-cta.home-cta:active { transform: scale(.96) !important; }
   @keyframes cta-breathe { 0%, 100% { opacity: 1; } 50% { opacity: .62; } }
-  /* light theme: the daytime sky is pale, so the title screen reads in dark ink with a soft light edge */
-  :root[data-theme="light"] .home-hero :is(.home-title, .home-best, .home-best b, .btn.home-cta.home-cta.home-cta) { color: #1b1f33 !important; text-shadow: 1px 1px 0 rgba(255, 255, 255, .7), 0 0 12px rgba(255, 255, 255, .6) !important; }
-  :root[data-theme="light"] .home-hero .home-title span { background: linear-gradient(90deg, #b05a00, #b8265f 55%, #0f6f97); -webkit-background-clip: text; background-clip: text; color: transparent !important; filter: none; }
-  :root[data-theme="light"] .home-hero :is(.home-sub, .home-hint, .home-best small) { color: #2c3350 !important; text-shadow: 0 0 8px rgba(255, 255, 255, .8); }
-  :root[data-theme="light"] .home-hero .home-sub b { color: #1b1f33; }
-  :root[data-theme="light"] .home-hero .home-kicker { color: #8a5200 !important; text-shadow: 0 0 8px rgba(255, 255, 255, .8); }
-  :root[data-theme="light"] .home-hero .hb-num { color: #0f8a55 !important; }
-  :root[data-theme="light"] .home-hero .btn.home-cta.home-cta.home-cta svg { filter: drop-shadow(1px 1px 0 rgba(255, 255, 255, .7)); }
+  /* day world: text straight on the pale sky reads in dark ink with a soft light edge (panels stay dark glass) */
+  :root[data-sky="day"] .home-hero :is(.home-title, .home-best, .home-best b, .btn.home-cta.home-cta.home-cta) { color: #1b1f33 !important; text-shadow: 1px 1px 0 rgba(255, 255, 255, .7), 0 0 12px rgba(255, 255, 255, .6) !important; }
+  :root[data-sky="day"] .home-hero .home-title span { background: linear-gradient(90deg, #b05a00, #b8265f 55%, #0f6f97); -webkit-background-clip: text; background-clip: text; color: transparent !important; filter: none; text-shadow: none !important; }   /* no edge: it showed through the see-through gradient letters */
+  :root[data-sky="day"] .home-hero :is(.home-sub, .home-hint, .home-best small) { color: #2c3350 !important; text-shadow: 0 0 8px rgba(255, 255, 255, .8); }
+  :root[data-sky="day"] .home-hero .home-sub b { color: #1b1f33; }
+  :root[data-sky="day"] .home-hero .home-kicker { color: #8a5200 !important; text-shadow: 0 0 8px rgba(255, 255, 255, .8); }
+  :root[data-sky="day"] .home-hero .hb-num { color: #0f8a55 !important; }
+  :root[data-sky="day"] .home-hero .btn.home-cta.home-cta.home-cta svg { filter: drop-shadow(1px 1px 0 rgba(255, 255, 255, .7)); }
   @media (prefers-reduced-motion: reduce) { :root .home-hero .btn.home-cta.home-cta.home-cta { animation: none; } }
   /* ---------- juice: title drop, bobbing item, hopping tab ---------- */
   .home-title .tw { font-style: normal; }
@@ -1223,13 +1223,7 @@
   .hb-arrow.prev { left: 0; } .hb-arrow.next { right: 0; }
   .hb-arrow:active { transform: translateY(-50%) scale(.85); }
   .hb-arrow.prev:hover svg { transform: translateX(-2px); } .hb-arrow.next:hover svg { transform: translateX(2px); }
-  :root[data-theme="light"] .hb-arrow { color: #1b1f33; filter: drop-shadow(1px 1px 0 rgba(255, 255, 255, .7)); }
-  /* daytime world behind the dark interface: the title-screen text gets a firmer edge and a soft dusk glow behind it */
-  :root[data-sky="day"] .home-hero :is(.home-kicker, .home-sub, .home-hint, .home-best, .home-best b, .btn.home-cta.home-cta.home-cta) {
-    text-shadow: 1px 1px 0 rgba(0, 0, 0, .8), 0 0 10px rgba(8, 14, 40, .6) !important; }
-  :root[data-sky="day"] .home-hero .home-title { text-shadow: 3px 3px 0 rgba(0, 0, 0, .6), 0 0 18px rgba(8, 14, 40, .45); }
-  :root[data-sky="day"] .home-hero .home-copy::before { content: ""; position: absolute; inset: -10px -18px; z-index: -1; pointer-events: none;
-    background: radial-gradient(60% 55% at 50% 45%, rgba(8, 14, 40, .32), transparent 75%); }
+  :root[data-sky="day"] .hb-arrow { color: #1b1f33; filter: drop-shadow(1px 1px 0 rgba(255, 255, 255, .7)); }
 </style>
 </head>
 <body>
