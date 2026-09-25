@@ -1145,6 +1145,49 @@
   :root[data-flavor="game"][data-skin="pixel"] .tab.on { background: #1f5a3c; color: #e0ffe8; border-radius: 14px; box-shadow: none; }
   :root[data-flavor="game"][data-skin="pixel"] .tab.on .tab-glyph { color: #e0ffe8; }
   :root[data-flavor="game"][data-skin="pixel"] .tab-label { color: #eaf6ee; }
+  /* ---------- game look, stage 3: the plan as a quest log ---------- */
+  /* level headers: a chapter banner with the Roman numeral in gold */
+  :root[data-flavor="game"][data-skin="pixel"] .lvl-head { background: color-mix(in srgb, var(--bg-2) 92%, transparent); }
+  :root[data-flavor="game"][data-skin="pixel"] .lvl-head .lv { display: inline-flex; align-items: center; gap: 10px; color: var(--gold); font-size: 13px; text-transform: uppercase; letter-spacing: 1px; text-shadow: 2px 2px 0 var(--px-shadow); }
+  :root[data-flavor="game"][data-skin="pixel"] .lvl-head .lv .lvr { font-size: 15px; }
+  :root[data-flavor="game"][data-skin="pixel"] .lvl-head .lv::before, :root[data-flavor="game"][data-skin="pixel"] .lvl-head .lv::after {
+    content: ""; width: 8px; height: 8px; background: var(--gold); transform: rotate(45deg); box-shadow: 2px 2px 0 var(--px-shadow); }
+  /* steps: quest cards in a pixel frame, with a square pixel checkbox */
+  :root[data-flavor="game"][data-skin="pixel"] .steps { gap: 12px; }
+  :root[data-flavor="game"][data-skin="pixel"] .step.step { position: relative; background: color-mix(in srgb, var(--surface) 92%, transparent) !important;
+    border-style: solid !important; border-width: 3px !important; border-image: var(--pf-line2) 1 stretch !important; box-shadow: 3px 3px 0 var(--px-shadow); }
+  :root[data-flavor="game"][data-skin="pixel"] .step .check { width: 28px; height: 28px; border-radius: 0; background: var(--bg); border: 3px solid var(--line-2); box-shadow: inset 2px 2px 0 rgba(0, 0, 0, .35); }
+  :root[data-flavor="game"][data-skin="pixel"] .step.done .check { background: #1f5a3c; border-color: #5fd873; box-shadow: none; }
+  :root[data-flavor="game"][data-skin="pixel"] .step.done { opacity: .72; }
+  :root[data-flavor="game"][data-skin="pixel"] .step.done .recipe { text-decoration: none; filter: saturate(.5); }
+  :root[data-flavor="game"][data-skin="pixel"] .step.done::after { content: "Clear"; position: absolute; right: 10px; top: -10px; transform: rotate(4deg);
+    padding: 3px 7px; font: 10px/1 "Press Start 2P", monospace; text-transform: uppercase; color: var(--gold); border: 2px solid var(--gold); background: var(--bg);
+    pointer-events: none; animation: clear-stamp .32s steps(4) both; }
+  @keyframes clear-stamp { from { transform: rotate(4deg) scale(1.8); opacity: 0; } to { transform: rotate(4deg) scale(1); opacity: 1; } }
+  /* the item: an inventory slot with a soft glow */
+  :root[data-flavor="game"][data-skin="pixel"] .item-head .icon-frame { background: radial-gradient(circle at 50% 40%, #2f6a52 0, var(--tile) 70%) !important; box-shadow: 3px 3px 0 var(--px-shadow); }
+  :root[data-flavor="game"][data-skin="pixel"][data-theme="light"] .item-head .icon-frame { background: radial-gradient(circle at 50% 40%, #fff6dc 0, var(--tile) 70%) !important; }
+  /* anz: an RPG dialogue box with a name plate and a blinking "more" arrow */
+  :root[data-flavor="game"][data-skin="pixel"] .talk { position: relative; border-radius: 0 !important; padding-bottom: 18px; background: var(--surface) !important; }
+  :root[data-flavor="game"][data-skin="pixel"] .talk .tip-name { justify-self: start; padding: 4px 8px 3px; background: var(--gold); color: #1a1206; font: 10px/1 "Press Start 2P", monospace; text-transform: uppercase; box-shadow: 2px 2px 0 var(--px-shadow); }
+  :root[data-flavor="game"][data-skin="pixel"] .talk::after { content: ""; position: absolute; right: 12px; bottom: 7px; width: 10px; height: 6px; background: var(--gold);
+    clip-path: polygon(0 0, 100% 0, 50% 100%); animation: talk-more 1s steps(2) infinite; }
+  @keyframes talk-more { 50% { transform: translateY(3px); } }
+  /* toasts: a dialogue box at the bottom, above the tab bar */
+  :root[data-flavor="game"][data-skin="pixel"] .toast { top: auto; bottom: calc(var(--tabbar-h) + 14px); transform: translate(-50%, 12px); border-radius: 0 !important;
+    background: var(--surface) !important; color: var(--text) !important; border-style: solid !important; border-width: 3px !important; border-image: var(--pf-gold) 1 stretch !important;
+    box-shadow: 4px 4px 0 var(--px-shadow); padding: 12px 30px 12px 16px; text-align: left; font-family: var(--font); font-size: 15px; }
+  :root[data-flavor="game"][data-skin="pixel"] .toast.show { transform: translate(-50%, 0); }
+  :root[data-flavor="game"][data-skin="pixel"] .toast::after { content: ""; position: absolute; right: 10px; bottom: 9px; width: 8px; height: 5px; background: var(--gold);
+    clip-path: polygon(0 0, 100% 0, 50% 100%); animation: talk-more 1s steps(2) infinite; }
+  /* "LEVEL V · CLEAR!" banner */
+  .lvl-clear { position: fixed; left: 50%; top: 38%; z-index: 70; display: grid; justify-items: center; gap: 8px; padding: 16px 26px 14px; pointer-events: none;
+    background: #0c2a1e; border: 3px solid #ffd84a; box-shadow: 5px 5px 0 #030a08; transform: translate(-50%, -50%); animation: lvl-clear 1.7s steps(20) both; }
+  .lvl-clear small { font: 11px/1 "Press Start 2P", monospace; color: #8fe0a2; text-transform: uppercase; letter-spacing: 1px; }
+  .lvl-clear b { font: 22px/1 "Press Start 2P", monospace; color: #ffd84a; text-shadow: 3px 3px 0 #5a3a00; text-transform: uppercase; }
+  @keyframes lvl-clear { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.4); } 14% { opacity: 1; transform: translate(-50%, -50%) scale(1.12); }
+    22% { transform: translate(-50%, -50%) scale(1); } 82% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -62%) scale(1); } }
+  @media (prefers-reduced-motion: reduce) { .lvl-clear, :root[data-flavor="game"] .step.done::after, :root[data-flavor="game"] .talk::after, :root[data-flavor="game"] .toast::after { animation: none; } }
 </style>
 </head>
 <body>
@@ -2979,7 +3022,7 @@ function createSolver() {
       const allDone = steps.every(st => done.has(stepId(st)));
       return `<div class="lvl-group">
         <div class="lvl-head">
-          <span class="lv">Level ${L}</span>
+          <span class="lv">Level ${lvTag(L, '')}</span>
           <div class="facts"><span>${n} refine${n > 1 ? 's' : ''} · ${acts} action${acts === 1 ? '' : 's'}</span><span>${feeText(item, feeAt(item, L) * n)} (${fmt(feeAt(item, L))} each)</span><span>${S.SUCCESS[L]}% base success</span>${lvCharms ? `<span class="charm">${lvCharms} charm${lvCharms === 1 ? '' : 's'}</span>` : ''}</div>
           <button class="mini lvl-all ${allDone ? 'on' : ''}" type="button" data-action="level-done" data-level="${L}">${allDone ? '↺ undo level' : '✓ mark level done'}</button>
         </div>
@@ -3832,6 +3875,16 @@ function createSolver() {
       setTimeout(() => toast('Undone'), 50);
     }, 4500);
   }
+  // Game look: a short "LEVEL V CLEAR" banner when every step of a level is ticked off
+  function levelClear(L) {
+    if (document.documentElement.getAttribute('data-flavor') !== 'game' || !L) return;
+    const old = document.querySelector('.lvl-clear'); if (old) old.remove();
+    const el = document.createElement('div');
+    el.className = 'lvl-clear'; el.setAttribute('aria-hidden', 'true');
+    el.innerHTML = `<small>Level ${ROMAN[L] || L}</small><b>Clear!</b>`;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1700);
+  }
   function toast(msg, action, ms) {
     ui.toast.textContent = msg; ui.toast.classList.add('show');
     ui.toast.classList.toggle('tappable', !!action);
@@ -3922,7 +3975,7 @@ function createSolver() {
         toastUndo(all ? `Level ${L} unticked` : `Level ${L} done`, snap);
         if (!all && at) {
           const d = loadDone(), everything = last.analysis.steps.every(st => d.has(stepId(st)));
-          if (everything) burst('finale'); else fxAdd(FXK.pop(at, '#f6c453').concat(FXK.coins(at)));
+          if (everything) burst('finale'); else { fxAdd(FXK.pop(at, '#f6c453').concat(FXK.coins(at))); levelClear(L); }
         }
         break;
       }
@@ -4123,7 +4176,10 @@ function createSolver() {
       else {
         toastUndo(el.checked ? 'Step done' : 'Step unticked', snap);
         const grp = card && card.closest('.lvl-group');
-        if (el.checked && grp && grp.querySelectorAll('.step').length === grp.querySelectorAll('.step.done').length) burst('coins', grp.querySelector('.lvl-head'));
+        if (el.checked && grp && grp.querySelectorAll('.step').length === grp.querySelectorAll('.step.done').length) {
+          burst('coins', grp.querySelector('.lvl-head'));
+          const lb = grp.querySelector('[data-level]'); if (lb) levelClear(Number(lb.dataset.level));
+        }
         else if (el.checked) burst('pop', el.closest('.step-main') && el.closest('.step-main').querySelector('.check'));
       }
       return;
