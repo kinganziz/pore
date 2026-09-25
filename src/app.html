@@ -1739,7 +1739,8 @@ __SOLVER_JS__
 
   const esc = s => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
   const fmt = n => Number(n).toLocaleString('en-US');
-  const fmtGold = g => g >= 1e6 ? (g / 1e6).toFixed(g >= 1e7 ? 1 : 2).replace(/\.?0+$/, '') + 'M' : g >= 1e3 ? (g / 1e3).toFixed(g >= 1e5 ? 0 : 1).replace(/\.0$/, '') + 'k' : String(g);
+  const fmtGold = g => g >= 9.995e11 ? (g / 1e12).toFixed(g >= 1e13 ? 1 : 2).replace(/\.?0+$/, '') + 'T' : g >= 9.995e8 ? (g / 1e9).toFixed(g >= 1e10 ? 1 : 2).replace(/\.?0+$/, '') + 'B'
+    : g >= 999500 ? (g / 1e6).toFixed(g >= 1e7 ? 1 : 2).replace(/\.?0+$/, '') + 'M' : g >= 1e3 ? (g / 1e3).toFixed(g >= 1e5 ? 0 : 1).replace(/\.0$/, '') + 'k' : String(g);   // up to trillions
   const abbrev = name => name.split(/\s+/).map(w => w.slice(0, 4)).join(' ').toUpperCase();
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const sameVec = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
@@ -2362,7 +2363,7 @@ __SOLVER_JS__
   function compactFactor(n) {
     if (n < 10000) return fmt(n);
     const units = [[1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'k']];
-    for (const [v, u] of units) if (n >= v) { const x = n / v; return (x >= 100 ? Math.round(x) : x.toFixed(1).replace(/\.0$/, '')) + u; }
+    for (const [v, u] of units) if (n >= v * (v === 1e3 ? 1 : 0.9995)) { const x = n / v; return (x >= 100 ? Math.round(x) : x.toFixed(1).replace(/\.0$/, '')) + u; }
     return fmt(n);
   }
   function factorClass(n) { const len = compactFactor(n).length; return len <= 3 ? '' : len <= 5 ? 'mid' : 'long'; }
@@ -4394,7 +4395,10 @@ __SOLVER_JS__
     coins: '<svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M5 1h6v1h2v2h1v6h-1v2h-2v1H5v-1H3v-2H2V4h1V2h2zM6 4v1H5v6h1v1h4v-1h1V5h-1V4zM7 6h2v4H7z"/></svg>',
   };
   // counts the way the game shows them: 1x, 57x, 1.9k
-  const invQty = n => n >= 1000 ? (n >= 1e6 ? (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'm' : (n / 1000).toFixed(n >= 1e4 ? 0 : 1).replace(/\.0$/, '') + 'k') : n + 'x';
+  const invQty = n => {   // 1x, 57x, 1.9k, 12m, 12b, 3.4t
+    for (const [v, u] of [[1e12, 't'], [1e9, 'b'], [1e6, 'm'], [1e3, 'k']]) if (n >= v * (v === 1e3 ? 1 : 0.9995)) { const x = n / v; return (x >= 100 ? Math.round(x) : x.toFixed(1).replace(/\.0$/, '')) + u; }
+    return n + 'x';
+  };
   function invSlot(key, icon, n, opts) {
     const o = opts || {};
     return `<button type="button" class="slot ${o.cls || ''} ${invSel === key ? 'sel' : ''}" style="--glow:${o.glow || 'var(--gold)'}" data-action="inv-sel" data-key="${key}" aria-label="${esc(o.label)}${n ? ', ' + n : ''}" title="${esc(o.label)}">` +
