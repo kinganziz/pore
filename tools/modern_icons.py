@@ -32,6 +32,7 @@ PAL = {
     "slate": ("#c8d0dc", "#7c8698", "#444c5c", "#181c24"),
     "silver": ("#ffffff", "#dcd8d0", "#908a80", "#2a2622"),
     "gold": ("#fff2a6", "#f6b62e", "#b0600c", "#3a1e06"),
+    "richgold": ("#fff6d2", "#dcae4c", "#8a5716", "#2c1a06"),   # metallic gold: cream light, honey body, bronze shadow
     "platinum": ("#ffffff", "#cfdbe8", "#7c8ca8", "#232a3a"),
     "platring": ("#dcefe6", "#90aa9e", "#465a52", "#161e1a"),
     "azurite": ("#a6dcff", "#3a80e8", "#183a88", "#0a1636"),
@@ -1190,7 +1191,7 @@ SPECS = {
     "Frostcurse": lambda ic: dagger(ic, P["ice"], P["azurite"], shape_="serrated", w=6, T=2, extra="glow:#ffffff"),
     "Frostheart Claymore": lambda ic: sword(ic, C("#ffffff", "#6ee0ff", "#1a88d8", "#08305a"), P["azurite"], shape_="crystal", w=9.5, gshape="cross", gw=14, gem_=P["ice"]),
     "Ghostweave Sword": lambda ic: sword(ic, C("#e8fff8", "#7ec8c0", "#2e6a70", "#0c2428"), P["azurite"], shape_="taper", w=6, gshape="spiky", gw=11),
-    "Gilded Dominion": lambda ic: sword(ic, P["fire"], P["white"], shape_="straight", w=7.5, gshape="wing", gw=15, gem_=P["ruby"], pgem=P["ruby"]),   # real gold: Horn Dancer's guard metal
+    "Gilded Dominion": lambda ic: sword(ic, P["richgold"], P["white"], shape_="straight", w=7.5, gshape="wing", gw=15, gem_=P["ruby"], pgem=P["ruby"]),   # real gold, not yellow or orange
     "Glutton's Scepter": lambda ic: mace(ic, C("#ffc8b8", "#c8746a", "#7a3a34", "#2a0e0c"), kind="drumstick"),
     "Goblin Mace": lambda ic: mace(ic, C("#e8b890", "#a8703e", "#5e3a1c", "#241206"), kind="club", studs=True),
     "Gold Sword": lambda ic: sword(ic, P["gold"], P["gold"], shape_="straight", w=6.5, pgem=P["amethyst"], gem_=P["amethyst"]),

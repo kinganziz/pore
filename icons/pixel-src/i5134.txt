@@ -5,34 +5,39 @@ b #260616
 c #ffffff
 d #c83280
 e #0a0a12
-f #3c3c56
-g #70708e
-h #1e1e2e
-i #ff96cc
-j #953a6d
-k #861e58
-l #6c1648
+f #585875
+g #2f2f44
+h #70708e
+i #41415b
+j #1e1e2e
+k #e669a9
+l #cd3b87
+m #953a6d
+n #87205a
+o #7a1a51
+p #6c1648
+q #9f2667
 --
 ........................
 ........................
 .........ab..ab.........
 ........acdbacdb........
 ........bdb..bdb........
-..ab....efe..efe....ab..
-.acdb...egfeeghe...acdb.
-.bddb...egheeghe...bddb.
-..egfe.egffggfffe.egfe..
-..egffeegffffffheegfhe..
-..egfffegffffffhegffhe..
-..egfffgfffbbfffgfffhe..
-..egffffffbidbffffffhe..
-..egfffffbjkkkbfffffhe..
-..egfffffbdddlbfffffhe..
-..efeeeeeebdlbeeeeeehe..
-...eggfggggbbgggfbgfe...
-..egfhcffffffffhcdbffe..
-..effhddgffffffbddbfhe..
-...efhffhhhhhhhhffhhe...
+..ab....efe..ege....ab..
+.acdb...ehieefje...acdb.
+.bddb...ehgeefje...bddb.
+..ehhe.ehfiffigge.egje..
+..ehhfeehfiiiigjeeijje..
+..ehhffehfiiiigjeigjje..
+..ehhffhffibbiggiggjje..
+..ehhfffffbklbgggggjje..
+..ehhffffbmnnobggggjje..
+..ehhffffbkllpbggggjje..
+..eheeeeeeblqbeeeeeeje..
+...ehhfhhhfbbfiigbgje...
+..ehhfcfffiiiigjcdbjje..
+..ehhfddhfiiiigbddbjje..
+...ehfffiiggggjjggjje...
 ....eeeeeeeeeeeeeeee....
 ........................
 ........................

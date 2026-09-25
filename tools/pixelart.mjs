@@ -143,8 +143,14 @@ function parseSvg(svg) {
     }
     if (tag === 'defs') { if (!self) inDefs++; continue; }
     if (tag === 'clipPath') { if (!self) inClip++; continue; }
-    if (/Gradient$/.test(tag)) { curGrad = grads[a.id] = []; if (self) curGrad = null; continue; }
-    if (tag === 'stop') { if (curGrad) curGrad.push([Number(a.offset || 0), hex(a['stop-color'] || '#000')]); continue; }
+    if (/Gradient$/.test(tag)) {
+      const num = (v, d) => (v == null ? d : String(v).endsWith('%') ? parseFloat(v) / 100 : Number(v));
+      curGrad = grads[a.id] = { stops: [], radial: tag === 'radialGradient', user: a.gradientUnits === 'userSpaceOnUse',
+        x1: num(a.x1, 0), y1: num(a.y1, 0), x2: num(a.x2, 1), y2: num(a.y2, 0), cx: num(a.cx, 0.5), cy: num(a.cy, 0.5), r: num(a.r, 0.5) };
+      if (self) curGrad = null;
+      continue;
+    }
+    if (tag === 'stop') { if (curGrad) curGrad.stops.push([Number(a.offset || 0), hex(a['stop-color'] || '#000')]); continue; }
     if (tag === 'g') {
       const top = stack[stack.length - 1];
       const inh = { ...top.inh };
@@ -162,19 +168,22 @@ function parseSvg(svg) {
     else if (tag === 'circle') subs = [{ pts: ellipsePts(+a.cx || 0, +a.cy || 0, +a.r, +a.r), closed: true }];
     else if (tag === 'ellipse') subs = [{ pts: ellipsePts(+a.cx || 0, +a.cy || 0, +a.rx, +a.ry), closed: true }];
     else subs = [{ pts: rectPts(+a.x || 0, +a.y || 0, +a.width, +a.height, +(a.rx || a.ry || 0)), closed: true }];
+    const raw = subs.flatMap(s => s.pts);
+    const box = [Math.min(...raw.map(p => p[0])), Math.min(...raw.map(p => p[1])), Math.max(...raw.map(p => p[0])), Math.max(...raw.map(p => p[1]))];
     subs = subs.map(s => ({ pts: s.pts.map(p => ap(m, p)), closed: s.closed }));
     const scale = Math.sqrt(Math.abs(m[0] * m[3] - m[1] * m[2]));
     const op = top.op * Number(a.opacity ?? 1);
     ops.push({ tag, d: a.d || `${tag}${a.cx}${a.cy}${a.r}${a.rx}${a.x}${a.y}`, subs, fill: a.fill ?? '#000', stroke: a.stroke || 'none',
-      sw: Number(a['stroke-width'] || 1) * scale, op });
+      sw: Number(a['stroke-width'] || 1) * scale, op, m, box });
   }
   const ramp = paint => {
     if (!paint || paint === 'none') return null;
     const g = paint.match(/url\(#([^)]+)\)/);
     if (g) {
-      const st = grads[g[1]] || [[0, [128, 128, 128]]];
+      const G = grads[g[1]] || { stops: [[0, [128, 128, 128]]] };
+      const st = G.stops.length ? G.stops : [[0, [128, 128, 128]]];
       const at = t => st.reduce((b, s) => (Math.abs(s[0] - t) < Math.abs(b[0] - t) ? s : b))[1];
-      return { hi: st[0][1], mid: at(0.5), lo: st[st.length - 1][1], grad: true };
+      return { hi: st[0][1], mid: at(0.5), lo: st[st.length - 1][1], grad: true, G };
     }
     const c = hex(paint);
     return { hi: c, mid: c, lo: c, grad: false };
@@ -184,7 +193,7 @@ function parseSvg(svg) {
   ops.forEach((o, i) => {
     const fill = ramp(o.fill), stroke = ramp(o.stroke);
     const inkOf = s => (s && lum(s.mid) < 0.35 ? s.mid : null);
-    if (fill && o.op >= 0.3) layers.push({ kind: 'fill', subs: o.subs, ramp: fill, ink: inkOf(stroke), op: o.op, rimmed: !!inkOf(stroke) && o.sw >= 1.2 });
+    if (fill && o.op >= 0.3) layers.push({ kind: 'fill', subs: o.subs, ramp: fill, ink: inkOf(stroke), op: o.op, rimmed: !!inkOf(stroke) && o.sw >= 1.2, m: o.m, box: o.box });
     if (stroke && o.sw > 0) {
       const dark = lum(stroke.mid) < 0.3;
       if (fill && dark) return;                                   // a shape's outline: redrawn later
@@ -197,10 +206,32 @@ function parseSvg(svg) {
       if (o.op < 0.3) return;
       const prev = ops[i - 1];
       const ink = prev && prev.d === o.d && prev.stroke !== 'none' ? ramp(prev.stroke).mid : null;
-      layers.push({ kind: 'stroke', subs: o.subs, r: o.sw / 2, ramp: stroke, ink, op: o.op });
+      layers.push({ kind: 'stroke', subs: o.subs, r: o.sw / 2, ramp: stroke, ink, op: o.op, m: o.m, box: o.box });
     }
   });
   return layers;
+}
+
+/* ------------------------------------------------------------------ gradient shading */
+const inv = m => { const det = m[0] * m[3] - m[1] * m[2]; return [m[3] / det, -m[1] / det, -m[2] / det, m[0] / det,
+  (m[2] * m[5] - m[3] * m[4]) / det, (m[1] * m[4] - m[0] * m[5]) / det]; };
+// where a canvas point sits along a layer's gradient (0 = first stop, 1 = last)
+function gradT(L, x, y) {
+  const G = L.ramp.G;
+  if (!G || !L.m) return 0.5;
+  const [ex, ey] = ap(inv(L.m), [x, y]);
+  const [bx0, by0, bx1, by1] = L.box;
+  const u = G.user ? ex : (ex - bx0) / Math.max(1e-6, bx1 - bx0), v = G.user ? ey : (ey - by0) / Math.max(1e-6, by1 - by0);
+  let t;
+  if (G.radial) t = Math.hypot(u - G.cx, v - G.cy) / Math.max(1e-6, G.r);
+  else { const dx = G.x2 - G.x1, dy = G.y2 - G.y1; t = ((u - G.x1) * dx + (v - G.y1) * dy) / Math.max(1e-9, dx * dx + dy * dy); }
+  return Math.max(0, Math.min(1, t));
+}
+function tone(G, t) {   // the gradient's colour at t
+  const st = G.stops;
+  if (t <= st[0][0]) return st[0][1];
+  for (let i = 1; i < st.length; i++) if (t <= st[i][0]) return mix(st[i - 1][1], st[i][1], (t - st[i - 1][0]) / Math.max(1e-6, st[i][0] - st[i - 1][0]));
+  return st[st.length - 1][1];
 }
 
 /* ------------------------------------------------------------------ rasterise */
@@ -261,7 +292,10 @@ function compile(svg) {
     if (!R.grad || size[li] < 5) { col[y][x] = R.mid; continue; }
     const same = (dx, dy) => { const nx = x + dx, ny = y + dy; return nx >= 0 && ny >= 0 && nx < N && ny < N && own[ny][nx] === li; };
     const light = !same(0, -1) || !same(-1, 0), dark = !same(0, 1) || !same(1, 0);
-    col[y][x] = light && !dark ? R.hi : dark && !light ? R.lo : R.mid;
+    let band = Math.round(gradT(L, (x + .5) * U, (y + .5) * U) * 4);
+    if (light && !dark) band -= 1; else if (dark && !light) band += 1;
+    if (L.kind === 'stroke') band = Math.min(band, 2);   // thin bands (rings, cords) stay bright: light to mid only
+    col[y][x] = tone(R.G, Math.max(0, Math.min(4, band)) / 4);
   }
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (tint[y][x] && col[y][x])
     for (const li of tint[y][x]) col[y][x] = mix(col[y][x], layers[li].ramp.mid, Math.min(1, layers[li].op * 1.2));
@@ -316,8 +350,27 @@ function fromTxt(t) {
   for (const l of head.split('\n')) { const m = l.match(/^(\S) (#[0-9a-fA-F]{6})$/); if (m) pal[m[1]] = m[2]; }
   return body.trim().split('\n').map(r => [...r].map(ch => (ch === '.' ? null : pal[ch])));
 }
+// Colour intensity: every icon is drawn more vivid than its grid (saturation up, a touch more contrast).
+// Near-greys (steel, silver, white, outlines) keep their colour so metals are not tinted.
+const VIVID = 1.3, CONTRAST = 1.08;
+function vivid(h) {
+  let [r, g, b] = hex(h).map(v => v / 255);
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
+  let hue = 0, sat = 0;
+  if (d) {
+    sat = d / (1 - Math.abs(2 * l - 1));
+    hue = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    if (hue < 0) hue += 6;   // magentas and pinks: wrap round, or they turn orange
+  }
+  const s2 = sat < 0.12 ? sat : Math.min(1, sat * VIVID + 0.04);
+  const l2 = Math.max(0, Math.min(1, 0.5 + (l - 0.5) * CONTRAST));
+  const c = (1 - Math.abs(2 * l2 - 1)) * s2, xx = c * (1 - Math.abs((hue % 2 + 2) % 2 - 1)), m = l2 - c / 2;
+  const [r1, g1, b1] = hue < 1 ? [c, xx, 0] : hue < 2 ? [xx, c, 0] : hue < 3 ? [0, c, xx] : hue < 4 ? [0, xx, c] : hue < 5 ? [xx, 0, c] : [c, 0, xx];
+  return toHex([(r1 + m) * 255, (g1 + m) * 255, (b1 + m) * 255]);
+}
 function toSvg(grid) {
   const runs = new Map();
+  grid = grid.map(r => r.map(c => (c ? vivid(c) : c)));
   grid.forEach((r, y) => { let x = 0; while (x < r.length) { const c = r[x]; if (!c) { x++; continue; } let x1 = x + 1; while (x1 < r.length && r[x1] === c) x1++; if (!runs.has(c)) runs.set(c, []); runs.get(c).push(`M${x} ${y}h${x1 - x}v1h-${x1 - x}z`); x = x1; } });
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${N} ${N}" shape-rendering="crispEdges">${[...runs].map(([c, d]) => `<path fill="${c}" d="${d.join('')}"/>`).join('')}</svg>`;
 }
