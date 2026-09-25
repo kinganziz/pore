@@ -1150,12 +1150,12 @@
   .tab.locked { opacity: .38; }
   .tab.locked .tab-icon { filter: grayscale(1); }
   /* ---------- home: swipeable cards of sought-after items ---------- */
-  .hb-carousel { width: min(100%, 360px); display: grid; gap: 8px; justify-self: center; }
+  .hb-carousel { width: 100%; display: grid; gap: 8px; justify-self: center; }
   .hb-track { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain;
-    padding: 2px 2px 6px; margin: -2px -2px -6px; }
+    --hb-w: min(86%, 340px); padding: 2px 0 6px; margin: -2px 0 -6px; }   /* the card in view sits in the middle, its neighbours peek in */
+  .hb-track::before, .hb-track::after { content: ""; flex: 0 0 calc((100% - var(--hb-w)) / 2 - 10px); }   /* end spacers: first and last card can centre too */
   .hb-track::-webkit-scrollbar { display: none; }
-  .hb-track .home-best { flex: 0 0 88%; scroll-snap-align: start; }
-  .hb-track .home-best:last-child { scroll-snap-align: end; }
+  .hb-track .home-best { flex: 0 0 var(--hb-w); scroll-snap-align: center; }
   .hb-dots { display: flex; justify-content: center; gap: 6px; }
   .hb-dots i { width: 6px; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, .3); transition: width .2s, background .2s; }
   .hb-dots i.on { width: 16px; background: #fff; }
