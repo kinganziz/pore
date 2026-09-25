@@ -381,6 +381,7 @@ try {
   const db = JSON.parse(readFileSync(path.join(ROOT, 'data', 'items.json'), 'utf8'));
   for (const it of db.items) names['i' + it.id] = it.name;
   for (const c of db.charms || []) names['c' + c.id] = c.name;
+  for (const g of db.goods || []) names['i' + g.id] = g.name;
 } catch (e) { /* names are only comments */ }
 
 mkdirSync(SRC, { recursive: true });

@@ -1368,8 +1368,13 @@
   .gm-menu button { position: relative; text-align: left; border: 0; background: none; color: var(--text); font: inherit; font-size: 17px; padding: 10px 4px 10px 26px; cursor: pointer;
     text-shadow: 1px 1px 0 rgba(0, 0, 0, .5); transition: color .15s; border-radius: 10px; }
   .gm-menu button::before { content: ""; position: absolute; left: 8px; top: 50%; width: 8px; height: 12px; margin-top: -6px; background: var(--gold); clip-path: polygon(0 0, 100% 50%, 0 100%); opacity: 0; }
-  .gm-menu button:hover, .gm-menu button:focus-visible { color: var(--gold); background: linear-gradient(90deg, rgba(255, 255, 255, .06), transparent 80%); outline: none; }
-  .gm-menu button:hover::before, .gm-menu button:focus-visible::before, .gm-menu button:active::before { opacity: 1; animation: menu-cursor .9s steps(2) infinite; }
+  .gm-menu button:focus-visible { color: var(--gold); background: linear-gradient(90deg, rgba(255, 255, 255, .06), transparent 80%); outline: none; }
+  .gm-menu button:focus-visible::before, .gm-menu button:active::before { opacity: 1; animation: menu-cursor .9s steps(2) infinite; }
+  .gm-menu button:focus:not(:focus-visible) { outline: none; }
+  @media (hover: hover) {   /* touch screens keep :hover after a tap, so only real pointers get the hover look */
+    .gm-menu button:hover { color: var(--gold); background: linear-gradient(90deg, rgba(255, 255, 255, .06), transparent 80%); }
+    .gm-menu button:hover::before { opacity: 1; animation: menu-cursor .9s steps(2) infinite; }
+  }
   .gm-menu button:active { color: var(--gold); }
   .gm .in-help .bg-thumb.icon { background: rgba(0, 0, 0, .3); color: var(--text); }
   /* ---------- inventory as a game bag: category tabs, slots with count badges, a slot editor ---------- */
@@ -1386,7 +1391,7 @@
   .slot .qty { position: absolute; right: 4px; bottom: 2px; font-style: normal; font-size: 14px; color: #fff; text-shadow: 1px 1px 0 #000, -1px 0 0 #000, 0 -1px 0 #000; }
   .slot.sel { box-shadow: inset 0 0 0 2px var(--gold), 0 0 12px color-mix(in srgb, var(--gold) 45%, transparent); }
   .slot.blank > :first-child { opacity: .55; }   /* not 'empty': that class is taken by the empty-state panels */
-  .slot.off > :first-child { opacity: .45; filter: grayscale(1); }   /* switched off: just grey */
+  .slot.off > :first-child { opacity: .7; filter: saturate(.45) brightness(.72); }   /* not owned / switched off: dull, but still in colour */
   .slot.add { color: var(--soft); background: rgba(0, 0, 0, .18); }
   .slot.add svg { width: 34%; height: 34%; }
   .slot:active { transform: scale(.94); }
@@ -1482,9 +1487,10 @@
   .inv-row .ir-main b { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .inv-row .ir-main small { color: var(--soft); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .inv-row .ir-n { color: var(--gold); font-size: 15px; }
-  .inv-row.off .ir-ic { opacity: .45; filter: grayscale(1); }
+  .inv-row.off .ir-ic { opacity: .7; filter: saturate(.45) brightness(.72); }
   .inv-row.off .ir-main b { color: var(--muted); }
-  .inv-row.sel, .inv-row:hover { background: linear-gradient(90deg, rgba(255, 255, 255, .07), transparent 85%); }
+  .inv-row.sel { background: linear-gradient(90deg, rgba(255, 255, 255, .07), transparent 85%); }
+  @media (hover: hover) { .inv-row:hover { background: linear-gradient(90deg, rgba(255, 255, 255, .07), transparent 85%); } }
   .inv-pop { position: absolute; inset: 0; z-index: 5; display: flex; align-items: flex-end; justify-content: center; padding: 12px; background: rgba(0, 0, 0, .35); }
   .inv-pop[hidden] { display: none; }
   #charmsSheet .sheet { position: relative; }
@@ -1506,6 +1512,23 @@
   .ip-lab { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
   .ip-lab small { text-transform: none; letter-spacing: 0; color: var(--soft); margin-left: 6px; }
   @media (prefers-reduced-motion: reduce) { .ip-card { animation: none; } }
+  .ip-row b.pos { color: #7ee07a; } .ip-row b.neg { color: #ff8a8a; }
+  .ip-sec { display: grid; gap: 6px; }
+  .ip-src { display: grid; grid-template-columns: 16px 1fr; gap: 8px; align-items: start; }
+  .ip-glyph { width: 16px; height: 16px; margin-top: 3px; image-rendering: pixelated; }
+  .ip-src b { display: block; font-size: 15px; color: var(--text); }
+  .ip-src small { display: block; color: var(--soft); font-size: 13px; line-height: 1.25; }
+  .ip-links { display: flex; flex-wrap: wrap; gap: 4px 6px; margin-top: 3px; }
+  .ip-link { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 2px 3px; border: 0; border-radius: 8px; background: rgba(255, 255, 255, .07); color: var(--text); font: inherit; font-size: 14px; cursor: pointer; }
+  .ip-link .pixel, .ip-link > svg { width: 22px; height: 22px; flex: 0 0 auto; }
+  .ip-link i { font-style: normal; color: var(--gold); }
+  .ip-link:active { transform: scale(.95); }
+  .ip-chip { display: inline-block; padding: 3px 8px; border-radius: 8px; background: rgba(255, 255, 255, .07); font-size: 14px; }
+  .ip-more summary { cursor: pointer; color: var(--gold); font-size: 14px; list-style: none; padding: 2px 0 4px 24px; }
+  .ip-more summary::-webkit-details-marker { display: none; }
+  .ip-more[open] summary { display: none; }
+  .ip-more { display: grid; gap: 6px; }
+  .ip-more[open] { display: grid; }
 </style>
 </head>
 <body>
@@ -1725,6 +1748,19 @@ __SOLVER_JS__
   const noShortcut = it => badges[it.key] != null && badges[it.key] >= Math.pow(2, maxOf(it) - 1);
   const ITEM_BY_KEY = new Map(ITEMS.map(it => [it.key, it]));
   const CHARMS = (ITEM_DB.charms || []).map(c => Object.assign({ key: 'c' + c.id }, c));
+  // everything else a player can own (potions, food, ores, drops...): no refining, but where to get it and what it is for
+  const GOODS = (ITEM_DB.goods || []).map(g => Object.assign({ key: 'i' + g.id }, g));
+  const GOOD_BY_KEY = new Map(GOODS.map(g => [g.key, g]));
+  const WHERE = ITEM_DB.where || {}, USES = ITEM_DB.uses || {};
+  const GOOD_TYPES = [['POTION', 'Potions', 'Potion', 'Potion of Luck'], ['FOOD', 'Food', 'Food', 'Apple'], ['FRUIT', 'Fruit', 'Fruit', 'Red Berries'],
+    ['MUSHROOM', 'Mushrooms', 'Mushroom', 'Glittercap'], ['PLANT', 'Plants', 'Plant', 'Sunflower'], ['ORE', 'Ores', 'Ore', 'Gold ore'], ['INGOT', 'Ingots', 'Ingot', 'Gold ingot'],
+    ['MATERIAL', 'Materials', 'Material', 'Emerald'], ['MONSTER_DROP', 'Monster drops', 'Monster drop', 'Bone'], ['KEY', 'Keys', 'Key', 'Gold Key'],
+    ['VALUABLE', 'Valuables', 'Valuable', 'Pouch'], ['RELIC', 'Relics', 'Relic', 'Chalice of Abundance'], ['RESOURCE', 'Resources', 'Resource', 'Coliseum Ticket'],
+    ['EVENT', 'Event items', 'Event item', 'Easter Egg'], ['BASIC', 'Fossils', 'Fossil', 'Fossil']];
+  const GOOD_SINGULAR = Object.fromEntries(GOOD_TYPES.map(t => [t[0], t[2]]));
+  const anyItem = k => ITEM_BY_KEY.get(k) || GOOD_BY_KEY.get(k) || CHARMS.find(c => c.key === k);
+  // the places each item comes from, for searching the bag by place ("whisper cave", "undead")
+  const PLACES = Object.fromEntries(Object.entries(WHERE).map(([k, list]) => [k, list.map(e => [typeof e[1] === 'string' ? e[1] : '', ...(Array.isArray(e[3]) ? e[3] : []), ...(Array.isArray(e[4]) ? e[4] : [])].join(' ')).join(' ').toLowerCase()]));
   const TYPES = [['WEAPON', 'Weapons', 'Weapon'], ['BOSS', 'Boss weapons', 'Boss weapon'], ['HELMET', 'Helmets', 'Helmet'], ['CHEST', 'Chest', 'Chest'], ['LEGGEAR', 'Leg gear', 'Leg gear'],
     ['SHOES', 'Shoes', 'Shoes'], ['SHIELD', 'Shields', 'Shield'], ['RING', 'Rings', 'Ring'], ['AMULET', 'Amulets', 'Amulet'],
     ['NECKLACE', 'Necklaces', 'Necklace'], ['TOOL', 'Tools', 'Tool']];
@@ -4466,29 +4502,36 @@ __SOLVER_JS__
   function renderCharms(force) {
     if (!ui.charmsBody || (!force && ui.charmsSheet.hidden)) return;
     // every category the bag can hold: all, charms, each item type (like the game's filter row), coins
-    const cats = [['all', 'All'], ['charms', 'Charms'], ...TYPES.map(t => ['t:' + t[0], t[1]]), ['coins', 'Coins']];
+    const cats = [['all', 'All'], ['charms', 'Charms'], ...TYPES.map(t => ['t:' + t[0], t[1]]), ...GOOD_TYPES.map(t => ['g:' + t[0], t[1]]), ['coins', 'Coins']];
     ui.charmsBody.innerHTML = `<label class="inv-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></svg><input type="search" placeholder="Search by name" value="${esc(invQ)}" data-field="inv-q" aria-label="Search the inventory">` +
       `<span class="inv-views" role="group" aria-label="View">${['grid', 'list', 'icons'].map(v => `<button type="button" class="${invView === v ? 'on' : ''}" data-action="inv-view" data-view="${v}" aria-label="${v === 'grid' ? 'Tiles with names' : v === 'list' ? 'List' : 'Icons only'}" title="${v === 'grid' ? 'Tiles' : v === 'list' ? 'List' : 'Icons'}">${INV_VIEW_SVG[v]}</button>`).join('')}</span></label>` +
       `<div id="invGrid"></div>`;
     // the category icons: a fixed strip at the foot of the sheet, right above the tab bar (like the game)
-    const catArt = k => ({ all: CAT_ALL, items: CAT_SWORD, charms: CAT_CLOVER, coins: CAT_COINS })[k] || filterIcon(k.slice(2));   // item types use the item list's type icons
+    const goodArt = t => { const g = GOODS.find(x => x.name === (GOOD_TYPES.find(y => y[0] === t) || [])[3]) || GOODS.find(x => x.type === t); return g ? iconSVG(g.key) : ''; };
+    const catArt = k => ({ all: CAT_ALL, items: CAT_SWORD, charms: CAT_CLOVER, coins: CAT_COINS })[k] || (k.startsWith('g:') ? goodArt(k.slice(2)) : filterIcon(k.slice(2)));   // item types use the item list's type icons
     document.getElementById('invCats').innerHTML = cats.map(([k, l]) => `<button type="button" role="tab" class="inv-cat ${invTab === k ? 'on' : ''}" data-action="inv-tab" data-tab="${k}" aria-selected="${invTab === k}" aria-label="${l}" title="${l}">${catArt(k)}</button>`).join('');
     const on = document.querySelector('#invCats .inv-cat.on'); if (on) on.scrollIntoView({ block: 'nearest', inline: 'center' });
     invRenderGrid();
   }
   function invRenderGrid() {
     const box = document.getElementById('invGrid'); if (!box) return;
-    const q = invQ.trim().toLowerCase(), hit = name => !q || name.toLowerCase().includes(q);
-    const show = k => invTab === 'all' || invTab === k || (k === 'items' && invTab.startsWith('t:'));
-    const typeOk = it => !invTab.startsWith('t:') || it.type === invTab.slice(2);
+    const q = invQ.trim().toLowerCase(), hit = (name, key) => !q || name.toLowerCase().includes(q) || (q.length > 2 && !!PLACES[key] && PLACES[key].includes(q));
+    const show = k => invTab === 'all' || invTab === k || (k === 'items' && invTab.startsWith('t:')) || (k === 'goods' && invTab.startsWith('g:'));
+    const typeOk = it => invTab.length < 3 || invTab[1] !== ':' || it.type === invTab.slice(2);
     const rows = [];   // { key, icon, n, cls, glow, label, lv, sub }
     if (show('coins')) for (const k of ['gold', 'wb']) { const nm = k === 'gold' ? 'Gold' : 'WB tokens'; if (hit(nm)) rows.push({ key: k, icon: INV_COIN_SVG[k], n: inv[k] != null ? (inv[k] >= 1000 ? invQty(inv[k]) : inv[k] + '') : '', cls: inv[k] == null ? 'blank' : '', glow: k === 'gold' ? '#f6c453' : '#cf8f4f', label: nm, sub: inv[k] == null ? 'not tracked' : k === 'gold' ? 'refining fees' : 'boss weapon fees' }); }
-    if (show('charms')) for (const c of CHARMS) if (hit(c.name)) rows.push({ key: c.key, icon: iconSVG(c.key), n: charmStock[c.key] ? invQty(charmStock[c.key]) : '', cls: charmOff.has(c.key) ? 'off' : '', glow: '#ff9d3c', label: c.name, lv: '×' + c.factor, sub: `charm ×${c.factor}${charmOff.has(c.key) ? ' · kept out of plans' : ''}` });
-    if (show('items')) {
+    if (show('charms')) for (const c of CHARMS) if (hit(c.name, c.key)) rows.push({ key: c.key, icon: iconSVG(c.key), n: charmStock[c.key] ? invQty(charmStock[c.key]) : '', cls: charmOff.has(c.key) ? 'off' : '', glow: '#ff9d3c', label: c.name, lv: '×' + c.factor, sub: `charm ×${c.factor}${charmOff.has(c.key) ? ' · kept out of plans' : ''}` });
+    if (show('items') || show('goods')) {
       const has = it => (inv.items[it.key] || 0) > 0;
-      ITEMS.filter(it => it.key !== 'custom' && hit(it.name) && typeOk(it))
-        .sort((a, b) => (has(b) - has(a)) || (has(a) ? (inv.added[b.key] || 0) - (inv.added[a.key] || 0) : 0) || a.name.localeCompare(b.name))
-        .forEach(it => rows.push({ key: it.key, icon: iconSVG(it.key), n: has(it) ? invQty(inv.items[it.key]) : '', cls: has(it) ? '' : 'off', glow: '#3aa84a', label: it.name, lv: has(it) ? 'I' : '', sub: `${TYPE_SINGULAR[it.type] || ''} · ${statsLine(it)}` }));
+      const pool = [...(show('items') ? ITEMS.filter(it => it.key !== 'custom').sort((a, b) => a.name.localeCompare(b.name)) : []), ...(show('goods') ? GOODS : [])]
+        .filter(it => hit(it.name, it.key) && typeOk(it));
+      const at = new Map(pool.map((it, i) => [it.key, i]));
+      pool.sort((a, b) => (has(b) - has(a)) || (has(a) ? (inv.added[b.key] || 0) - (inv.added[a.key] || 0) : 0) || at.get(a.key) - at.get(b.key))
+        .forEach(it => {
+          const gear = ITEM_BY_KEY.has(it.key);
+          rows.push({ key: it.key, icon: iconSVG(it.key), n: has(it) ? invQty(inv.items[it.key]) : '', cls: has(it) ? '' : 'off', glow: gear ? '#3aa84a' : '#4aa8ff', label: it.name, lv: gear && has(it) ? 'I' : '',
+            sub: gear ? `${TYPE_SINGULAR[it.type] || ''} · ${statsLine(it)}` : `${GOOD_SINGULAR[it.type] || ''}${it.desc ? ' · ' + it.desc : ''}` });
+        });
     }
     const sel = r => invSel === r.key ? 'sel' : '';
     let html;
@@ -4496,27 +4539,81 @@ __SOLVER_JS__
         `<span class="ir-ic">${r.icon}</span><span class="ir-main"><b>${esc(r.label)}</b><small>${esc(r.sub || '')}</small></span><span class="ir-n">${r.n || ''}</span></button>`).join('')}</div>`;
     else if (invView === 'grid') html = `<div class="slots named">${rows.map(r => `<div class="named-slot">${invSlot(r.key, r.icon, r.n, r)}<span class="ns-name">${esc(r.label)}</span></div>`).join('')}</div>`;
     else html = `<div class="slots">${rows.map(r => invSlot(r.key, r.icon, r.n, r)).join('')}</div>`;
-    const hint = { all: 'Tap anything to see it and set how many you own; grey means none.', charms: 'Tap a charm to set your stock or keep it out of plans.', coins: 'Gold pays fees, world boss (WB) tokens pay boss weapons.' }[invTab] || 'Tap an item to see it and set how many base (P1) copies you own.';
+    const hint = invTab.startsWith('g:') ? 'Tap an item to see where to get it and set how many you own.' : { all: 'Tap anything to see where to get it and set how many you own. Dim means you have none. Search finds places too.', charms: 'Tap a charm to set your stock or keep it out of plans.', coins: 'Gold pays fees, world boss (WB) tokens pay boss weapons.' }[invTab] || 'Tap an item to see it and set how many base (P1) copies you own.';
     box.innerHTML = (rows.length ? html : '<p class="inv-hint">Nothing matches.</p>') + `<p class="inv-hint">${hint}</p>`;
     invRenderPop();
+  }
+  // a tappable item inside a card (ingredients, keys, products): opens that item's card
+  const itemLink = (k, pre, post) => anyItem(k) ? `<button type="button" class="ip-link" data-action="inv-go" data-key="${k}">${iconSVG(k)}<span>${pre ? `<i>${pre}</i> ` : ''}${esc(anyItem(k).name)}${post ? ` <i>${post}</i>` : ''}</span></button>` : '';
+  const SRC_ORDER = { shop: 0, craft: 1, boss: 2, mob: 3, enc: 4, find: 5, mine: 6, chest: 7, event: 8, coliseum: 9 };   // chests need a key, so they come after drops
+  const SRC_GLYPH = {   // small pixel signs for each kind of source
+    mob: ['#ff6a6a', 'M2 1h4v1h1v3H6v1H2V5H1V2h1zM2 3v1h1V3zM5 3v1h1V3zM3 6h1v1H3zM5 6h1v1H5z'],
+    find: ['#8fd0ff', 'M1 1h2v1h2V1h2v6H5V6H3v1H1zM2 3v2h1V3zM5 3v2h1V3z'],
+    enc: ['#ffd23a', 'M3 0h2v5H3zM3 6h2v2H3z'],
+    mine: ['#c4ccd8', 'M1 1h5v1h1v2H6V3H5v1H4v1H3v1H2v1H1V6h1V5h1V4H2V3H1z'],
+    chest: ['#e0a050', 'M1 2h6v5H1zM1 4h6v1H1zM3 4h2v2H3z'],
+    shop: ['#f6c453', 'M2 1h4v1h1v4H6v1H2V6H1V2h1zM3 3v2h2V3z'],
+    craft: ['#b8c4d4', 'M1 1h4v3H4v4H2V4H1z'],
+    boss: ['#ff9d3c', 'M0 2h1v1h1V2h1v1h1V1h1v2h1V2h1v1h1V2h1v5H0z'],
+    event: ['#ff9ad0', 'M3 0h2v2h2v2H5v1h1v2H5V6H3v1H2V5h1V4H1V2h2z'],
+    coliseum: ['#e2343e', 'M1 1h6v3H6v1H5v1H3V5H2V4H1z'],
+  };
+  const srcRow = (kind, title, sub, links) => `<div class="ip-src"><svg class="ip-glyph" viewBox="0 0 8 8" shape-rendering="crispEdges"><path fill="${SRC_GLYPH[kind][0]}" d="${SRC_GLYPH[kind][1]}"/></svg><div><b>${esc(title)}</b><small>${sub}</small>${links ? `<span class="ip-links">${links}</span>` : ''}</div></div>`;
+  function whereHTML(key) {
+    const list = (WHERE[key] || []).slice().sort((a, b) => (SRC_ORDER[a[0]] - SRC_ORDER[b[0]]) || ((typeof b[2] === 'number' ? b[2] : 0) - (typeof a[2] === 'number' ? a[2] : 0)));
+    if (!list.length) return '';
+    const at = locs => locs && locs.length ? ' · ' + locs.map(esc).join(', ') : '';
+    const rows = list.map(e => {
+      switch (e[0]) {
+        case 'mob': return srcRow('mob', e[1], `monster · drops it ${e[2]}%${at(e[3])}`);
+        case 'find': return srcRow('find', e[1], `found while exploring · ${e[2]}%`);
+        case 'enc': return srcRow('enc', e[1], `encounter · ${e[2]}%${e[3] > 1 ? ' · ' + e[3] + ' at once' : ''}${at(e[4])}`);
+        case 'mine': return srcRow('mine', e[1], `mining power ${e[2]}${at(e[3])}`);
+        case 'chest': return srcRow('chest', e[1], `${e[2]} drop${e[3] && anyItem(e[3]) ? ' · opens with' : ''}`, e[3] ? itemLink(e[3]) : '');
+        case 'shop': return srcRow('shop', e[1], `sells it for ${fmtGold(e[2])} gold${at(e[3])}`);
+        case 'craft': return srcRow('craft', 'Craft it', e[2] ? 'needs the recipe unlocked' : 'from', e[1].map(([k, n]) => itemLink(k, n + '×')).join(''));
+        case 'boss': return srcRow('boss', e[1], 'world boss weapon');
+        case 'event': return srcRow('event', 'Events', 'seasonal event item');
+        case 'coliseum': return srcRow('coliseum', 'Coliseum', 'coliseum reward');
+      }
+      return '';
+    });
+    const first = rows.slice(0, 6).join(''), more = rows.slice(6);
+    return `<div class="ip-sec"><div class="ip-lab">Where to get it</div>${first}${more.length ? `<details class="ip-more"><summary>${more.length} more</summary>${more.join('')}</details>` : ''}</div>`;
+  }
+  function usesHTML(key) {
+    const u = USES[key] || []; if (!u.length) return '';
+    const keys = u.filter(x => x[0] === 'key').map(x => `<span class="ip-chip">opens the ${esc(x[1])}</span>`).join('');
+    const crafts = u.filter(x => x[0] === 'craft').map(x => itemLink(x[1], '', x[2] + ' needed'));
+    const more = crafts.length > 6 ? `<details class="ip-more"><summary>${crafts.length - 5} more</summary><div class="ip-links">${crafts.slice(5).join('')}</div></details>` : '';
+    return `<div class="ip-sec"><div class="ip-lab">Used for</div><div class="ip-links">${keys}${crafts.slice(0, more ? 5 : 6).join('')}</div>${more}</div>`;
   }
   // the small card for the picked entry: its details and what you can set about it
   function invRenderPop() {
     const pop = document.getElementById('invPop'); if (!pop) return;
-    const it = invSel && ITEM_BY_KEY.get(invSel), c = invSel && CHARMS.find(x => x.key === invSel), coin = invSel === 'gold' || invSel === 'wb';
-    if (!it && !c && !coin) { pop.hidden = true; pop.innerHTML = ''; return; }
+    const it = invSel && ITEM_BY_KEY.get(invSel), c = invSel && CHARMS.find(x => x.key === invSel), coin = invSel === 'gold' || invSel === 'wb', g = invSel && GOOD_BY_KEY.get(invSel);
+    if (!it && !c && !coin && !g) { pop.hidden = true; pop.innerHTML = ''; return; }
     let head = '', details = '', controls = '';
-    if (it) {
+    if (g) {
+      head = `${iconSVG(g.key)}<div><b>${esc(g.name)}</b><small>${esc(GOOD_SINGULAR[g.type] || '')}</small></div>`;
+      details = (g.desc ? `<p class="ip-desc">${esc(g.desc)}</p>` : '') +
+        (g.pct ? Object.entries(g.pct).map(([n, v]) => `<div class="ip-row"><span>${esc(n)}</span><b class="${v < 0 ? 'neg' : 'pos'}">${v > 0 ? '+' : ''}${v}%</b></div>`).join('') : '');
+      const extra = whereHTML(g.key) + usesHTML(g.key);
+      details += extra || '<p class="ip-desc">The wiki does not say where this one comes from yet.</p>';
+      controls = `<div class="ip-lab">You own</div>${invStepper('inv-item', g.key, inv.items[g.key] || 0, g.name + ' you own')}` +
+        (inv.items[g.key] ? `<div class="ie-acts"><button type="button" class="danger" data-action="inv-del" data-key="${g.key}">Clear</button></div>` : '');
+    } else if (it) {
       const maxL = maxOf(it), cost = badges[it.key], std = Math.pow(2, maxL - 1);
       head = `${iconSVG(it.key)}<div><b>${esc(it.name)}</b><small>${esc(TYPE_SINGULAR[it.type] || '')}${it.affinity ? ' · ' + esc(AFF_LABEL(it.affinity)) : ''}${it.boss ? ' · ' + esc(it.boss) : ''}</small></div>`;
       details = Object.entries(it.stats).map(([n, v]) => `<div class="ip-row"><span>${esc(n)}</span><b>${v}</b></div>`).join('') +
         `<div class="ip-row"><span>Refines up to</span><b>P${maxL}</b></div>` +
-        (cost != null ? `<div class="ip-row"><span>Perfect P${maxL} with PORE</span><b>${fmt(cost)} base items</b></div><div class="ip-row dim"><span>the standard way</span><b>${fmt(std)}</b></div>` : '');
+        (cost != null ? `<div class="ip-row"><span>Perfect P${maxL} with PORE</span><b>${fmt(cost)} base items</b></div><div class="ip-row dim"><span>the standard way</span><b>${fmt(std)}</b></div>` : '') +
+        whereHTML(it.key) + usesHTML(it.key);
       controls = `<div class="ip-lab">Base (P1) copies you own</div>${invStepper('inv-item', it.key, inv.items[it.key] || 0, it.name + ' base copies')}` +
         `<div class="ie-acts"><button type="button" data-action="pick" data-key="${it.key}">Plan it ›</button>${inv.items[it.key] ? `<button type="button" class="danger" data-action="inv-del" data-key="${it.key}">Clear</button>` : ''}</div>`;
     } else if (c) {
       head = `${iconSVG(c.key)}<div><b>${esc(c.name)}</b><small>charm · ×${c.factor} success</small></div>`;
-      details = c.desc ? `<p class="ip-desc">${esc(c.desc)}</p>` : '';
+      details = (c.desc ? `<p class="ip-desc">${esc(c.desc)}</p>` : '') + whereHTML(c.key);
       controls = `<div class="ip-lab">In stock <small>empty = not tracked</small></div>${invStepper('cstock', c.key, charmStock[c.key] || null, c.name + ' in stock')}` +
         `<div class="ie-acts gm-opts"><span>Use in plans</span><button type="button" class="${charmOff.has(c.key) ? '' : 'on'}" data-action="charm" data-key="${c.key}" data-set="on">On</button><button type="button" class="${charmOff.has(c.key) ? 'on' : ''}" data-action="charm" data-key="${c.key}" data-set="off">Off</button></div>`;
     } else {
@@ -4597,6 +4694,7 @@ __SOLVER_JS__
       case 'close-charms': closeCharms(); break;
       case 'inv-tab': invTab = el.dataset.tab; invSel = null; haptic(6); renderCharms(); break;   // the category icons at the bottom
       case 'inv-sel': invSel = invSel === el.dataset.key ? null : el.dataset.key; haptic(6); invRenderGrid(); break;
+      case 'inv-go': invSel = el.dataset.key; haptic(6); invRenderGrid(); { const cd = document.querySelector('#invPop .ip-card'); if (cd) cd.scrollTop = 0; } break;   // an item named inside a card
       case 'inv-pop-close': if (el.id === 'invPop' && e.target !== el) break; invSel = null; invRenderGrid(); break;   // the × or a tap beside the card (not inside it)
       case 'inv-view': invView = el.dataset.view; try { localStorage.setItem('pore.invview.v1', invView); } catch (err) { /* ignore */ } renderCharms(); break;
       case 'inv-step': {
@@ -4911,7 +5009,7 @@ __SOLVER_JS__
     if (f === 'cstock' && !ui.charmsSheet.hidden) { clearTimeout(invBadgeT); invBadgeT = setTimeout(() => { const a = document.activeElement; renderCharms(); const g = document.querySelector(`[data-field="cstock"][data-key="${el.dataset.key}"]`); if (g && a === el) { g.focus(); g.setSelectionRange(g.value.length, g.value.length); } }, 700); }
     if (f === 'inv-q') { invQ = el.value; invSel = null; invRenderGrid(); return; }
     if (f === 'inv-item') {
-      const n = Math.max(0, Math.min(99999, Math.round(Number(el.value)) || 0));
+      const n = Math.max(0, Math.min(1e12, Math.round(Number(el.value)) || 0));
       invSetItem(el.dataset.key, n); invSave();
       clearTimeout(invBadgeT); invBadgeT = setTimeout(() => { const k = el.dataset.key, pos = el.selectionStart; invRenderGrid(); const g = document.querySelector(`[data-field="inv-item"][data-key="${k}"]`); if (g && document.activeElement !== g) { g.focus(); try { g.setSelectionRange(pos, pos); } catch (e) { /* number inputs */ } } }, 700);
       if (state.item === el.dataset.key) { state.stock = n; persist(); renderResults(); }

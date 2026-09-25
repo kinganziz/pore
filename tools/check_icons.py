@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check that every equipment item (key i<id>) and charm (key c<id>) has a drawing in each icon style:
+"""Check that every item (key i<id>: equipment and the other items) and charm (key c<id>) has a drawing in each icon style:
 
     icons/modern/<key>.svg        HD     (tools/modern_icons.py; charms drawn by hand) - loaded by the app as images
     icons/pixel/<key>.svg         Pixel  (tools/pixelart.mjs from icons/pixel-src/<key>.txt, the default style)
@@ -20,7 +20,7 @@ STYLES = {"HD": "modern", "Pixel": "pixel"}
 
 def main() -> None:
     data = json.loads(DATA.read_text(encoding="utf-8"))
-    keys = [f"i{it['id']}" for it in data["items"]] + [f"c{ch['id']}" for ch in data.get("charms", [])]
+    keys = [f"i{it['id']}" for it in data["items"] + data.get("goods", [])] + [f"c{ch['id']}" for ch in data.get("charms", [])]
     failed = False
     for name, folder in STYLES.items():
         missing = [k for k in keys if not (ROOT / "icons" / folder / f"{k}.svg").exists()]
