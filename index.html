@@ -1705,6 +1705,16 @@
   .boss-stats > div { background: rgba(0, 0, 0, .26); border: 2px solid rgba(255, 255, 255, .06); border-radius: 10px; box-shadow: inset 2px 2px 0 rgba(0, 0, 0, .35); padding: 6px 8px; }
   .boss-stats small { display: block; color: var(--gold); font-size: 11px; opacity: .85; } .boss-stats b { font-size: 16px; }
   .boss-row-pic { grid-template-columns: 1fr; } .boss-row-pic .pixel { width: 40px; height: 40px; }
+  .place-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 12px 8px; }
+  .place-grid.bare { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px; }
+  .place-tile { display: grid; justify-items: center; gap: 4px; padding: 4px 2px; border: 0; background: none; color: var(--text); font: inherit; cursor: pointer; border-radius: 10px; }
+  .place-tile:active { transform: scale(.95); }
+  .place-tile .pt-pic { display: grid; place-items: center; }
+  .place-tile .pt-face { width: 60px; height: 60px; }
+  .place-grid.bare .pt-face { width: 52px; height: 52px; }
+  .place-tile .map-pic { width: 92px; height: 66px; }
+  .place-grid.bare .map-pic { width: 64px; height: 46px; }
+  .place-tile .pt-name { font-size: 12px; line-height: 1.2; text-align: center; color: var(--gold); }
 </style>
 </head>
 <body>
@@ -5484,8 +5494,8 @@ function createSolver() {
     const nameEl = document.getElementById('invCatName'); if (nameEl) nameEl.textContent = invTab === 'all' ? (invGear ? 'Gear only' : '') : invTab === 'maps' && invMap ? invMap : invTab === 'npcs' && invNpc ? invNpc : invTab === 'bosses' && invBoss ? invBoss : catName;
     const mapList = (invTab === 'maps' && !invMap) || (invTab === 'npcs' && !invNpc) || invTab === 'bosses';   // the list of maps: no gear filter or item views to pick
     ui.charmsBody.innerHTML = `<label class="inv-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></svg><input type="search" placeholder="${mapList ? (invTab === 'npcs' ? 'Search NPCs' : invTab === 'bosses' ? 'Search bosses' : 'Search maps') : 'Search items or places'}" value="${esc(invQ)}" data-field="inv-q" aria-label="Search the inventory">` +
-      (mapList ? '</label>' : `<button type="button" class="inv-gear ${invGear ? 'on' : ''}" data-action="inv-gear" aria-pressed="${invGear}" aria-label="Gear only: hide what you cannot equip" title="Gear only">${iconSVG((ITEMS.find(it => it.name === 'Iron Sword') || ITEMS[0]).key)}</button>` +
-      `<span class="inv-views" role="group" aria-label="View">${['grid', 'list', 'icons'].map(v => `<button type="button" class="${invView === v ? 'on' : ''}" data-action="inv-view" data-view="${v}" aria-label="${v === 'grid' ? 'Tiles with names' : v === 'list' ? 'List' : 'Icons only'}" title="${v === 'grid' ? 'Tiles' : v === 'list' ? 'List' : 'Icons'}">${INV_VIEW_SVG[v]}</button>`).join('')}</span></label>`) +
+      (mapList ? '' : `<button type="button" class="inv-gear ${invGear ? 'on' : ''}" data-action="inv-gear" aria-pressed="${invGear}" aria-label="Gear only: hide what you cannot equip" title="Gear only">${iconSVG((ITEMS.find(it => it.name === 'Iron Sword') || ITEMS[0]).key)}</button>`) +
+      `<span class="inv-views" role="group" aria-label="View">${['grid', 'list', 'icons'].map(v => `<button type="button" class="${invView === v ? 'on' : ''}" data-action="inv-view" data-view="${v}" aria-label="${v === 'grid' ? 'Tiles with names' : v === 'list' ? 'List' : 'Icons only'}" title="${v === 'grid' ? 'Tiles' : v === 'list' ? 'List' : 'Icons'}">${INV_VIEW_SVG[v]}</button>`).join('')}</span></label>` +
       `<div id="invGrid"></div>`;
     // the category icons: a fixed strip at the foot of the sheet, right above the tab bar (like the game)
     const goodArt = t => { const g = GOODS.find(x => x.name === (GOOD_TYPES.find(y => y[0] === t) || [])[3]) || GOODS.find(x => x.type === t); return g ? iconSVG(g.key) : ''; };
@@ -5512,6 +5522,10 @@ function createSolver() {
     const q = invQ.trim().toLowerCase(), onMap = invTab === 'maps' && invMap && MAP_KEYS.get(invMap);
     const onNpc = invTab === 'npcs' && invNpc && NPCS.has(invNpc) && new Set(NPCS.get(invNpc).items.keys());
     const onSet = onMap || onNpc, placeOf = k => onMap ? mapChance(k, invMap) : npcDeal(k, invNpc);
+    // Maps, NPCs and World bosses: rows (picture, name, details), tiles (picture and name) or pictures only
+    const placeList = list => invView === 'list'
+      ? `<div class="map-list">${list.map(e => `<button type="button" class="map-row" ${e.attrs}>${e.pic}<span class="ir-main"><b class="${e.face ? 'npc-name' : ''}">${esc(e.name)}${e.face || ''}</b><small>${e.sub}</small>${e.desc ? `<small class="map-desc">${e.desc}</small>` : ''}</span><span class="map-go">›</span></button>`).join('')}</div>`
+      : `<div class="place-grid ${invView === 'icons' ? 'bare' : ''}">${list.map(e => `<button type="button" class="place-tile" ${e.attrs} title="${esc(e.name)}"><span class="pt-pic">${e.big}</span>${invView === 'icons' ? '' : `<span class="pt-name">${esc(e.name)}</span>`}</button>`).join('')}</div>`;
     if (invTab === 'bosses') {
       const statRow = b => [['HP', b.hp], ['Attack', b.atk], ['Defense', b.def], ['Speed', b.spd], ['Luck', b.luck], ['Mana', b.mana]].filter(x => x[1]);
       if (invBoss && BOSS_BY.has(invBoss)) {   // one boss: what it is, its fight stats, and the weapon it drops
@@ -5525,31 +5539,27 @@ function createSolver() {
         return;
       }
       const list = BOSSES.filter(b => !q || `${b.name} ${b.element} ${b.desc} ${(ITEM_BY_KEY.get(b.weapon) || {}).name || ''}`.toLowerCase().includes(q));
-      box.innerHTML = (list.length ? `<div class="map-list">${list.map(b => { const w = b.weapon && ITEM_BY_KEY.get(b.weapon);
-        return `<button type="button" class="map-row" data-action="inv-boss" data-boss="${esc(b.name)}"><span class="npc-pic boss-row-pic">${w ? iconSVG(w.key) : ''}</span>` +
-          `<span class="ir-main"><b class="npc-name">${esc(b.name)}${bossIcon(b.name)}</b><small>${esc(ELEMENT(b.element))} · ${fmt(b.hp)} HP</small><small class="map-desc">drops ${w ? esc(w.name) : 'a weapon'}</small></span>` +
-          `<span class="map-go">›</span></button>`; }).join('')}</div>` : '<p class="inv-hint">Nothing matches.</p>') +
+      box.innerHTML = (list.length ? placeList(list.map(b => { const w = b.weapon && ITEM_BY_KEY.get(b.weapon);
+        return { attrs: `data-action="inv-boss" data-boss="${esc(b.name)}"`, name: b.name, face: bossIcon(b.name), big: bossIcon(b.name, 'pt-face'),
+          pic: `<span class="npc-pic boss-row-pic">${w ? iconSVG(w.key) : ''}</span>`, sub: `${esc(ELEMENT(b.element))} · ${fmt(b.hp)} HP`, desc: `drops ${w ? esc(w.name) : 'a weapon'}` }; })) : '<p class="inv-hint">Nothing matches.</p>') +
         '<p class="inv-hint">Every world boss, with the weapon it drops. Tap one for its stats.</p>';
       invRenderPop();
       return;
     }
     if (invTab === 'npcs' && !onNpc) {   // the NPCs, in the order you meet them, with a few of their wares
       const list = NPC_LIST.filter(n => !q || `${n.name} ${[...n.locs].join(' ')}`.toLowerCase().includes(q));
-      box.innerHTML = (list.length ? `<div class="map-list">${list.map(n => { const wares = [...n.items.entries()].sort((a, b) => b[1] - a[1]), low = Math.min(...n.items.values());
-        return `<button type="button" class="map-row" data-action="inv-npc" data-npc="${esc(n.name)}">` +
-          `<span class="npc-pic">${wares.slice(0, 4).map(([k]) => iconSVG(k)).join('')}</span>` +
-          `<span class="ir-main"><b class="npc-name">${esc(n.name)}${npcIcon(n.name)}</b><small>${[...n.locs].map(esc).join(', ') || 'somewhere'} · ${n.items.size} item${n.items.size === 1 ? '' : 's'}</small><small class="map-desc">from ${fmt(low)} gold</small></span>` +
-          `<span class="map-go">›</span></button>`; }).join('')}</div>` : '<p class="inv-hint">Nothing matches.</p>') +
+      box.innerHTML = (list.length ? placeList(list.map(n => { const wares = [...n.items.entries()].sort((a, b) => b[1] - a[1]), low = Math.min(...n.items.values());
+        return { attrs: `data-action="inv-npc" data-npc="${esc(n.name)}"`, name: n.name, face: npcIcon(n.name), big: npcIcon(n.name).replace('npc-face', 'pt-face'),
+          pic: `<span class="npc-pic">${wares.slice(0, 4).map(([k]) => iconSVG(k)).join('')}</span>`,
+          sub: `${[...n.locs].map(esc).join(', ') || 'somewhere'} · ${n.items.size} item${n.items.size === 1 ? '' : 's'}`, desc: `from ${fmt(low)} gold` }; })) : '<p class="inv-hint">Nothing matches.</p>') +
         '<p class="inv-hint">Every NPC who sells something, in the order you meet them. Tap one to see what they sell and for how much.</p>';
       invRenderPop();
       return;
     }
     if (invTab === 'maps' && !onMap) {   // the maps, in game order, with a picture of their world
       const list = MAPS.filter(m => !q || `${m.name} ${m.kind || ''} ${m.desc || ''}`.toLowerCase().includes(q));   // by name, kind (cave, snow…) or description
-      box.innerHTML = (list.length ? `<div class="map-list">${list.map(m => `<button type="button" class="map-row" data-action="inv-map" data-place="${esc(m.name)}">` +
-        mapImg(m) +
-        `<span class="ir-main"><b>${esc(m.name)}</b><small>${m.steps ? fmt(m.steps) + ' steps to unlock' : 'where it starts'} · ${MAP_KEYS.get(m.name).size} items</small>${m.desc ? `<small class="map-desc">${esc(m.desc)}</small>` : ''}</span>` +
-        `<span class="map-go">›</span></button>`).join('')}</div>` : '<p class="inv-hint">Nothing matches.</p>') +
+      box.innerHTML = (list.length ? placeList(list.map(m => ({ attrs: `data-action="inv-map" data-place="${esc(m.name)}"`, name: m.name, pic: mapImg(m), big: mapImg(m),
+        sub: `${m.steps ? fmt(m.steps) + ' steps to unlock' : 'where it starts'} · ${MAP_KEYS.get(m.name).size} items`, desc: m.desc ? esc(m.desc) : '' }))) : '<p class="inv-hint">Nothing matches.</p>') +
         '<p class="inv-hint">Every place in the game, in the order you reach them. Tap one to see what you can get there, and go straight to the right place.</p>';
       invRenderPop();
       return;
