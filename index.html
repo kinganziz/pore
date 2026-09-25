@@ -1675,6 +1675,7 @@
   .npc-pic .pixel { width: 22px; height: 22px; }
   .npc-head { margin: 0 2px 12px; } .npc-head small { color: var(--gold); font-size: 13px; }
   #saverClock small { font-size: .38em; margin-left: .25em; letter-spacing: 0; }
+  .ip-warn { margin: 6px 0 2px; color: var(--bad, #e2343e); font-weight: 700; font-size: 15px; }
 </style>
 </head>
 <body>
@@ -2351,8 +2352,10 @@ function createSolver() {
   // the maps (locations) in game order, and every item you can get in each: found there, from its monsters,
   // encounters, ore nodes and shops
   const MAPS = ITEM_DB.places || [];
+  // Alcohol is left out of every list and search: it only sits in the bag, with a health warning instead of info
+  const HIDDEN = new Set(GOODS.filter(g => /^wine$/i.test(g.name)).map(g => g.key));
   const MAP_KEYS = new Map(MAPS.map(m => [m.name, new Set()]));
-  for (const [k, list] of Object.entries(WHERE)) for (const e of list) {
+  for (const [k, list] of Object.entries(WHERE)) if (!HIDDEN.has(k)) for (const e of list) {
     const locs = e[0] === 'find' ? [e[1]] : ['mob', 'mine', 'shop'].includes(e[0]) ? e[3] : e[0] === 'enc' ? e[4] : [];
     for (const loc of locs || []) if (MAP_KEYS.has(loc)) MAP_KEYS.get(loc).add(k);
   }
@@ -5481,7 +5484,7 @@ function createSolver() {
       invRenderPop();
       return;
     }
-    const hit = (name, key) => (!onSet || onSet.has(key)) && (!q || name.toLowerCase().includes(q) || (q.length > 2 && !!PLACES[key] && PLACES[key].includes(q)));
+    const hit = (name, key) => !(HIDDEN.has(key) && (q || onSet)) && (!onSet || onSet.has(key)) && (!q || name.toLowerCase().includes(q) || (q.length > 2 && !!PLACES[key] && PLACES[key].includes(q)));
     const show = k => invTab === 'all' || invTab === k || (k === 'items' && invTab.startsWith('t:')) || (k === 'goods' && invTab.startsWith('g:')) || (!!onSet && k !== 'coins');
     const typeOk = it => invTab.length < 3 || invTab[1] !== ':' || it.type === invTab.slice(2);
     const rows = [];   // { key, icon, n, cls, glow, label, lv, sub }
@@ -5582,7 +5585,10 @@ function createSolver() {
     const it = invSel && ITEM_BY_KEY.get(invSel), c = invSel && CHARMS.find(x => x.key === invSel), coin = invSel === 'gold' || invSel === 'wb', g = invSel && GOOD_BY_KEY.get(invSel);
     if (!it && !c && !coin && !g) { pop.hidden = true; pop.innerHTML = ''; return; }
     let head = '', details = '', controls = '';
-    if (g) {
+    if (g && HIDDEN.has(g.key)) {
+      head = `${iconSVG(g.key)}<div><b>${esc(g.name)}</b><small>${esc(GOOD_SINGULAR[g.type] || '')}</small></div>`;
+      details = '<p class="ip-warn">Alcohol consumption is injurious to health.</p>';
+    } else if (g) {
       head = `${iconSVG(g.key)}<div><b>${esc(g.name)}</b><small>${esc(GOOD_SINGULAR[g.type] || '')}${g.rarity ? ` · <span class="rar ${g.rarity}">${esc(g.rarity[0].toUpperCase() + g.rarity.slice(1))}</span>` : ''}</small></div>`;
       details = (g.desc ? `<p class="ip-desc">${esc(g.desc)}</p>` : '') +
         (g.pct ? Object.entries(g.pct).map(([n, v]) => `<div class="ip-row"><span>${esc(n)}</span><b class="${v < 0 ? 'neg' : 'pos'}">${v > 0 ? '+' : ''}${v}%</b></div>`).join('') : '');
