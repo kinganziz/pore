@@ -1543,9 +1543,10 @@
   .pore-gem .logo { width: 38px; height: 38px; }
   .pore-gem:active { transform: scale(.9); }
   .pore-gem { position: relative; z-index: 2; }
-  /* the plan page keeps room for the gem; Home has none (its background button sits beside the gem) */
+  /* the plan page keeps room for the gem; Home has none */
   body.has-item main.app { padding-top: calc(env(safe-area-inset-top, 0px) + 58px); }
-  main .bg-switch { left: 46px; }
+  main .bg-switch { left: 2px; top: 38px; }   /* at the left edge under the gem; its picker opens to the right */
+  html, body { overflow-x: clip; }   /* nothing may ever make the app scroll sideways (clip keeps sticky headers working) */
   .sheet-head { padding-left: 52px; }
   .lvl-head { padding-left: 62px; }
   /* the menu: a strip that slides out to the right of the gem (name, day or night, look, help) */
