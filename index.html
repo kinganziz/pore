@@ -27,7 +27,7 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Jersey+15&family=VT323&family=Press+Start+2P&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Jersey+15&family=VT323&display=swap" rel="stylesheet">
 <style>
   :root {
     color-scheme: dark;
@@ -669,7 +669,7 @@
   .sheet .row { content-visibility: auto; contain-intrinsic-size: auto 66px; }
   /* =====================================================================================
      Pixel game theme: an option (gamepad button in the header); the modern design above is the default.
-     Follows the DLM pixel theme: "Cartridge" palette, Jersey 15 body (DLM uses Pixelify Sans, whose 2/5/8 read poorly) + Press Start 2P display,
+     Follows the DLM pixel theme: "Cartridge" palette, Jersey 15 body (DLM uses Pixelify Sans, whose 2/5/8 read poorly) and the same type as the modern look (Press Start 2P headings were dropped: harder to read),
      rounded corners like the modern theme, hard 3-4px drop shadows, buttons that press onto their
      shadow, a 2x2 dither. Frames only on real containers; rows, headers, tabs and segments stay flat.
      ===================================================================================== */
@@ -689,7 +689,7 @@
     --px-btn: 3px 3px 0 0 var(--px-shadow);
     --shadow: none;
     --font: "Jersey 15", "Segoe UI", system-ui, sans-serif;   /* clearest pixel digits (8, 5, 3) of the fonts tried */
-    --display: "Press Start 2P", "Jersey 15", monospace;
+    --display: var(--font);
     --ease: steps(3, end);
   }
   :root[data-skin="pixel"][data-theme="light"] {
@@ -759,52 +759,24 @@
   :root[data-skin="pixel"] .step-num, :root[data-skin="pixel"] .logo { box-shadow: var(--px-btn) !important; }
   :root[data-skin="pixel"] :is(.pill, .chip, .lvl-head .facts span) { border: 2px solid var(--line); }
 
-  /* ---- type: Press Start 2P for titles, eyebrows and big numbers; Jersey 15 for reading ---- */
-  :root[data-skin="pixel"] :is(h1, h2, .hero-num, .stat-row .val, .lvl-head .lv, .hero-label, .tile b) { font-family: var(--display); font-weight: 400; letter-spacing: 0; line-height: 1.3; }
-  :root[data-skin="pixel"] h2 { font-size: 13px; }
-  :root[data-skin="pixel"] h3 { font-family: var(--display); font-weight: 400; font-size: 11px; line-height: 1.5; letter-spacing: 0; }
-  /* Press Start 2P runs ~1.4x larger than other fonts at the same size: scale every display spot down,
-     and keep the smallest labels (tile costs, chip levels) in the reading font */
-  :root[data-skin="pixel"] :is(.tile-item .tc, .chip b, .cat-grid b) { font-family: var(--font); font-weight: 600; }
-  :root[data-skin="pixel"] .tile-item .tc { font-size: 12px; }
-  :root[data-skin="pixel"] .item-head .name { font-size: 15px; line-height: 1.35; }
-  :root[data-skin="pixel"] .target-summary .big { font-size: 16px; }
-  :root[data-skin="pixel"] .ring .lbl b { font-size: 15px; }
-  :root[data-skin="pixel"] .tile b { font-size: 13px; }
-  :root[data-skin="pixel"] :is(.recipe .mult, .row .badge b) { font-size: 11px; }
-  :root[data-skin="pixel"] .shop-row .qty { font-size: 15px; }
-  :root[data-skin="pixel"] :is(.ladder-row .lv, table.ref .lv, .fit-row .score) { font-size: 10px; }
-  :root[data-skin="pixel"] .sheet-head h2 { font-size: 13px; }
-  :root[data-skin="pixel"] :is(.empty h3, .section-title h3) { font-size: 13px; line-height: 1.5; }
-  :root[data-skin="pixel"] .brand h1 { font-size: 16px; text-shadow: 3px 3px 0 var(--px-shadow); }
-  :root[data-skin="pixel"] .hero-label { font-size: 8px; letter-spacing: .08em; line-height: 1.6; }
-  :root[data-skin="pixel"] .hero-num { font-size: clamp(30px, 9vw, 40px); text-shadow: 4px 4px 0 var(--px-shadow); }
-  :root[data-skin="pixel"] .hero-num small { font-family: var(--font); font-size: 15px; text-shadow: none; white-space: nowrap; font-size-adjust: .5; }
-  :root[data-skin="pixel"] .stat-row .val { font-size: 14px; }
-  :root[data-skin="pixel"] .lvl-head .lv { font-size: 12px; }
-  :root[data-skin="pixel"] .formula { font-family: var(--font); }
+  /* ---- type: the same fonts and sizes as the modern look, with hard pixel drop shadows on the big titles ---- */
+  :root[data-skin="pixel"] .brand h1 { text-shadow: 2px 2px 0 var(--px-shadow); }
+  :root[data-skin="pixel"] .hero-num { text-shadow: 3px 3px 0 var(--px-shadow); }
 
   /* ---- bars, meters and motion ---- */
   :root[data-skin="pixel"] .bar .opt, :root[data-skin="pixel"] .progress .fill { background: var(--good); }
   :root[data-skin="pixel"] .ring circle { stroke-linecap: butt; }
   :root[data-skin="pixel"] .ring svg { filter: none !important; }
   :root[data-skin="pixel"] .search svg { z-index: 1; }
-  :root[data-skin="pixel"] :is(.brand h1, .empty h3, .fit-row .score, .hd-btn, .hero-label, .hero-num, .info-body h3, .item-head .name, .ladder-row .lv, .lvl-head .lv, .recipe .mult, .ring .lbl b, .row .badge b, .section-title h3, .sheet-head h2, .shop-row .qty, .stat-row .val, .step-label h2, .target-summary .big, .tile b, h1, h2, h3, table.ref .lv) { font-size-adjust: none; }   /* Press Start 2P spots keep their hand-set sizes */
   /* pixel-art diamond (logo and start screen) replaces the smooth one */
   .px-only { display: none; }
   :root[data-skin="pixel"] .px-only { display: block; }
   :root[data-skin="pixel"] .hd-only { display: none; }
   :root[data-skin="pixel"] .logo svg.px-only { width: 24px; height: 20px; }
   :root[data-skin="pixel"] .glyph .px-gem { width: 78px; height: 60px; margin: 0 auto; }
-  /* charm total: the reading font (Press Start 2P is too wide for the tile) */
-  :root[data-skin="pixel"] .charm-total b { font-family: var(--font); font-weight: 700; font-size: 18px; }
-  :root[data-skin="pixel"] .charm-total b.mid { font-size: 15px; }
-  :root[data-skin="pixel"] .charm-total b.long { font-size: 14px; }
 
-  :root[data-skin="pixel"] .hd-btn { font-size: 9px; letter-spacing: 0; padding: 0 !important; }   /* Press Start 2P is wide */
   /* reading font option (help page): VT323 instead of Jersey 15; font-size-adjust scales it to the same size */
   :root[data-font="vt323"], :root[data-font="vt323"][data-skin="pixel"] { --font: "VT323", ui-monospace, monospace; }
-  :root[data-font="vt323"][data-skin="pixel"] { --display: "Press Start 2P", "VT323", monospace; }
   /* ---------- start-up splash: shown until fonts and icons are ready (max 5 s) ---------- */
   #splash { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: var(--bg); transition: opacity .35s ease, visibility .35s; }
   #splash.done { opacity: 0; visibility: hidden; pointer-events: none; }
@@ -1070,16 +1042,15 @@
   /* level badges: a white Roman numeral on a chip with a corner glow in the level's colour */
   :root[data-flavor="game"][data-skin="pixel"] .chip.chip { --lvc: #3aa84a; background: radial-gradient(130% 150% at 100% 0%, color-mix(in srgb, var(--lvc) 75%, transparent) 0, transparent 58%), var(--tile) !important; border-color: var(--line) !important; }
   :root[data-flavor="game"][data-skin="pixel"] .chip.chip b { background: transparent !important; box-shadow: none !important; border: 0 !important; color: #fff !important;
-    font-family: "Press Start 2P", monospace; font-size: 11px; padding: 0 2px; white-space: nowrap; text-shadow: 1px 1px 0 #000; }
+    font-family: var(--font); font-size: 15px; padding: 0 2px; white-space: nowrap; text-shadow: 1px 1px 0 #000; }
   :root[data-flavor="game"][data-skin="pixel"][data-theme="light"] .chip.chip b { color: #1a2a22 !important; text-shadow: none; }
   :root[data-flavor="game"] .chip.lv1 { --lvc: #3aa84a; } :root[data-flavor="game"] .chip.lv2 { --lvc: #4cc85a; }
   :root[data-flavor="game"] .chip.lv3 { --lvc: #c8d24a; } :root[data-flavor="game"] .chip.lv4 { --lvc: #8a6ae0; }
   :root[data-flavor="game"] .chip.lv5 { --lvc: #5a5af0; } :root[data-flavor="game"] .chip.lv6 { --lvc: #c060e0; }
   :root[data-flavor="game"] .chip.lv7 { --lvc: #e08a3a; } :root[data-flavor="game"] .chip.lv8 { --lvc: #e0c03a; }
   :root[data-flavor="game"] .chip.lv9 { --lvc: #9a4ad8; } :root[data-flavor="game"] .chip.lv10 { --lvc: #e03a4a; }
-  :root[data-flavor="game"] .chip-btn .lvr { font-family: "Press Start 2P", monospace; font-size: 10px; }
+  :root[data-flavor="game"] .chip-btn .lvr { font-size: 15px; }
   .theme-pick button { font-family: inherit !important; }
-  :root[data-skin="pixel"] .home-title { font-size: clamp(20px, 6vw, 30px); line-height: 1.25; letter-spacing: 0; }
   /* ---------- pixel frames: stepped pixel corners on every frame (pixel and game looks) ---------- */
   :root[data-skin="pixel"] :is(.card, .hero, .toast, .tile-item, .icon-only, .charm-chip, .btn, .icon-btn, .chip-btn, .example, .mini, .filter, .row,
       .seg, .pill, .chip, .tip, .talk, .g-recipe, .g-how, .same-formula, .proj-open, .proj-x, .coach-bubble, .home-hero, .home-best, .deal, .type-tile,
@@ -1112,7 +1083,6 @@
   :root[data-theme="light"] .home-hero .home-kicker { color: #fff4c0; }
   body:not(.has-item) #resultsBody > .card { background: color-mix(in srgb, var(--surface) 84%, transparent) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
   body:not(.has-item) .tip { background: color-mix(in srgb, var(--surface) 88%, transparent); }
-  :root[data-skin="pixel"] .home-hero .home-title { font-size: clamp(22px, 6.6vw, 32px); }
   /* game look: deep forest green for filled highlights (the full bright green was too loud) */
   :root[data-flavor="game"][data-skin="pixel"] :is(.logo, .step-num, .skin-btn[aria-pressed="true"], .hd-btn[aria-pressed="true"], .toast.tappable, .filter.on, .chip-btn.on:not(.gold)) {
     background: #1f5a3c !important; color: #d8ffe2 !important; border-color: #3f9a62 !important; }
@@ -1151,8 +1121,8 @@
   /* ---------- game look, stage 3: the plan as a quest log ---------- */
   /* level headers: a chapter banner with the Roman numeral in gold */
   :root[data-flavor="game"][data-skin="pixel"] .lvl-head { background: color-mix(in srgb, var(--bg-2) 92%, transparent); }
-  :root[data-flavor="game"][data-skin="pixel"] .lvl-head .lv { display: inline-flex; align-items: center; gap: 10px; color: var(--gold); font-size: 13px; text-transform: uppercase; letter-spacing: 1px; text-shadow: 2px 2px 0 var(--px-shadow); }
-  :root[data-flavor="game"][data-skin="pixel"] .lvl-head .lv .lvr { font-size: 15px; }
+  :root[data-flavor="game"][data-skin="pixel"] .lvl-head .lv { display: inline-flex; align-items: center; gap: 10px; color: var(--gold); font-size: 18px; text-transform: uppercase; letter-spacing: 1px; text-shadow: 2px 2px 0 var(--px-shadow); }
+  :root[data-flavor="game"][data-skin="pixel"] .lvl-head .lv .lvr { font-size: 20px; }
   :root[data-flavor="game"][data-skin="pixel"] .lvl-head .lv::before, :root[data-flavor="game"][data-skin="pixel"] .lvl-head .lv::after {
     content: ""; width: 8px; height: 8px; background: var(--gold); transform: rotate(45deg); box-shadow: 2px 2px 0 var(--px-shadow); }
   /* steps: quest cards in a pixel frame, with a square pixel checkbox */
@@ -1165,7 +1135,7 @@
   :root[data-flavor="game"][data-skin="pixel"] .step.done { opacity: .72; }
   :root[data-flavor="game"][data-skin="pixel"] .step.done .recipe { text-decoration: none; filter: saturate(.5); }
   :root[data-flavor="game"][data-skin="pixel"] .step.done::after { content: "Clear"; position: absolute; right: 10px; top: -10px; transform: rotate(4deg);
-    padding: 3px 7px; font: 10px/1 "Press Start 2P", monospace; text-transform: uppercase; color: var(--gold); border: 2px solid var(--gold); background: var(--bg);
+    padding: 3px 7px; font: 14px/1 var(--font); text-transform: uppercase; color: var(--gold); border: 2px solid var(--gold); background: var(--bg);
     pointer-events: none; animation: clear-stamp .32s steps(4) both; }
   @keyframes clear-stamp { from { transform: rotate(4deg) scale(1.8); opacity: 0; } to { transform: rotate(4deg) scale(1); opacity: 1; } }
   /* the item: an inventory slot with a soft glow */
@@ -1173,7 +1143,7 @@
   :root[data-flavor="game"][data-skin="pixel"][data-theme="light"] .item-head .icon-frame { background: radial-gradient(circle at 50% 40%, #fff6dc 0, var(--tile) 70%) !important; }
   /* anz: an RPG dialogue box with a name plate and a blinking "more" arrow */
   :root[data-flavor="game"][data-skin="pixel"] .talk { position: relative; border-radius: calc(var(--pfu) * 5) !important; padding-bottom: 18px; background: var(--surface) !important; }
-  :root[data-flavor="game"][data-skin="pixel"] .talk .tip-name { justify-self: start; padding: 4px 8px 3px; background: var(--gold); color: #1a1206; font: 10px/1 "Press Start 2P", monospace; text-transform: uppercase; box-shadow: 2px 2px 0 var(--px-shadow); }
+  :root[data-flavor="game"][data-skin="pixel"] .talk .tip-name { justify-self: start; padding: 4px 8px 3px; background: var(--gold); color: #1a1206; font: 14px/1 var(--font); text-transform: uppercase; box-shadow: 2px 2px 0 var(--px-shadow); }
   :root[data-flavor="game"][data-skin="pixel"] .talk::after { content: ""; position: absolute; right: 12px; bottom: 7px; width: 10px; height: 6px; background: var(--gold);
     clip-path: polygon(0 0, 100% 0, 50% 100%); animation: talk-more 1s steps(2) infinite; }
   @keyframes talk-more { 50% { transform: translateY(3px); } }
@@ -1187,13 +1157,25 @@
   /* "LEVEL V · CLEAR!" banner */
   .lvl-clear { position: fixed; left: 50%; top: 38%; z-index: 70; display: grid; justify-items: center; gap: 8px; padding: 16px 26px 14px; pointer-events: none;
     background: #0c2a1e; border: 3px solid #ffd84a; box-shadow: 5px 5px 0 #030a08; transform: translate(-50%, -50%); animation: lvl-clear 1.7s steps(20) both; }
-  .lvl-clear small { font: 11px/1 "Press Start 2P", monospace; color: #8fe0a2; text-transform: uppercase; letter-spacing: 1px; }
-  .lvl-clear b { font: 22px/1 "Press Start 2P", monospace; color: #ffd84a; text-shadow: 3px 3px 0 #5a3a00; text-transform: uppercase; }
+  .lvl-clear small { font: 16px/1 var(--font); color: #8fe0a2; text-transform: uppercase; letter-spacing: 1px; }
+  .lvl-clear b { font: 34px/1 var(--font); color: #ffd84a; text-shadow: 3px 3px 0 #5a3a00; text-transform: uppercase; }
   @keyframes lvl-clear { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.4); } 14% { opacity: 1; transform: translate(-50%, -50%) scale(1.12); }
     22% { transform: translate(-50%, -50%) scale(1); } 82% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -62%) scale(1); } }
   @media (prefers-reduced-motion: reduce) { .lvl-clear, :root[data-flavor="game"] .step.done::after, :root[data-flavor="game"] .talk::after, :root[data-flavor="game"] .toast::after { animation: none; } }
   .tab.locked { opacity: .38; }
   .tab.locked .tab-icon { filter: grayscale(1); }
+  /* ---------- home: swipeable cards of sought-after items ---------- */
+  .hb-carousel { width: min(100%, 360px); display: grid; gap: 8px; justify-self: center; }
+  .hb-track { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain;
+    padding: 2px 2px 6px; margin: -2px -2px -6px; }
+  .hb-track::-webkit-scrollbar { display: none; }
+  .hb-track .home-best { flex: 0 0 88%; scroll-snap-align: start; }
+  .hb-track .home-best:last-child { scroll-snap-align: end; }
+  .hb-dots { display: flex; justify-content: center; gap: 6px; }
+  .hb-dots i { width: 6px; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, .3); transition: width .2s, background .2s; }
+  .hb-dots i.on { width: 16px; background: #fff; }
+  :root[data-skin="pixel"] .hb-dots i { border-radius: 0; }
+  :root[data-flavor="game"] .hb-dots i.on { background: #ffd84a; }
 </style>
 </head>
 <body>
@@ -2891,17 +2873,19 @@ function createSolver() {
     return ITEMS.filter(it => badges[it.key] != null && !noShortcut(it))
       .sort((x, y) => costShare(x) - costShare(y) || x.name.localeCompare(y.name)).slice(0, 12);
   }
-  // the title screen shows one of the best deals at random: a new one each visit, steady while you are there
+  // the title screen: a swipeable card for each of these sought-after items, starting at a random one each visit
+  // (steady while you stay there)
+  const HOME_PICKS = ['Fire Platinum Ring', 'Crit Damage Platinum Ring', 'Platinum Mining Necklace', 'Elite Gloves', 'Crit Platinum Ring', 'Brutal Amulet', "Liora's Necklace"];
   let homePick = null;
-  function homeSpot() {
-    if (!homePick || !ITEM_BY_KEY.has(homePick)) {
-      const pool = homeDeals();
-      homePick = pool.length ? pool[Math.floor(Math.random() * pool.length)].key : null;
-    }
-    return homePick ? ITEM_BY_KEY.get(homePick) : null;
+  function homeSpots() {
+    const pool = HOME_PICKS.map(n => ITEMS.find(it => it.name === n)).filter(it => it && badges[it.key] != null);
+    if (!pool.length) return [];
+    if (!homePick || !pool.some(it => it.key === homePick)) homePick = pool[Math.floor(Math.random() * pool.length)].key;
+    const k = pool.findIndex(it => it.key === homePick);
+    return pool.slice(k).concat(pool.slice(0, k));
   }
   function homeHTML() {
-    const deals = homeDeals(), best = homeSpot() || deals[0];
+    const deals = homeDeals(), spots = homeSpots();
     const std = it => Math.pow(2, maxOf(it) - 1);
     const pct = it => Math.round((1 - badges[it.key] / std(it)) * 100);
     const hero = `<section class="home-hero">
@@ -2909,10 +2893,13 @@ function createSolver() {
           <span class="home-kicker">~ Pixel Odyssey ~</span>
           <h1 class="home-title">Max your gear<br><span>for a fraction.</span></h1>
           <p class="home-sub">A perfect P10 normally eats <b>512</b> base items. PORE finds the cheapest path, step by step.</p>
-          ${best ? `<button class="home-best" type="button" data-action="pick" data-key="${best.key}">
-            <span class="hb-icon">${iconSVG(best.key)}</span>
-            <span class="hb-text"><b><span class="hb-num" data-count="${badges[best.key]}">${fmt(badges[best.key])}</span> items</b> for a perfect P${maxOf(best)}<small>${esc(best.name)} · ${pct(best)}% less</small></span>
-          </button>` : ''}
+          ${spots.length ? `<div class="hb-carousel">
+            <div class="hb-track">${spots.map((it, i) => `<button class="home-best" type="button" data-action="pick" data-key="${it.key}">
+              <span class="hb-icon">${iconSVG(it.key)}</span>
+              <span class="hb-text"><b><span class="hb-num" data-count="${badges[it.key]}">${fmt(i ? badges[it.key] : std(it))}</span> items</b> for a perfect P${maxOf(it)}<small>${esc(it.name)} · ${pct(it)}% less</small></span>
+            </button>`).join('')}</div>
+            ${spots.length > 1 ? `<div class="hb-dots" aria-hidden="true">${spots.map((_, i) => `<i class="${i ? '' : 'on'}"></i>`).join('')}</div>` : ''}
+          </div>` : ''}
           <button class="btn primary home-cta" type="button" data-action="open-picker">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></svg>
             Choose an item
@@ -2937,14 +2924,29 @@ function createSolver() {
     return hero + projectsHTML() + dealRow + browse + tipHTML();
   }
   function countUpHome() {
-    const el = document.querySelector('.hb-num');
-    if (!el || reduced) return;
-    const to = Number(el.dataset.count), t0 = performance.now();
-    (function step(t) {
-      const k = Math.min(1, (t - t0) / 900);
-      el.textContent = fmt(Math.round(512 - (512 - to) * (1 - Math.pow(1 - k, 3))));
-      if (k < 1) requestAnimationFrame(step);
-    })(t0);
+    const track = document.querySelector('.hb-track');
+    if (!track) return;
+    const cards = [...track.children], counted = new Set();
+    const count = i => {   // each card counts down from the standard cost the first time it is shown
+      if (counted.has(i) || !cards[i]) return; counted.add(i);
+      const el = cards[i].querySelector('.hb-num'), to = Number(el.dataset.count);
+      if (reduced) { el.textContent = fmt(to); return; }
+      const from = Math.pow(2, maxOf(ITEM_BY_KEY.get(cards[i].dataset.key)) - 1), t0 = performance.now();
+      (function step(t) {
+        const k = Math.min(1, (t - t0) / 900);
+        el.textContent = fmt(Math.round(from - (from - to) * (1 - Math.pow(1 - k, 3))));
+        if (k < 1) requestAnimationFrame(step);
+      })(t0);
+    };
+    count(0);
+    const dots = document.querySelectorAll('.hb-dots i');
+    let at = 0;
+    track.addEventListener('scroll', () => {
+      const w = cards[1] ? cards[1].offsetLeft - cards[0].offsetLeft : track.clientWidth;
+      const i = Math.max(0, Math.min(cards.length - 1, Math.round(track.scrollLeft / w)));
+      if (i === at) return;
+      at = i; dots.forEach((d, j) => d.classList.toggle('on', j === i)); count(i);
+    }, { passive: true });
   }
 
   function renderResults() {
