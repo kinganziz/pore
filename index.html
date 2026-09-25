@@ -853,7 +853,7 @@
   .rec-bar { grid-area: bar; height: 8px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
   .rec-bar i { display: block; height: 100%; border-radius: inherit; background: var(--good); }
   .rec-line small { grid-area: meta; color: var(--muted); font-size: 12px; }
-  /* ---------- "Ask anz" guide ---------- */
+  /* ---------- the guide (anz walks you through the plan) ---------- */
   .guide-cta { margin-top: 14px; gap: 10px; }
   .guide-cta img { width: 26px; height: auto; margin: -6px 0; }
   .guide-progress { display: grid; grid-template-columns: 1fr auto; gap: 6px; margin: 4px 0 14px; font-size: 13px; color: var(--muted); }
@@ -1137,7 +1137,9 @@
   body { padding-bottom: var(--tabbar-h); }
   /* the bar stays on top like the game's; sheets end just above it */
   .tabbar { z-index: 55; }
-  .sheet-backdrop { bottom: var(--tabbar-h); }
+  .sheet-backdrop { top: var(--topbar-h, 62px); bottom: var(--tabbar-h); }
+  @media (max-width: 719px) { .sheet { height: 100%; padding-top: 0; } }
+  @media (min-width: 720px) { .sheet { height: min(100%, 900px); } }
   :root[data-skin="pixel"] .tabbar { background: var(--bg-2); border-top: var(--px-w) solid var(--line); box-shadow: none; }
   @media (min-width: 720px) { :root[data-skin="pixel"] .tabbar { border-image: var(--pf-line) 1 stretch; border-radius: 0; box-shadow: var(--px-raised); } }
   :root[data-skin="pixel"] .tab { border-radius: 0; font-family: var(--font); }
@@ -1188,6 +1190,8 @@
   @keyframes lvl-clear { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.4); } 14% { opacity: 1; transform: translate(-50%, -50%) scale(1.12); }
     22% { transform: translate(-50%, -50%) scale(1); } 82% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -62%) scale(1); } }
   @media (prefers-reduced-motion: reduce) { .lvl-clear, :root[data-flavor="game"] .step.done::after, :root[data-flavor="game"] .talk::after, :root[data-flavor="game"] .toast::after { animation: none; } }
+  .tab.locked { opacity: .38; }
+  .tab.locked .tab-icon { filter: grayscale(1); }
 </style>
 </head>
 <body>
@@ -1267,7 +1271,7 @@
 <div class="sheet-backdrop" id="guideSheet" hidden>
   <div class="sheet guide-sheet" role="dialog" aria-modal="true" aria-labelledby="guideTitle">
     <div class="sheet-head">
-      <h2 id="guideTitle">Ask anz</h2>
+      <h2 id="guideTitle">Guide</h2>
       <button class="icon-btn" type="button" data-action="close-guide" aria-label="Close">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
@@ -1839,7 +1843,7 @@ function createSolver() {
   };
   const STAT_NAMES = Array.from(new Set(ITEM_DB.statNames.concat(Object.keys(STAT_META)))).sort();
   const AFF_LABEL = a => a ? a.split('_').map(w => w[0] + w.slice(1).toLowerCase()).join(' + ') : '';
-  const STORAGE = { state: 'pore.state.v3', badges: 'pore.badges.v4', recent: 'pore.recent.v1', theme: 'pore.theme', done: 'pore.done.', obs: 'pore.observations.v1', icons: 'pore.iconstyle.v2', skin: 'pore.skin', font: 'pore.font', projects: 'pore.projects.v1', cstock: 'pore.charmstock.v1', charmoff: 'pore.charmoff.v1', community: 'pore.community.v1', intro: 'pore.intro.v1' };
+  const STORAGE = { lastplan: 'pore.lastplan.v1', state: 'pore.state.v3', badges: 'pore.badges.v4', recent: 'pore.recent.v1', theme: 'pore.theme', done: 'pore.done.', obs: 'pore.observations.v1', icons: 'pore.iconstyle.v2', skin: 'pore.skin', font: 'pore.font', projects: 'pore.projects.v1', cstock: 'pore.charmstock.v1', charmoff: 'pore.charmoff.v1', community: 'pore.community.v1', intro: 'pore.intro.v1' };
   const REPO_URL = 'https://github.com/kinganziz/pore';
   const MODEL_KEYS = new Set(S.models.map(m => m.key));
 
@@ -1859,6 +1863,7 @@ function createSolver() {
   let stepIndex = new Map();      // step id -> step (from the last render)
   let openObsForm = null;         // step id whose observation form is open
   let revealResults = false;
+  let lastPlan = null, lastPlanY = null;   // the plan the Plan tab returns to, and where its page was scrolled
   let swReg = null;               // service worker registration (for manual update checks)
   let updateFound = false;      // scroll the plan into view after the next solve (mobile)
 
@@ -1932,6 +1937,7 @@ function createSolver() {
   function unb64url(str) { str = str.replace(/-/g, '+').replace(/_/g, '/'); while (str.length % 4) str += '='; return decodeURIComponent(escape(atob(str))); }
   function persist() {
     saveJSON(STORAGE.state, encodeState(false));
+    if (state.item) { lastPlan = encodeState(false); saveJSON(STORAGE.lastplan, lastPlan); }
     const hash = state.item ? '#s=' + b64url(JSON.stringify(encodeState(true))) : '';
     if (location.hash !== hash) { try { history.replaceState(history.state, '', location.pathname + location.search + hash); } catch (e) { /* ignore */ } }
   }
@@ -1979,6 +1985,7 @@ function createSolver() {
     badges = Object.assign({}, ITEM_DB.badges || {}, loadJSON(STORAGE.badges, {}));
     recent = loadJSON(STORAGE.recent, []);
     observations = loadJSON(STORAGE.obs, []).filter(o => o && o.item && Array.isArray(o.base) && Array.isArray(o.actual));
+    lastPlan = loadJSON(STORAGE.lastplan, null);
     let done = false;
     const m = /[#&]s=([A-Za-z0-9_-]+)/.exec(location.hash);
     if (m) { try { applyState(JSON.parse(unb64url(m[1]))); done = true; } catch (e) { /* ignore */ } }
@@ -2808,18 +2815,33 @@ function createSolver() {
   document.addEventListener('visibilitychange', () => { if (document.hidden) sceneHide(); else if (!state.item) sceneShow(); });
   addEventListener('resize', () => { if (!scene.el) return; scene.W = 0; if (state.item) sceneStill(); else sceneShow(); });
 
-  /* ================= tab bar: Home, Items, Plan, Ask anz, Help (like the game's bottom bar) ================= */
+  /* ================= tab bar: Home, Items, Plan, Guide, Help (like the game's bottom bar) ================= */
   const TAB_HOME = '<svg class="tab-glyph" viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M7 1h2v1h1v1h1v1h1v1h1v1h1v1h1v2h-1v6H9v-4H7v4H2V9H1V7h1V6h1V5h1V4h1V3h1V2h1z"/></svg>';
   const TAB_HELP = '<svg class="tab-glyph" viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M5 2h6v1h1v1h1v4h-1v1h-1v1H9v2H7V9h1V8h1V7h1V4H6v2H4V4h1V3h0z M7 13h2v2H7z"/></svg>';
-  function planTarget() { return state.item ? { key: state.item } : projects[0] ? { key: projects[0].key, id: projects[0].id } : null; }
+  // Plan and Guide follow the last item you opened, from any screen; until there is one they are locked
+  function planTarget() {
+    if (state.item) return { key: state.item };
+    let snap = lastPlan;
+    if (!snap && projects[0]) { try { snap = JSON.parse(projects[0].snap); } catch (e) { /* ignore */ } }   // saved before the Plan tab existed
+    const i = snap && snap.i;
+    return i && (i === 'custom' ? snap.c : ITEM_BY_KEY.has(i)) ? { key: i === 'custom' ? null : i, snap } : null;
+  }
+  function openPlan(snap) {
+    closePicker({ keepHistory: true });
+    pushScreen({}, location.pathname + location.search + '#s=');
+    applyState(snap); if (!state.item) return;
+    resetPlan(); pendingScroll = lastPlanY; lastPlanY = null;   // back where you were on the page
+    jumpTo(0); renderAll(); scheduleSolve(0);
+  }
   function renderTabbar() {
     const t = planTarget();
     const planIcon = t && t.key ? iconSVG(t.key) : iconSVG((ITEMS.find(it => it.name === 'Telescope') || ITEMS[0]).key);
-    const tab = (id, icon, label) => `<button class="tab" type="button" data-action="tab" data-tab="${id}"><span class="tab-icon">${icon}</span><span class="tab-label">${label}</span></button>`;
+    const lock = !t;
+    const tab = (id, icon, label, needsPlan) => `<button class="tab ${needsPlan && lock ? 'locked' : ''}" type="button" data-action="tab" data-tab="${id}"${needsPlan && lock ? ' aria-disabled="true" title="Open an item first"' : ''}><span class="tab-icon">${icon}</span><span class="tab-label">${label}</span></button>`;
     ui.tabbar.innerHTML = tab('home', TAB_HOME, 'Home') +
       tab('items', iconSVG((ITEMS.find(it => it.name === 'Iron Sword') || ITEMS[0]).key), 'Items') +
-      tab('plan', planIcon, 'Plan') +
-      tab('guide', '<img src="icons/app/anz.png?v=3" alt="" width="124" height="128" draggable="false">', 'Ask anz') +
+      tab('plan', planIcon, 'Plan', true) +
+      tab('guide', '<img src="icons/app/anz.png?v=3" alt="" width="124" height="128" draggable="false">', 'Guide', true) +
       tab('help', TAB_HELP, 'Help');
     syncTabbar();
   }
@@ -2828,28 +2850,32 @@ function createSolver() {
     const on = !ui.guideSheet.hidden ? 'guide' : !ui.pickerSheet.hidden ? 'items' : !ui.infoSheet.hidden ? 'help' : state.item ? 'plan' : 'home';
     ui.tabbar.querySelectorAll('.tab').forEach(b => { b.classList.toggle('on', b.dataset.tab === on); b.setAttribute('aria-current', b.dataset.tab === on ? 'page' : 'false'); });
   }
+  function replaceEntry(extra, url) { try { history.replaceState(navEntry(extra), '', url || location.href); } catch (e) { /* ignore */ } }
   function tabGo(id) {
     haptic(8);
-    // closing a sheet steps back in history (asynchronous): open the next screen once that has happened
     const open = { items: !ui.pickerSheet.hidden, help: !ui.infoSheet.hidden, guide: !ui.guideSheet.hidden };
     if (open[id]) return;
-    const closing = Object.keys(open).filter(k => open[k]);
-    if (closing.length) {
-      closePicker(); closeInfo(); closeGuide();
-      setTimeout(() => tabGo(id), 320);
-      return;
+    const t = planTarget();
+    if ((id === 'plan' || id === 'guide') && !t) { toast('Open an item first: Plan and Guide follow it'); return; }
+    const inSheet = Object.values(open).some(Boolean);
+    // leaving a sheet for the screen right under it (the plan, or the start screen) is a plain Back
+    if (inSheet && ((id === 'plan' && state.item) || (id === 'home' && !state.item))) { closeSheets(); return; }
+    // anything else switches in place: the sheet is hidden without stepping back in history and the next screen
+    // takes over its history entry, so the item screen underneath never flashes up in between
+    if (inSheet) { closePicker({ fromHistory: true }); closeInfo({ fromHistory: true }); closeGuide({ fromHistory: true }); }
+    const sheet = (name, openFn) => { openFn({ fromHistory: inSheet }); if (inSheet) replaceEntry({ sheet: name }); };
+    if (id === 'home') {
+      if (!state.item) window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
+      else if (inSheet) { showHome(); replaceEntry({}, location.pathname + location.search); }
+      else { pushScreen({}, location.pathname + location.search); showHome(); }   // always the start screen, whatever came before
     }
-    if (id === 'home') { if (state.item) goHome(); else window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' }); }
-    else if (id === 'items') openPicker();
-    else if (id === 'help') openInfo();
+    else if (id === 'items') sheet('picker', openPicker);
+    else if (id === 'help') sheet('info', openInfo);
     else if (id === 'plan') {
-      const t = planTarget();
-      if (!t) { toast('Pick an item to start a plan'); openPicker(); }
-      else if (!state.item && t.id) openProject(t.id);
+      if (!state.item) openPlan(t.snap);
     } else if (id === 'guide') {
-      if (state.item && last && last.analysis) { upsertProject({}); openGuide(); }
-      else if (!state.item && planTarget() && planTarget().id) { openProject(planTarget().id); toast('Your plan is open: tap Ask anz again for the guide'); }
-      else { toast('Pick an item first, then anz walks you through it'); openPicker(); }
+      if (state.item) { upsertProject({}); sheet('guide', openGuide); }
+      else { openPlan(t.snap); upsertProject({}); openGuide(); }
     }
   }
 
@@ -3081,7 +3107,7 @@ function createSolver() {
         <div class="note">Result: ${chipHTML(res.plan.nodes[res.plan.root], item, 'result')}${res.ms > 400 ? ` · solved in ${(res.ms / 1000).toFixed(1)}s` : ''}</div>
         ${(() => {
           const dn = a.steps.filter(st => loadDone().has(stepId(st))).length, tot = a.steps.length;
-          const label = dn && dn < tot ? `Ask anz: continue where you left off (${dn}/${tot})` : dn >= tot && tot ? 'Ask anz: all steps done, review' : 'Ask anz: guide me step by step';
+          const label = dn && dn < tot ? `Guide: continue where you left off (${dn}/${tot})` : dn >= tot && tot ? 'Guide: all steps done, review' : 'Guide me step by step';
           return `<button class="btn primary block guide-cta" type="button" data-action="guide-open"><img src="icons/app/anz.png?v=3" alt="" width="124" height="128">${label}</button>`;
         })()}
         <div class="btn-row share-row">
@@ -3349,6 +3375,7 @@ function createSolver() {
     showHome();
   }
   function showHome() {
+    if (state.item) lastPlanY = window.scrollY;
     state.item = null; state.t = {}; state.o = []; state.stock = 0; state.k = {};
     resetPlan(); pendingScroll = null;
     closePicker({ fromHistory: true }); closeInfo({ fromHistory: true }); closeGuide({ fromHistory: true });
@@ -3482,7 +3509,7 @@ function createSolver() {
       `<span class="tip-next" aria-hidden="true">▼</span></button>`;
   }
 
-  /* ================= "Ask anz": one step at a time ================= */
+  /* ================= the guide: anz, one step at a time ================= */
   // Walks the batch steps from the lowest level up (every step's inputs exist by the time it comes up),
   // sharing progress with the crafting guide and results with the in-game record.
   let carryDone = null;
@@ -3495,9 +3522,11 @@ function createSolver() {
     return k < 0 ? steps.length : k;
   }
   function openGuide(opts) {
-    if (!ui.guideSheet.hidden || !last || !last.analysis) return;
+    if (!ui.guideSheet.hidden || !state.item) return;
     if (!(opts && opts.fromHistory)) pushScreen({ sheet: 'guide' });
-    guide.i = guideFirstOpen(); guide.other = false;
+    const ready = !!(last && last.analysis);
+    guide.i = ready ? guideFirstOpen() : -1; guide.other = false;
+    if (!ready) guide.resync = true;   // pick the right step once the plan is ready
     ui.guideSheet.hidden = false; document.body.classList.add('locked');
     renderGuide();
   }
@@ -3924,7 +3953,7 @@ function createSolver() {
     if (!el) return;
     const act = el.dataset.action;
     switch (act) {
-      case 'home': e.preventDefault(); goHome(); break;
+      case 'home': e.preventDefault(); if (ui.pickerSheet.hidden && ui.infoSheet.hidden && ui.guideSheet.hidden) goHome(); else closeSheets(); break;
       case 'skin': setSkin({ modern: 'pixel', pixel: 'game', game: 'modern' }[skin]); toast(SKINS[skin]); break;
       case 'skin-pick': setSkin(el.dataset.skin); toast(SKINS[skin]); break;
       case 'icon-style': setIconStyle(iconStyle === 'modern' ? 'pixelhd' : 'modern'); toast(ICON_STYLES[iconStyle].label); break;
@@ -4259,7 +4288,7 @@ function createSolver() {
     if (e.key === 'Escape') closeSheets();
     if (e.key === '/' && ui.pickerSheet.hidden && ui.infoSheet.hidden && !/input|select|textarea/i.test(document.activeElement.tagName)) { e.preventDefault(); openPicker(); }
   });
-  ui.infoBtn.addEventListener('click', () => openInfo());
+  ui.infoBtn.addEventListener('click', () => tabGo('help'));
   ui.themeBtn.addEventListener('click', () => setTheme(document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light'));
   // (hash changes, e.g. Back to an earlier plan, are handled by the popstate listener)
 
