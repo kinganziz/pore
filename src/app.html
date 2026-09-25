@@ -1876,6 +1876,34 @@ __SOLVER_JS__
     const locs = e[0] === 'find' ? [e[1]] : ['mob', 'mine', 'shop'].includes(e[0]) ? e[3] : e[0] === 'enc' ? e[4] : [];
     for (const loc of locs || []) if (MAP_KEYS.has(loc)) MAP_KEYS.get(loc).add(k);
   }
+  // Each map's picture is made from its wiki data: the landscape of its kind at the place's own time of day, with
+  // the things most often found lying around there (by the wiki's chances) on the ground, drawn with our icons.
+  const MAP_FINDS = new Map(MAPS.map(m => [m.name, []]));
+  for (const [k, list] of Object.entries(WHERE)) for (const e of list) if (e[0] === 'find' && MAP_FINDS.has(e[1])) MAP_FINDS.get(e[1]).push([k, e[2]]);
+  for (const l of MAP_FINDS.values()) l.sort((a, b) => b[1] - a[1]);
+  const mapArt = {};
+  function mapPic(m) {
+    if (mapArt[m.name]) return mapArt[m.name];
+    const base = bgThumb(MAP_BG[m.kind] || 'hills', MAP_NIGHT.has(m.kind) ? 'night' : 'day');
+    const finds = (MAP_FINDS.get(m.name) || []).slice(0, 4).map(f => f[0]).filter(k => GOOD_BY_KEY.has(k) || ITEM_BY_KEY.has(k) || CHARMS.some(c => c.key === k));
+    if (!base || mapPic.busy?.[m.name]) return base;
+    (mapPic.busy || (mapPic.busy = {}))[m.name] = 1;
+    const load = src => new Promise(ok => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => ok(null); im.src = src; });
+    Promise.all([load(base), ...finds.map(k => load(`icons/pixel/${k}.svg?v=${ICONS_V}`))]).then(([bg, ...ics]) => {
+      if (!bg) return;
+      const W = 112, H = 80, c = document.createElement('canvas'); c.width = W; c.height = H;
+      const g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(bg, 0, 0, W, H);
+      const got = ics.filter(Boolean), n = got.length, sz = 22, rnd = sceneRand(m.name.length * 97 + (m.steps || 0));
+      got.forEach((im, i) => {   // spread along the ground, the most common one in front
+        const x = Math.round((i + .5) * W / n - sz / 2 + (rnd() - .5) * 8), y = H - sz - 3 - Math.round(rnd() * 6) - (i % 2) * 4;
+        g.fillStyle = 'rgba(0, 0, 0, .35)'; g.fillRect(x + 3, y + sz - 2, sz - 6, 3);   // a little shadow
+        g.drawImage(im, x, y, sz, sz);
+      });
+      mapArt[m.name] = c.toDataURL();
+      document.querySelectorAll('img.map-pic').forEach(el => { if (el.dataset.map === m.name) el.src = mapArt[m.name]; });
+    });
+    return base;
+  }
   const MAP_NIGHT = new Set(['cave', 'crystal cave', 'cursed', 'apocalypse']);   // map pictures keep the place's own time of day
   const MAP_BG = { sunny: 'hills', cave: 'cave', forest: 'forest', cursed: 'forest', 'crystal cave': 'cave', sand: 'desert', snow: 'snow', sea: 'sea', mountains: 'snow', island: 'sea', sharp: 'snow', red: 'forest', mushroom: 'shrooms', swamp: 'shrooms', apocalypse: 'town' };
   // the places each item comes from, for searching the bag by place ("whisper cave", "undead")
@@ -4879,7 +4907,7 @@ __SOLVER_JS__
     if (invTab === 'maps' && !onMap) {   // the maps, in game order, with a picture of their world
       const list = MAPS.filter(m => !q || `${m.name} ${m.kind || ''} ${m.desc || ''}`.toLowerCase().includes(q));   // by name, kind (cave, snow…) or description
       box.innerHTML = (list.length ? `<div class="map-list">${list.map(m => `<button type="button" class="map-row" data-action="inv-map" data-place="${esc(m.name)}">` +
-        `<img class="map-pic" src="${bgThumb(MAP_BG[m.kind] || 'hills', MAP_NIGHT.has(m.kind) ? 'night' : 'day')}" alt="" draggable="false">` +
+        `<img class="map-pic" data-map="${esc(m.name)}" src="${mapPic(m)}" alt="" draggable="false">` +
         `<span class="ir-main"><b>${esc(m.name)}</b><small>${m.steps ? fmt(m.steps) + ' steps to unlock' : 'where it starts'} · ${MAP_KEYS.get(m.name).size} items</small>${m.desc ? `<small class="map-desc">${esc(m.desc)}</small>` : ''}</span>` +
         `<span class="map-go">›</span></button>`).join('')}</div>` : '<p class="inv-hint">Nothing matches.</p>') +
         '<p class="inv-hint">Every place in the game, in the order you reach them. Tap one to see what you can get there.</p>';
