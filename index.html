@@ -1182,6 +1182,11 @@
   :root[data-finish="retro"] .glyph .px-gem { width: 78px; height: 60px; margin: 0 auto; }
   :root:where([data-finish="retro"]) { --px-shadow: rgba(0, 0, 0, .45); }   /* :where: the Pixel and Game palettes set their own */
   :root[data-finish="retro"] .brand h1 { text-shadow: 2px 2px 0 rgba(0, 0, 0, .45); }
+  /* backgrounds: None hides the scene; the picker wraps on phones */
+  :root[data-nobg] #scene { display: none !important; }
+  .bg-pick { align-items: flex-start; }
+  .bg-pick .seg { flex-wrap: wrap; justify-content: flex-end; border-radius: 16px; }
+  .font-pick small { font-size: 11px; color: var(--soft); }
 </style>
 </head>
 <body>
@@ -1284,6 +1289,12 @@
       </div>
       <div class="font-pick theme-pick"><span>Look</span><div class="seg" role="group" aria-label="Look">
         <button type="button" data-action="skin-pick" data-skin="modern">Modern</button><button type="button" data-action="skin-pick" data-skin="retro">Retro</button><button type="button" data-action="skin-pick" data-skin="pixel">Pixel</button><button type="button" data-action="skin-pick" data-skin="game">Game</button>
+      </div></div>
+      <div class="font-pick theme-pick bg-pick"><span>Background</span><div class="seg" role="group" aria-label="Background">
+        <button type="button" data-action="bg-pick" data-bg="auto">Auto</button><button type="button" data-action="bg-pick" data-bg="hills">Hills</button><button type="button" data-action="bg-pick" data-bg="sea">Sea</button><button type="button" data-action="bg-pick" data-bg="desert">Desert</button><button type="button" data-action="bg-pick" data-bg="snow">Snow</button><button type="button" data-action="bg-pick" data-bg="town">Town</button><button type="button" data-action="bg-pick" data-bg="none">None</button>
+      </div></div>
+      <div class="font-pick theme-pick"><span>Motion <small>(saves battery when off)</small></span><div class="seg" role="group" aria-label="Background motion">
+        <button type="button" data-action="bg-motion" data-motion="on">On</button><button type="button" data-action="bg-motion" data-motion="off">Off</button>
       </div></div>
       <div class="font-pick"><span>Font</span><div class="seg" role="group" aria-label="Font">
         <button type="button" data-action="font" data-font="jersey">Jersey 15</button><button type="button" data-action="font" data-font="vt323">VT323</button>
@@ -2252,6 +2263,7 @@ function createSolver() {
     if (skin === 'modern') { d.removeAttribute('data-flavor'); d.removeAttribute('data-finish'); }
     else { d.setAttribute('data-flavor', skin); d.setAttribute('data-finish', 'retro'); }
     syncTopbar();
+    if (scene.ctx) { scene.skyKey = ''; sceneShow(); }
     const b = document.querySelector('[data-action="skin"]');
     if (b) b.setAttribute('aria-pressed', String(skin !== 'modern'));
     document.querySelectorAll('[data-action="skin-pick"]').forEach(x => x.classList.toggle('on', x.dataset.skin === skin));
@@ -2679,125 +2691,397 @@ function createSolver() {
     </div>`;
   }
 
-  /* ================= home scene: an animated pixel landscape behind the home screen ================= */
-  // Drawn live at low resolution and scaled up (crisp pixels): sky, stars or clouds, a moon or sun, three parallax
-  // layers (far mountains, pine hills, rocky ground) scrolling slowly, and fireflies drifting up. Colours follow
-  // the look and theme. Runs only on the home screen, pauses when hidden, and stays still with reduced motion.
-  const scene = { el: null, ctx: null, raf: 0, key: '', W: 0, H: 0, x: 0, last: 0, stars: [], flies: [], trees: [], rocks: [] };
-  const SCENES = {
-    modern: { sky: ['#0b0a24', '#171544', '#2a2064', '#46307a', '#6a3f86'], star: '#fff6d8', moon: '#fff1c4', far: '#2b2458', mid: '#1b1a3e', near: '#110f27', tree: '#15163a', fly: '#ffe38a', cloud: '#3a2e70' },
-    modernLight: { sky: ['#f7e1c0', '#f3cfa6', '#eebb8e', '#e6a47c', '#dc8f70'], star: null, moon: '#fff6dc', far: '#d49b86', mid: '#b8786a', near: '#8e5550', tree: '#9c6258', fly: '#fff3c0', cloud: '#fbead2' },
-    pixel: { sky: ['#07071a', '#0e0e2c', '#171742', '#232359', '#33336e'], star: '#f0f0f8', moon: '#ffd042', far: '#262660', mid: '#191946', near: '#0f0f2e', tree: '#12123a', fly: '#ffd042', cloud: '#2c2c66' },
-    pixelLight: { sky: ['#efe6cc', '#e8dbb9', '#e1cfa6', '#d9c294', '#d0b483'], star: null, moon: '#fff4d0', far: '#c4ad86', mid: '#a58c62', near: '#7e6948', tree: '#8a744f', fly: '#fff4c0', cloud: '#f6efdc' },
-    game: { sky: ['#030d0a', '#06170f', '#0b2419', '#123526', '#1c4a35'], star: '#dfffe6', moon: '#e8ffd8', far: '#123326', mid: '#0c2419', near: '#07150f', tree: '#0a1f16', fly: '#9dff7a', cloud: '#15402f' },
-    gameLight: { sky: ['#f2e6ce', '#ecdcbf', '#e6d1ad', '#e0c49a', '#d9b588'], star: null, moon: '#fff4d6', far: '#dcae8c', mid: '#c98a62', near: '#a8623e', tree: '#b8744c', fly: '#fff0b0', cloud: '#f7eddc' },
+  /* ================= backgrounds: animated pixel scenes behind every screen ================= */
+  // Five original pixel scenes (Hills, Sea, Desert, Snow, Town), each with a night (dark theme) and a day (light
+  // theme) palette, drawn live at low resolution and scaled up with crisp pixels. Layers scroll in whole pixels.
+  // Settings (help page): which scene (Auto = a different one each time the app opens, or None) and Motion on/off.
+  // Home moves fully; plans and sheets hold the land still with only small things moving, about six frames a
+  // second; hidden pages, Motion off and reduced motion draw one still frame.
+  const scene = { el: null, ctx: null, raf: 0, timer: 0, W: 0, H: 0, px: 2, x: 0, last: 0, key: '', st: null, sky: null, skyKey: '' };
+  const BG_SCENES = ['hills', 'sea', 'desert', 'snow', 'town'];
+  const BG_NAMES = { auto: 'Auto', hills: 'Hills', sea: 'Sea', desert: 'Desert', snow: 'Snow', town: 'Town', none: 'None' };
+  let bgPref = 'auto', bgMotion = true, bgNow = 'hills';
+  function bgLoad() {
+    try { bgPref = localStorage.getItem('pore.bg.v1') || 'auto'; bgMotion = localStorage.getItem('pore.bgmotion.v1') !== 'off'; } catch (e) { /* ignore */ }
+    if (!BG_NAMES[bgPref]) bgPref = 'auto';
+    if (bgPref === 'auto') {   // a different scene each time the app opens
+      let lastBg = null; try { lastBg = localStorage.getItem('pore.bg.last'); } catch (e) { /* ignore */ }
+      const pool = BG_SCENES.filter(k => k !== lastBg);
+      bgNow = pool[Math.floor(Math.random() * pool.length)];
+      try { localStorage.setItem('pore.bg.last', bgNow); } catch (e) { /* ignore */ }
+    } else bgNow = bgPref;
+    document.documentElement.toggleAttribute('data-nobg', bgNow === 'none');
+  }
+  function setBg(pref) {
+    bgPref = BG_NAMES[pref] ? pref : 'auto';
+    try { localStorage.setItem('pore.bg.v1', bgPref); } catch (e) { /* ignore */ }
+    bgNow = bgPref === 'auto' ? (BG_SCENES.includes(bgNow) ? bgNow : 'hills') : bgPref;
+    document.documentElement.toggleAttribute('data-nobg', bgNow === 'none');
+    scene.key = ''; syncBgPicker(); sceneHide(); sceneShow();
+  }
+  function setBgMotion(on) {
+    bgMotion = !!on;
+    try { localStorage.setItem('pore.bgmotion.v1', bgMotion ? 'on' : 'off'); } catch (e) { /* ignore */ }
+    syncBgPicker(); sceneHide(); sceneShow();
+  }
+  function syncBgPicker() {
+    document.querySelectorAll('[data-action="bg-pick"]').forEach(b => b.classList.toggle('on', b.dataset.bg === bgPref));
+    document.querySelectorAll('[data-action="bg-motion"]').forEach(b => b.classList.toggle('on', (b.dataset.motion === 'on') === bgMotion));
+  }
+
+  // ---- palettes: [night, day]; Hills also follows the look (Pixel indigo, Game green)
+  const HILLS = {
+    modern: { sky: ['#0b0a24', '#171544', '#2a2064', '#46307a', '#6a3f86'], star: '#fff6d8', moon: '#fff1c4', far: '#2b2458', cap: '#8f86c8', mid: '#1b1a3e', near: '#110f27', tree: '#15163a', treeHi: '#2a2a5c', bush: '#1a1b44', grass: '#2a2556', fly: '#ffe38a', cloud: '#3a2e70', castle: '#221d4c', win: '#ffd27a' },
+    modernLight: { sky: ['#f7e1c0', '#f3cfa6', '#eebb8e', '#e6a47c', '#dc8f70'], star: null, moon: '#fff6dc', far: '#d49b86', cap: '#fbe8d8', mid: '#b8786a', near: '#8e5550', tree: '#9c6258', treeHi: '#b8806e', bush: '#a86a5c', grass: '#a4695f', fly: '#fff3c0', cloud: '#fbead2', castle: '#c48a78', win: '#fff0c0' },
+    pixel: { sky: ['#07071a', '#0e0e2c', '#171742', '#232359', '#33336e'], star: '#f0f0f8', moon: '#ffd042', far: '#262660', cap: '#8888cc', mid: '#191946', near: '#0f0f2e', tree: '#12123a', treeHi: '#26265e', bush: '#16164a', grass: '#22225a', fly: '#ffd042', cloud: '#2c2c66', castle: '#1e1e52', win: '#ffd042' },
+    pixelLight: { sky: ['#efe6cc', '#e8dbb9', '#e1cfa6', '#d9c294', '#d0b483'], star: null, moon: '#fff4d0', far: '#c4ad86', cap: '#f6efdc', mid: '#a58c62', near: '#7e6948', tree: '#8a744f', treeHi: '#a48c64', bush: '#94805a', grass: '#8e7a54', fly: '#fff4c0', cloud: '#f6efdc', castle: '#b09874', win: '#fff4c0' },
+    game: { sky: ['#030d0a', '#06170f', '#0b2419', '#123526', '#1c4a35'], star: '#dfffe6', moon: '#e8ffd8', far: '#123326', cap: '#6fa88c', mid: '#0c2419', near: '#07150f', tree: '#0a1f16', treeHi: '#17402c', bush: '#0e2a1d', grass: '#15382a', fly: '#9dff7a', cloud: '#15402f', castle: '#10301f', win: '#c8ff9a' },
+    gameLight: { sky: ['#f2e6ce', '#ecdcbf', '#e6d1ad', '#e0c49a', '#d9b588'], star: null, moon: '#fff4d6', far: '#dcae8c', cap: '#fbf1e0', mid: '#c98a62', near: '#a8623e', tree: '#b8744c', treeHi: '#d09068', bush: '#c07e56', grass: '#b87450', fly: '#fff0b0', cloud: '#f7eddc', castle: '#d09a78', win: '#fff4d0' },
   };
-  function scenePalette() {
+  const BG_PAL = {
+    sea: [
+      { sky: ['#070c24', '#101b42', '#1b2d5e', '#2c4380', '#48609e'], star: '#f4f6ff', moon: '#fff1c4', cloud: '#26356a', sea: ['#0b1838', '#0f2048', '#132a5a'], wave: '#5f80c4', glint: '#fff1c4', island: '#08102a', tower: '#d8d2c4', stripe: '#c0493e', lamp: '#ffe9a0', boat: '#140f1c', sail: '#d8d2c0', rock: '#050a1c', bird: null },
+      { sky: ['#8fcaf6', '#a9d6f8', '#c4e3fa', '#dcefff', '#f0f8ff'], star: null, moon: '#fff6cc', cloud: '#ffffff', sea: ['#3a8fcf', '#2f7cb8', '#256ba0'], wave: '#e6f5ff', glint: '#ffffff', island: '#5f7f90', tower: '#f4f0e6', stripe: '#d0463c', lamp: '#fff6d0', boat: '#6a4a36', sail: '#fffaf0', rock: '#3c5260', bird: '#34404c' },
+    ],
+    desert: [
+      { sky: ['#0b0820', '#1c1238', '#34204f', '#56305c', '#7a4462'], star: '#fff4e0', moon: '#ffeccc', cloud: '#3e2a58', far: '#3a2446', mid: '#2a1a36', near: '#1b1024', pyr: '#48304f', pyrShade: '#34203e', cactus: '#0f0a18', camel: '#120b1c' },
+      { sky: ['#86c3ee', '#a6d3f0', '#c8e2ee', '#ecdcc0', '#f4cf9c'], star: null, moon: '#fff6d0', cloud: '#fff8ee', far: '#e8bb7c', mid: '#d99f5e', near: '#c68548', pyr: '#e2b878', pyrShade: '#bf9258', cactus: '#4e7a3c', camel: '#7a5634' },
+    ],
+    snow: [
+      { sky: ['#040a1a', '#0a1830', '#12284a', '#1c3a62', '#2a4d78'], star: '#f4f8ff', moon: '#f0f4ff', cloud: '#1e3252', aurora: ['#3cffa0', '#44d6ff', '#9a7cff'], far: '#1a2c4a', cap: '#c8d8f0', mid: '#12203a', midCap: '#9fb4d4', near: '#8fa2c2', pine: '#0b1a2a', pineSnow: '#b8c8e0', cabin: '#2a1c14', roof: '#c8d6ea', win: '#ffc860', smoke: '#8a9ab8', flake: '#ffffff' },
+      { sky: ['#b0d2f0', '#c4def4', '#d8eaf8', '#e8f2fa', '#f6f9fd'], star: null, moon: '#fff8e0', cloud: '#ffffff', aurora: null, far: '#8ea6c4', cap: '#ffffff', mid: '#6c86a8', midCap: '#f0f5fb', near: '#fdfeff', pine: '#2c5646', pineSnow: '#ffffff', cabin: '#6a4630', roof: '#ffffff', win: '#ffe39a', smoke: '#d8e0ea', flake: '#ffffff' },
+    ],
+    town: [
+      { sky: ['#07061a', '#120f33', '#1e1a4d', '#2e2766', '#433779'], star: '#fff6e0', moon: '#fff1c4', cloud: '#2a2560', far: '#1a1740', farWin: '#6a5aa8', house: '#0f0d28', roof: '#171438', win: '#ffd27a', winOff: '#1d1a42', lamp: '#ffe8a0', ground: '#0a0920', bat: '#05040f' },
+      { sky: ['#9ed2fa', '#b6ddfb', '#cfe8fc', '#e6f3fd', '#fdf6ea'], star: null, moon: '#fff6cc', cloud: '#ffffff', far: '#a3b2cf', farWin: '#c6d2e6', house: '#e4d4b6', roof: '#b4584c', win: '#6a7c9c', winOff: '#8a9ab8', lamp: '#fff4d0', ground: '#8c8474', bat: '#3a3a48' },
+    ],
+  };
+  function bgPalette() {
     const d = document.documentElement, light = d.dataset.theme === 'light';
-    const base = d.dataset.flavor === 'game' ? 'game' : d.dataset.flavor === 'pixel' ? 'pixel' : 'modern';
-    return SCENES[base + (light ? 'Light' : '')];
+    if (bgNow === 'hills') return HILLS[(d.dataset.flavor === 'game' ? 'game' : d.dataset.flavor === 'pixel' ? 'pixel' : 'modern') + (light ? 'Light' : '')];
+    return (BG_PAL[bgNow] || BG_PAL.sea)[light ? 1 : 0];
   }
   function sceneRand(seed) { let t = seed >>> 0; return () => { t += 0x6D2B79F5; let r = Math.imul(t ^ (t >>> 15), 1 | t); r ^= r + Math.imul(r ^ (r >>> 7), 61 | r); return ((r ^ (r >>> 14)) >>> 0) / 4294967296; }; }
+  const ridge = (x, P, base, amps, H) => base * H + amps.reduce((t, [a, k, ph]) => t + a * H * Math.sin(2 * Math.PI * k * x / P + ph), 0);
+  const P = 360;   // everything that scrolls repeats every P world pixels
+
   function sceneSetup() {
     const c = scene.el || (scene.el = document.getElementById('scene'));
-    if (!c) return false;
-    // one world pixel is the same size across and down, and never bigger than 3 screen pixels: phones get 180
-    // pixels across, big screens see more land instead of a blown-up picture
-    const cw = c.clientWidth || innerWidth, ch = c.clientHeight || innerHeight, px = Math.max(1, Math.min(cw / 180, ch / 200, 3));
-    const W = Math.round(cw / px), H = Math.round(ch / px);
+    if (!c || bgNow === 'none') return false;
+    // one world pixel is the same size across and down: about 240 across a phone, at most 3 screen pixels on big
+    // screens (which see more land instead of a blown-up picture)
+    const cw = c.clientWidth || innerWidth, ch = c.clientHeight || innerHeight, px = Math.max(1, Math.min(cw / 240, ch / 260, 3));
+    const W = Math.round(cw / px), H = Math.round(ch / px), key = bgNow + W + 'x' + H;
     scene.px = px;
-    if (scene.W !== W || scene.H !== H) {
-      scene.W = W; scene.H = H; c.width = W; c.height = H;
-      scene.ctx = c.getContext('2d');
-      const r = sceneRand(7);
-      scene.stars = Array.from({ length: 70 }, () => ({ x: r() * W, y: r() * H * 0.5, p: r() * 6.28, b: r() < 0.2 }));
-      scene.flies = Array.from({ length: 22 }, () => ({ x: r() * W, y: H * (0.55 + r() * 0.45), s: 0.08 + r() * 0.16, p: r() * 6.28 }));
-      scene.trees = Array.from({ length: 26 }, (_, i) => ({ x: i * 14 + r() * 8, h: 7 + Math.floor(r() * 7) }));
-      scene.rocks = Array.from({ length: 9 }, (_, i) => ({ x: i * 40 + r() * 20, w: 3 + Math.floor(r() * 4), h: 4 + Math.floor(r() * 10) }));
+    if (scene.key !== key) {
+      scene.key = key; scene.W = W; scene.H = H; c.width = W; c.height = H;
+      scene.ctx = c.getContext('2d'); scene.skyKey = '';
+      const r = sceneRand(11 + BG_SCENES.indexOf(bgNow));
+      const st = scene.st = {
+        stars: Array.from({ length: 110 }, () => ({ x: r() * W, y: r() * H * 0.5, p: r() * 6.28, b: r() < 0.18 })),
+        clouds: Array.from({ length: 5 }, (_, i) => ({ x: r() * (W + 80), y: 0.07 + i * 0.06 + r() * 0.03, w: 18 + Math.floor(r() * 18) })),
+        shoot: { t: 3 + r() * 6, x: 0, y: 0, life: 0 },
+      };
+      if (bgNow === 'hills') {
+        st.trees = Array.from({ length: 30 }, (_, i) => ({ x: i * 12 + r() * 7, h: 8 + Math.floor(r() * 9), bush: r() < 0.25 }));
+        st.rocks = Array.from({ length: 10 }, (_, i) => ({ x: i * 36 + r() * 18, w: 3 + Math.floor(r() * 4), h: 3 + Math.floor(r() * 9) }));
+        st.tufts = Array.from({ length: 60 }, () => ({ x: Math.floor(r() * P), h: 1 + Math.floor(r() * 3) }));
+        st.flies = Array.from({ length: 26 }, () => ({ x: r() * W, y: H * (0.55 + r() * 0.45), s: 0.08 + r() * 0.16, p: r() * 6.28 }));
+      } else if (bgNow === 'sea') {
+        st.rows = Array.from({ length: 26 }, (_, i) => ({ k: i, dash: Array.from({ length: 8 }, () => ({ x: r() * P, w: 2 + Math.floor(r() * 6) })) }));
+        st.birds = Array.from({ length: 5 }, () => ({ x: r() * W, y: 0.16 + r() * 0.18, s: 0.4 + r() * 0.5, p: r() * 6.28 }));
+      } else if (bgNow === 'desert') {
+        st.cacti = Array.from({ length: 7 }, (_, i) => ({ x: i * 52 + r() * 30, h: 9 + Math.floor(r() * 9), arm: r() < 0.7 }));
+        st.pyrs = [{ x: 60, s: 22 }, { x: 94, s: 14 }, { x: 250, s: 18 }];
+      } else if (bgNow === 'snow') {
+        st.pines = Array.from({ length: 26 }, (_, i) => ({ x: i * 14 + r() * 8, h: 10 + Math.floor(r() * 10) }));
+        st.flakes = Array.from({ length: 90 }, () => ({ x: r() * W, y: r() * H, s: 0.2 + r() * 0.5, p: r() * 6.28, big: r() < 0.2 }));
+        st.smoke = [];
+      } else if (bgNow === 'town') {
+        st.far = []; for (let x = 0; x < P;) { const w = 8 + Math.floor(r() * 12); st.far.push({ x, w, h: 20 + Math.floor(r() * 34), wins: r() }); x += w + 1; }
+        st.houses = []; for (let x = 0; x < P;) { const w = 16 + Math.floor(r() * 14); st.houses.push({ x, w, h: 14 + Math.floor(r() * 14), roof: r() < 0.7, chim: r() < 0.5, seed: Math.floor(r() * 9999) }); x += w + 2 + Math.floor(r() * 6); }
+        st.bats = Array.from({ length: 4 }, () => ({ x: r() * W, y: 0.18 + r() * 0.2, s: 0.5 + r() * 0.6, p: r() * 6.28 }));
+      }
     }
     return true;
   }
-  const ridge = (x, P, base, amps, H) => base * H + amps.reduce((t, [a, k, ph]) => t + a * H * Math.sin(2 * Math.PI * k * x / P + ph), 0);
-  function sceneDraw(dt, calm) {
-    const { ctx: g, W, H } = scene, pal = scenePalette(), P = 360;
-    if (!calm) scene.x += dt * 0.012;                        // walking speed (the land holds still on working screens)
-    const now = performance.now() / 1000;
-    // sky: one smooth gradient through the palette's sky colours (flat bands showed as big rectangles)
-    const top = H * 0.62;
-    if (!scene.skyGrad || scene.skyKey !== pal.sky.join() + H) {
+
+  // ---- shared pieces
+  function drawSky(g, W, H, pal, top) {
+    if (!scene.sky || scene.skyKey !== pal.sky.join() + H + top) {
       const gr = g.createLinearGradient(0, 0, 0, top);
-      pal.sky.forEach((c, i) => gr.addColorStop(i / (pal.sky.length - 1 || 1), c));
-      scene.skyGrad = gr; scene.skyKey = pal.sky.join() + H;
+      pal.sky.forEach((c, i) => gr.addColorStop(i / (pal.sky.length - 1), c));
+      scene.sky = gr; scene.skyKey = pal.sky.join() + H + top;
     }
-    g.fillStyle = scene.skyGrad; g.fillRect(0, 0, W, Math.ceil(top));
+    g.fillStyle = scene.sky; g.fillRect(0, 0, W, Math.ceil(top));
     g.fillStyle = pal.sky[pal.sky.length - 1]; g.fillRect(0, Math.floor(top), W, H - Math.floor(top));
-    // stars (night) or clouds (day)
-    if (pal.star) for (const st of scene.stars) {
-      const tw = Math.sin(now * 1.6 + st.p);
+  }
+  function drawStars(g, pal, now, maxY) {
+    if (!pal.star) return;
+    g.fillStyle = pal.star;
+    for (const s of scene.st.stars) {
+      if (s.y > maxY) continue;
+      const tw = Math.sin(now * 1.6 + s.p);
       if (tw < -0.55) continue;
-      g.fillStyle = pal.star; g.globalAlpha = 0.45 + 0.55 * Math.max(0, tw);
-      g.fillRect(Math.round(st.x), Math.round(st.y), 1, 1);
-      if (st.b && tw > 0.6) { g.fillRect(Math.round(st.x) - 1, Math.round(st.y), 3, 1); g.fillRect(Math.round(st.x), Math.round(st.y) - 1, 1, 3); }
-    }
-    g.globalAlpha = 1;
-    // moon or sun, with a soft stepped halo
-    // the moon (with its halo) sits wholly below the top bar, whatever the bar's height
-    const mr = 8, bar = document.querySelector('.topbar'), barH = bar ? bar.getBoundingClientRect().bottom / (scene.px || 2) : 0;
-    const mx = Math.round(W * 0.74), my = Math.max(Math.round(H * 0.13), Math.ceil(barH) + mr + 7);
-    g.fillStyle = pal.moon; g.globalAlpha = 0.12;
-    for (let y = -mr - 5; y <= mr + 5; y++) for (let x = -mr - 5; x <= mr + 5; x++) if (x * x + y * y <= (mr + 5) * (mr + 5)) g.fillRect(mx + x, my + y, 1, 1);
-    g.globalAlpha = 1;
-    for (let y = -mr; y <= mr; y++) for (let x = -mr; x <= mr; x++) if (x * x + y * y <= mr * mr) g.fillRect(mx + x, my + y, 1, 1);
-    if (pal.star) { g.fillStyle = pal.far; g.globalAlpha = 0.35; g.fillRect(mx - 3, my - 2, 2, 2); g.fillRect(mx + 2, my + 2, 3, 2); g.fillRect(mx - 1, my + 4, 2, 1); g.globalAlpha = 1; }
-    // drifting clouds
-    g.fillStyle = pal.cloud; g.globalAlpha = pal.star ? 0.55 : 0.9;
-    for (let i = 0; i < 4; i++) {
-      const cx = ((i * 71 + scene.x * 0.25) % (W + 60)) - 30, cy = Math.round(H * (0.08 + i * 0.07));
-      g.fillRect(Math.round(cx), cy, 26, 3); g.fillRect(Math.round(cx) + 5, cy - 2, 14, 2); g.fillRect(Math.round(cx) + 9, cy - 4, 7, 2);
-    }
-    g.globalAlpha = 1;
-    // three parallax layers
-    // each layer scrolls by whole pixels: a fractional offset made the hill edges shimmer and the trees bob
-    const off = speed => Math.floor(scene.x * speed);
-    const layer = (speed, base, amps, color) => {
-      g.fillStyle = color;
-      const o = off(speed);
-      for (let x = 0; x < W; x++) { const h = Math.round(ridge(x + o, P, base, amps, H)); g.fillRect(x, h, 1, H - h); }
-    };
-    layer(0.35, 0.5, [[0.05, 1, 0.3], [0.035, 2, 1.7], [0.02, 5, 0.9]], pal.far);
-    const midSpeed = 0.7, midAmps = [[0.03, 2, 2.2], [0.02, 3, 0.4], [0.01, 7, 1.1]];
-    layer(midSpeed, 0.63, midAmps, pal.mid);
-    g.fillStyle = pal.tree;                                  // pines on the hills
-    const midOff = off(midSpeed);
-    for (const t of scene.trees) {   // the hills repeat every P pixels; so do the trees, for screens wider than P
-      for (let x = ((Math.round(t.x) - midOff) % P + P) % P; x <= W + 6; x += P) {
-        const base = Math.round(ridge(x + midOff, P, 0.63, midAmps, H));
-        for (let k = 0; k < t.h; k++) { const w = Math.max(1, Math.floor((k + 2) / 2.2)); g.fillRect(x - w, base - t.h + k, w * 2 + 1, 1); }
-        g.fillRect(x, base, 1, 2);
-      }
-    }
-    const nearSpeed = 1.2, nearAmps = [[0.012, 3, 0.2], [0.008, 8, 2.4]];
-    layer(nearSpeed, 0.8, nearAmps, pal.near);
-    g.fillStyle = pal.near;                                  // standing stones and broken pillars
-    const nearOff = off(nearSpeed);
-    for (const rk of scene.rocks) {
-      for (let x = ((Math.round(rk.x) - nearOff) % P + P) % P; x <= W + 8; x += P) {
-        const base = Math.round(ridge(x + nearOff, P, 0.8, nearAmps, H));
-        g.fillRect(x, base - rk.h, rk.w, rk.h + 1);
-        g.fillRect(x - 1, base - rk.h, rk.w + 2, 1);
-      }
-    }
-    // fireflies drifting up
-    for (const f of scene.flies) {
-      f.y -= f.s * dt * 0.06; if (f.y < H * 0.45) { f.y = H + 2; f.x = Math.random() * W; }
-      const x = Math.round(f.x + Math.sin(now * 0.9 + f.p) * 3), y = Math.round(f.y), glow = 0.5 + 0.5 * Math.sin(now * 2.2 + f.p);
-      g.fillStyle = pal.fly; g.globalAlpha = 0.18 * glow; g.fillRect(x - 1, y - 1, 3, 3);
-      g.globalAlpha = 0.5 + 0.5 * glow; g.fillRect(x, y, 1, 1);
+      g.globalAlpha = 0.45 + 0.55 * Math.max(0, tw);
+      g.fillRect(Math.round(s.x), Math.round(s.y), 1, 1);
+      if (s.b && tw > 0.6) { g.fillRect(Math.round(s.x) - 1, Math.round(s.y), 3, 1); g.fillRect(Math.round(s.x), Math.round(s.y) - 1, 1, 3); }
     }
     g.globalAlpha = 1;
   }
-  // Home: full motion. Plan and the sheets: the land holds still and only stars and fireflies move, about six
-  // frames a second, so a plan left open while playing costs next to no battery and nothing tugs at the eye.
+  function drawShootingStar(g, pal, dt, W, H) {   // now and then a star streaks across the night sky
+    if (!pal.star) return;
+    const sh = scene.st.shoot;
+    if (sh.life <= 0) { sh.t -= dt / 1000; if (sh.t < 0) { sh.life = 1; sh.x = W * (0.2 + Math.random() * 0.6); sh.y = H * (0.05 + Math.random() * 0.15); sh.t = 6 + Math.random() * 9; } return; }
+    sh.life -= dt / 900; sh.x -= dt * 0.09; sh.y += dt * 0.035;
+    for (let i = 0; i < 9; i++) { g.globalAlpha = Math.max(0, sh.life) * (1 - i / 9); g.fillStyle = pal.star; g.fillRect(Math.round(sh.x + i * 2.4), Math.round(sh.y - i), 1, 1); }
+    g.globalAlpha = 1;
+  }
+  function moonSpot(W, H) {   // wholly below the top bar, whatever its height
+    const bar = document.querySelector('.topbar'), barH = bar ? bar.getBoundingClientRect().bottom / (scene.px || 2) : 0;
+    return { x: Math.round(W * 0.74), y: Math.max(Math.round(H * 0.12), Math.ceil(barH) + 17) };
+  }
+  function drawMoon(g, pal, W, H, craters) {
+    const { x: mx, y: my } = moonSpot(W, H), mr = 9;
+    g.fillStyle = pal.moon;
+    g.globalAlpha = 0.1; for (let y = -mr - 7; y <= mr + 7; y++) for (let x = -mr - 7; x <= mr + 7; x++) if (x * x + y * y <= (mr + 7) * (mr + 7)) g.fillRect(mx + x, my + y, 1, 1);
+    g.globalAlpha = 0.16; for (let y = -mr - 3; y <= mr + 3; y++) for (let x = -mr - 3; x <= mr + 3; x++) if (x * x + y * y <= (mr + 3) * (mr + 3)) g.fillRect(mx + x, my + y, 1, 1);
+    g.globalAlpha = 1; for (let y = -mr; y <= mr; y++) for (let x = -mr; x <= mr; x++) if (x * x + y * y <= mr * mr) g.fillRect(mx + x, my + y, 1, 1);
+    if (craters && pal.star) { g.fillStyle = craters; g.globalAlpha = 0.28; g.fillRect(mx - 4, my - 3, 3, 3); g.fillRect(mx + 2, my + 2, 4, 3); g.fillRect(mx - 1, my + 5, 2, 2); g.fillRect(mx + 3, my - 5, 2, 2); g.globalAlpha = 1; }
+    return { mx, my };
+  }
+  function drawClouds(g, pal, W, H, speed) {
+    g.fillStyle = pal.cloud;
+    for (const c of scene.st.clouds) {
+      const x = Math.round(((c.x + scene.x * speed) % (W + 80)) - 40), y = Math.round(H * c.y), w = c.w;
+      g.globalAlpha = pal.star ? 0.5 : 0.85;
+      g.fillRect(x, y, w, 3); g.fillRect(x + 4, y - 2, w - 9, 2); g.fillRect(x + Math.floor(w / 3), y - 4, Math.floor(w / 3), 2);
+      g.globalAlpha = pal.star ? 0.25 : 0.5; g.fillRect(x + 2, y + 3, w - 4, 1);
+    }
+    g.globalAlpha = 1;
+  }
+  const off = speed => Math.floor(scene.x * speed);
+  // a hill line: fills below the ridge; with a cap colour, whatever rises above the snow line is snow-capped
+  function drawRidge(g, W, H, speed, base, amps, color, cap, capLine) {
+    const o = off(speed);
+    for (let x = 0; x < W; x++) {
+      const h = Math.round(ridge(x + o, P, base, amps, H));
+      g.fillStyle = color; g.fillRect(x, h, 1, H - h);
+      if (cap && h < capLine) { g.fillStyle = cap; g.fillRect(x, h, 1, Math.max(1, Math.round(capLine - h + 1.5 + 1.5 * Math.sin((x + o) * 1.3)))); }   // solid down to a jagged snow line
+    }
+  }
+  function each(items, speed, pad, W, fn) {   // things standing on a scrolling layer, repeated every P pixels
+    const o = off(speed);
+    for (const it of items) for (let x = ((Math.round(it.x) - o) % P + P) % P - pad; x <= W + pad; x += P) fn(it, x, o);
+  }
+  function pine(g, x, base, h, col, hi, snow) {
+    for (let k = 0; k < h; k++) {
+      const w = Math.max(1, Math.floor((k + 2) / 2.2)) - ((k % 4 === 3) ? 1 : 0);   // layered boughs
+      g.fillStyle = col; g.fillRect(x - w, base - h + k, w * 2 + 1, 1);
+      if (hi && w > 1) { g.fillStyle = hi; g.fillRect(x + w, base - h + k, 1, 1); }
+      if (snow && k % 4 === 0 && w > 0) { g.fillStyle = snow; g.fillRect(x - w + 1, base - h + k, w * 2 - 1, 1); }
+    }
+    g.fillStyle = col; g.fillRect(x, base, 1, 2);
+  }
+
+  // ---- the scenes
+  const SCENE_DRAW = {
+    hills(g, W, H, pal, now, dt) {
+      drawSky(g, W, H, pal, H * 0.62); drawStars(g, pal, now, H * 0.5); drawShootingStar(g, pal, dt, W, H);
+      drawMoon(g, pal, W, H, pal.far); drawClouds(g, pal, W, H, 0.25);
+      drawRidge(g, W, H, 0.2, 0.46, [[0.07, 1, 0.3], [0.05, 3, 1.7], [0.025, 7, 0.9]], pal.far, pal.cap, H * 0.43, 9);
+      // a castle on the far hills, windows lit
+      each([{ x: 150 }], 0.2, 20, W, (it, x) => {
+        const b = Math.round(ridge(x + off(0.2), P, 0.46, [[0.07, 1, 0.3], [0.05, 3, 1.7], [0.025, 7, 0.9]], H)) + 2;
+        g.fillStyle = pal.castle;
+        g.fillRect(x - 10, b - 9, 21, 9); g.fillRect(x - 12, b - 15, 5, 15); g.fillRect(x + 8, b - 15, 5, 15); g.fillRect(x - 2, b - 20, 5, 11);
+        for (const tx of [x - 12, x - 10, x + 8, x + 10, x - 2, x + 2]) g.fillRect(tx, (tx === x - 2 || tx === x + 2) ? b - 22 : b - 17, 1, 2);
+        g.fillStyle = pal.win; for (const [wx, wy] of [[x - 10, b - 12], [x + 10, b - 12], [x, b - 16], [x - 5, b - 5], [x + 5, b - 5]]) { g.globalAlpha = 0.6 + 0.4 * Math.sin(now * 0.8 + wx); g.fillRect(wx, wy, 1, 2); }
+        g.globalAlpha = 1;
+      });
+      const midAmps = [[0.03, 2, 2.2], [0.02, 3, 0.4], [0.01, 7, 1.1]];
+      drawRidge(g, W, H, 0.55, 0.62, midAmps, pal.mid);
+      each(scene.st.trees, 0.55, 8, W, (t, x, o) => {
+        const base = Math.round(ridge(x + o, P, 0.62, midAmps, H));
+        if (t.bush) { g.fillStyle = pal.bush; g.fillRect(x - 3, base - 3, 7, 3); g.fillRect(x - 2, base - 5, 5, 2); g.fillStyle = pal.treeHi; g.fillRect(x + 1, base - 5, 1, 1); }
+        else pine(g, x, base, t.h, pal.tree, pal.treeHi);
+      });
+      const nearAmps = [[0.012, 3, 0.2], [0.008, 8, 2.4]];
+      drawRidge(g, W, H, 1.1, 0.8, nearAmps, pal.near);
+      each(scene.st.tufts, 1.1, 2, W, (t, x, o) => { const b = Math.round(ridge(x + o, P, 0.8, nearAmps, H)); g.fillStyle = pal.grass; g.fillRect(x, b - t.h, 1, t.h); if (t.h > 1) g.fillRect(x + 1, b - 1, 1, 1); });
+      each(scene.st.rocks, 1.1, 8, W, (rk, x, o) => { const b = Math.round(ridge(x + o, P, 0.8, nearAmps, H)); g.fillStyle = pal.near; g.fillRect(x, b - rk.h, rk.w, rk.h + 1); g.fillRect(x - 1, b - rk.h, rk.w + 2, 1); g.fillStyle = pal.grass; g.fillRect(x, b - rk.h, 1, rk.h); });
+      for (const f of scene.st.flies) {
+        f.y -= f.s * dt * 0.06; if (f.y < H * 0.45) { f.y = H + 2; f.x = Math.random() * W; }
+        const x = Math.round(f.x + Math.sin(now * 0.9 + f.p) * 3), y = Math.round(f.y), glow = 0.5 + 0.5 * Math.sin(now * 2.2 + f.p);
+        g.fillStyle = pal.fly; g.globalAlpha = 0.18 * glow; g.fillRect(x - 1, y - 1, 3, 3); g.globalAlpha = 0.5 + 0.5 * glow; g.fillRect(x, y, 1, 1);
+      }
+      g.globalAlpha = 1;
+    },
+    sea(g, W, H, pal, now, dt) {
+      const hz = Math.round(H * 0.56);
+      drawSky(g, W, H, pal, hz); drawStars(g, pal, now, hz - 10); drawShootingStar(g, pal, dt, W, H);
+      const { mx } = drawMoon(g, pal, W, H, pal.star ? pal.cloud : null); drawClouds(g, pal, W, H, 0.2);
+      // an island with a lighthouse on the horizon; its beam sweeps at night
+      each([{ x: 70 }], 0.15, 40, W, (it, x) => {
+        g.fillStyle = pal.island;
+        for (let i = -34; i <= 34; i++) { const h = Math.round(9 * Math.cos(i / 34 * Math.PI / 2) + (i > 0 ? 2 * Math.sin(i / 6) : 0)); g.fillRect(x + i, hz - h, 1, h); }
+        const tx = x - 8, tb = hz - 8;
+        g.fillStyle = pal.tower; g.fillRect(tx - 2, tb - 18, 5, 18); g.fillRect(tx - 3, tb - 20, 7, 2);
+        g.fillStyle = pal.stripe; g.fillRect(tx - 2, tb - 14, 5, 2); g.fillRect(tx - 2, tb - 7, 5, 2);
+        g.fillStyle = pal.lamp; g.fillRect(tx - 1, tb - 23, 3, 3); g.fillStyle = pal.stripe; g.fillRect(tx - 2, tb - 25, 5, 2);
+        if (pal.star) {   // the beam
+          const a = Math.sin(now * 0.9), len = 70, lx = tx, ly = tb - 22;
+          g.fillStyle = pal.lamp;
+          for (let i = 1; i < len; i++) { const spread = Math.max(1, Math.floor(i / 7)); g.globalAlpha = 0.16 * (1 - i / len) * Math.abs(a); g.fillRect(Math.round(lx + i * Math.sign(a || 1)), ly - spread, 1, spread * 2 + 1); }
+          g.globalAlpha = 1;
+        }
+      });
+      // the sea: darker rows toward you, moving wave glints, the moon's path shimmering
+      if (!scene.seaGrad || scene.seaKey !== pal.sea.join() + hz + H) {   // smooth water, no bands
+        const gr = g.createLinearGradient(0, hz, 0, H); pal.sea.forEach((c, i) => gr.addColorStop(i / (pal.sea.length - 1), c));
+        scene.seaGrad = gr; scene.seaKey = pal.sea.join() + hz + H;
+      }
+      g.fillStyle = scene.seaGrad; g.fillRect(0, hz, W, H - hz);
+      g.fillStyle = pal.wave;
+      for (const row of scene.st.rows) {
+        const t = row.k / 26, y = Math.round(hz + 2 + (H - hz) * t * t * 1.05); if (y >= H) continue;
+        const sp = 0.3 + t * 2.2, drift = Math.floor(now * 6 * sp + (row.k % 2 ? 40 : 0));
+        g.globalAlpha = 0.25 + 0.5 * t;
+        for (const d of row.dash) { const w = Math.max(1, Math.round(d.w * (0.5 + t * 1.5))); for (let x = ((Math.round(d.x) + drift) % P + P) % P - w; x < W; x += P) g.fillRect(x, y, w, 1); }
+      }
+      g.fillStyle = pal.glint;
+      for (let y = hz + 1; y < H - 8; y += 2) { const t = (y - hz) / (H - hz), w = Math.round((2 + t * 10) * (0.6 + 0.4 * Math.sin(now * 3 + y * 0.9))); g.globalAlpha = pal.star ? 0.5 * (1 - t * 0.6) : 0.35 * (1 - t); g.fillRect(mx - w + Math.round(Math.sin(now * 2 + y) * 2), y, w * 2, 1); }
+      g.globalAlpha = 1;
+      // a sailing boat drifting along the horizon
+      const bx = Math.round(((now * 3 + W * 0.45) % (W + 60)) - 30), by = hz + 6 + Math.round(Math.sin(now * 1.6));
+      g.fillStyle = pal.boat; g.fillRect(bx - 7, by, 15, 2); g.fillRect(bx - 5, by + 2, 11, 1); g.fillRect(bx, by - 14, 1, 14);
+      g.fillStyle = pal.sail; for (let k = 0; k < 11; k++) g.fillRect(bx + 1, by - 13 + k, Math.floor(k / 1.6) + 1, 1); for (let k = 0; k < 8; k++) g.fillRect(bx - Math.floor(k / 1.8) - 1, by - 10 + k, Math.floor(k / 1.8) + 1, 1);
+      // gulls by day
+      if (pal.bird) { g.fillStyle = pal.bird; for (const b of scene.st.birds) { const x = Math.round((b.x + now * 8 * b.s) % (W + 20)) - 10, y = Math.round(H * b.y + Math.sin(now * 2 + b.p) * 2), up = Math.sin(now * 6 + b.p) > 0; g.fillRect(x - 2, y - (up ? 1 : 0), 2, 1); g.fillRect(x + 1, y - (up ? 1 : 0), 2, 1); g.fillRect(x, y, 1, 1); } }
+      // rocks in the foreground
+      g.fillStyle = pal.rock;
+      for (let i = 0; i < 26; i++) { const h = Math.round(18 - i * 0.7 + 3 * Math.sin(i * 1.3)); g.fillRect(i, H - h, 1, h); g.fillRect(W - 1 - i, H - Math.round(h * 0.7), 1, Math.round(h * 0.7)); }
+    },
+    desert(g, W, H, pal, now, dt) {
+      drawSky(g, W, H, pal, H * 0.64); drawStars(g, pal, now, H * 0.55); drawShootingStar(g, pal, dt, W, H);
+      drawMoon(g, pal, W, H, pal.far); drawClouds(g, pal, W, H, 0.15);
+      const farA = [[0.02, 1, 0.5], [0.015, 2, 2.1], [0.008, 5, 0.4]];
+      drawRidge(g, W, H, 0.2, 0.6, farA, pal.far);
+      each(scene.st.pyrs, 0.2, 30, W, (p, x, o) => {   // pyramids with a shaded side
+        const b = Math.round(ridge(x + o, P, 0.6, farA, H)) + 2;
+        for (let k = 0; k < p.s; k++) { g.fillStyle = pal.pyr; g.fillRect(x - k, b - p.s + k, k + 1, 1); g.fillStyle = pal.pyrShade; g.fillRect(x + 1, b - p.s + k, k, 1); }
+      });
+      const midA = [[0.025, 2, 1.2], [0.012, 5, 0.3]];
+      drawRidge(g, W, H, 0.5, 0.7, midA, pal.mid);
+      // a camel caravan walking along the dunes
+      const cx0 = Math.round(W - ((now * 4) % (W + 80))), step = Math.sin(now * 5) > 0 ? 1 : 0;
+      g.fillStyle = pal.camel;
+      for (let i = 0; i < 3; i++) {
+        const x = cx0 + i * 14, b = Math.round(ridge(x + off(0.5), P, 0.7, midA, H));
+        g.fillRect(x, b - 6, 7, 2); g.fillRect(x + 2, b - 8, 3, 2); g.fillRect(x - 2, b - 8, 2, 4); g.fillRect(x - 3, b - 9, 2, 2);
+        g.fillRect(x, b - 4, 1, 4 - step); g.fillRect(x + 6, b - 4, 1, 3 + step); g.fillRect(x + 2, b - 4, 1, 3 + step); g.fillRect(x + 4, b - 4, 1, 4 - step);
+      }
+      const nearA = [[0.02, 3, 0.2], [0.01, 7, 2.4]];
+      drawRidge(g, W, H, 1.0, 0.84, nearA, pal.near);
+      each(scene.st.cacti, 1.0, 8, W, (c, x, o) => {
+        const b = Math.round(ridge(x + o, P, 0.84, nearA, H));
+        g.fillStyle = pal.cactus; g.fillRect(x, b - c.h, 3, c.h + 1);
+        if (c.arm) { g.fillRect(x - 3, b - c.h + 4, 3, 2); g.fillRect(x - 3, b - c.h + 1, 2, 4); g.fillRect(x + 3, b - c.h + 6, 3, 2); g.fillRect(x + 4, b - c.h + 3, 2, 4); }
+      });
+    },
+    snow(g, W, H, pal, now, dt) {
+      drawSky(g, W, H, pal, H * 0.6); drawStars(g, pal, now, H * 0.5);
+      if (pal.aurora) {   // northern lights: soft moving curtains
+        for (let b = 0; b < 3; b++) {
+          g.fillStyle = pal.aurora[b];
+          for (let x = 0; x < W; x += 1) {
+            const y = Math.round(H * (0.14 + b * 0.05) + 8 * Math.sin(x / 26 + now * 0.35 + b * 1.7) + 4 * Math.sin(x / 9 - now * 0.5)), len = 10 + Math.round(8 * Math.sin(x / 13 + now * 0.4 + b));
+            g.globalAlpha = 0.09 + 0.05 * Math.sin(x / 7 + now + b); g.fillRect(x, y, 1, len);
+          }
+        }
+        g.globalAlpha = 1;
+      }
+      drawMoon(g, pal, W, H, pal.far); drawClouds(g, pal, W, H, 0.2);
+      drawRidge(g, W, H, 0.2, 0.44, [[0.09, 1, 0.8], [0.05, 3, 2.2], [0.03, 8, 0.3]], pal.far, pal.cap, H * 0.46, 9);
+      const midA = [[0.035, 2, 1.4], [0.02, 5, 0.2]];
+      drawRidge(g, W, H, 0.55, 0.62, midA, pal.mid, pal.midCap, H * 0.66, 3);
+      each(scene.st.pines, 0.55, 8, W, (t, x, o) => { const b = Math.round(ridge(x + o, P, 0.62, midA, H)); pine(g, x, b, t.h, pal.pine, null, pal.pineSnow); });
+      const nearA = [[0.012, 3, 0.4], [0.008, 7, 1.6]];
+      drawRidge(g, W, H, 1.0, 0.8, nearA, pal.near);
+      // a cabin with a warm window and chimney smoke
+      let chim = null;
+      each([{ x: 120 }], 1.0, 20, W, (it, x, o) => {
+        const b = Math.round(ridge(x + o, P, 0.8, nearA, H)) + 1;
+        g.fillStyle = pal.cabin; g.fillRect(x - 9, b - 9, 19, 9);
+        g.fillStyle = pal.roof; for (let k = 0; k < 7; k++) g.fillRect(x - 11 + k, b - 10 - k, 23 - k * 2, 1);
+        g.fillStyle = pal.cabin; g.fillRect(x + 5, b - 17, 3, 5);
+        g.fillStyle = pal.win; g.globalAlpha = 0.85 + 0.15 * Math.sin(now * 3); g.fillRect(x - 6, b - 6, 3, 3); g.fillRect(x + 3, b - 6, 3, 3); g.globalAlpha = 1;
+        g.fillStyle = pal.cabin; g.fillRect(x - 1, b - 6, 3, 6);
+        if (x > -20 && x < W + 20) chim = { x: x + 6, y: b - 18 };
+      });
+      const sm = scene.st.smoke;
+      if (chim && (sm.length < 14) && Math.random() < dt / 260) sm.push({ x: chim.x, y: chim.y, a: 1 });
+      g.fillStyle = pal.smoke;
+      for (let i = sm.length - 1; i >= 0; i--) {
+        const p = sm[i]; p.y -= dt * 0.006; p.x += dt * 0.003 + Math.sin(p.y / 4) * 0.05; p.a -= dt / 5200;
+        if (p.a <= 0 || !chim) { sm.splice(i, 1); continue; }
+        g.globalAlpha = 0.5 * p.a; const s = p.a > 0.6 ? 2 : 3; g.fillRect(Math.round(p.x) - 1, Math.round(p.y), s, s);
+      }
+      g.globalAlpha = 1;
+      g.fillStyle = pal.flake;   // falling snow
+      for (const f of scene.st.flakes) {
+        f.y += f.s * dt * 0.02; f.x += Math.sin(now * 0.8 + f.p) * 0.02 * dt / 16;
+        if (f.y > H) { f.y = -2; f.x = Math.random() * W; }
+        g.globalAlpha = f.big ? 0.9 : 0.6; g.fillRect(Math.round(f.x), Math.round(f.y), f.big ? 2 : 1, f.big ? 2 : 1);
+      }
+      g.globalAlpha = 1;
+    },
+    town(g, W, H, pal, now, dt) {
+      drawSky(g, W, H, pal, H * 0.66); drawStars(g, pal, now, H * 0.45); drawShootingStar(g, pal, dt, W, H);
+      drawMoon(g, pal, W, H, pal.far); drawClouds(g, pal, W, H, 0.2);
+      const gy = Math.round(H * 0.86), fy = Math.round(H * 0.72);
+      // far skyline with a clock tower
+      each(scene.st.far, 0.2, 24, W, (b, x) => {
+        g.fillStyle = pal.far; g.fillRect(x, fy - b.h, b.w, b.h + (gy - fy));
+        g.fillStyle = pal.farWin; g.globalAlpha = 0.6;
+        for (let wy = fy - b.h + 3; wy < fy + 6; wy += 4) for (let wx = x + 2; wx < x + b.w - 1; wx += 3) if (((wx * 7 + wy * 13 + Math.floor(b.wins * 97)) % 5) === 0) g.fillRect(wx, wy, 1, 1);
+        g.globalAlpha = 1;
+      });
+      each([{ x: 200 }], 0.2, 12, W, (t, x) => { g.fillStyle = pal.far; g.fillRect(x - 4, fy - 58, 9, 70); for (let k = 0; k < 8; k++) g.fillRect(x - 4 + Math.floor(k / 2), fy - 66 + k, 9 - Math.floor(k / 2) * 2, 1); g.fillStyle = pal.lamp; g.fillRect(x - 2, fy - 52, 5, 5); g.fillStyle = pal.far; g.fillRect(x, fy - 51, 1, 2); g.fillRect(x, fy - 50, 2, 1); });
+      // near houses: pitched roofs, chimneys, windows lighting up and going dark
+      each(scene.st.houses, 0.6, 32, W, (h, x) => {
+        const top = gy - h.h;
+        g.fillStyle = pal.house; g.fillRect(x, top, h.w, h.h);
+        if (h.roof) { g.fillStyle = pal.roof; const half = Math.ceil(h.w / 2) + 1; for (let k = 0; k < half; k++) g.fillRect(x - 1 + k, top - half + k + 1, h.w + 2 - k * 2, 1); }
+        else { g.fillStyle = pal.roof; g.fillRect(x - 1, top - 2, h.w + 2, 2); }
+        if (h.chim) { g.fillStyle = pal.house; g.fillRect(x + h.w - 5, top - (h.roof ? Math.ceil(h.w / 2) - 1 : 5), 3, 5); }
+        for (let wy = top + 3; wy < gy - 4; wy += 6) for (let wx = x + 3; wx < x + h.w - 3; wx += 5) {
+          const on = Math.sin(now * 0.15 + (h.seed + wx * 3 + wy) * 0.7) > -0.2;
+          g.fillStyle = on ? pal.win : pal.winOff; g.fillRect(wx, wy, 2, 3);
+        }
+      });
+      g.fillStyle = pal.ground; g.fillRect(0, gy, W, H - gy);
+      // street lamps with a glow
+      each([{ x: 30 }, { x: 110 }, { x: 190 }, { x: 270 }], 0.6, 10, W, (l, x) => {
+        g.fillStyle = pal.house; g.fillRect(x, gy - 14, 1, 14); g.fillRect(x - 1, gy - 15, 3, 1);
+        g.fillStyle = pal.lamp; g.fillRect(x - 1, gy - 17, 3, 2);
+        if (pal.star) { g.globalAlpha = 0.14; for (let r = 1; r < 7; r++) g.fillRect(x - r, gy - 16 - Math.floor(r / 2), r * 2 + 1, r); g.globalAlpha = 1; }
+      });
+      if (pal.star) {   // bats at night
+        g.fillStyle = pal.bat;
+        for (const b of scene.st.bats) { const x = Math.round((b.x + now * 9 * b.s) % (W + 20)) - 10, y = Math.round(H * b.y + Math.sin(now * 1.7 + b.p) * 5), up = Math.sin(now * 9 + b.p) > 0; g.fillRect(x - 1, y, 3, 1); g.fillRect(x - 3, y - (up ? 1 : -1), 2, 1); g.fillRect(x + 2, y - (up ? 1 : -1), 2, 1); }
+      }
+    },
+  };
+
+  function sceneDraw(dt, calm) {
+    if (!scene.ctx || !scene.key.startsWith(bgNow)) { if (!sceneSetup()) return; }   // the scene was switched: set it up first
+    const { ctx: g, W, H } = scene, pal = bgPalette();
+    if (!calm) scene.x += dt * 0.012;                        // walking speed (the land holds still on working screens)
+    (SCENE_DRAW[bgNow] || SCENE_DRAW.hills)(g, W, H, pal, performance.now() / 1000, dt);
+  }
+  // Home: full motion. Plan and the sheets: the land holds still and only small things move, about six frames a
+  // second, so a plan left open while playing costs next to no battery and nothing tugs at the eye.
   function sceneLoop(t) {
     const calm = !!state.item || document.body.classList.contains('locked');
     const dt = Math.min(calm ? 250 : 100, t - (scene.last || t)); scene.last = t;
@@ -2807,12 +3091,12 @@ function createSolver() {
   }
   function sceneShow() {
     if (!sceneSetup()) return;
-    if (reduced || document.hidden) { sceneDraw(0); return; }
+    if (reduced || document.hidden || !bgMotion) { sceneDraw(0, true); return; }
     if (!scene.raf && !scene.timer) { scene.last = 0; scene.raf = requestAnimationFrame(sceneLoop); }
   }
   function sceneHide() { if (scene.raf) cancelAnimationFrame(scene.raf); clearTimeout(scene.timer); scene.raf = 0; scene.timer = 0; }
   document.addEventListener('visibilitychange', () => { if (document.hidden) sceneHide(); else sceneShow(); });
-  addEventListener('resize', () => { if (!scene.el) return; scene.W = 0; sceneShow(); });
+  addEventListener('resize', () => { if (!scene.el) return; scene.key = ''; sceneShow(); });
 
   /* ================= tab bar: Home, Items, Plan, Guide, Help (like the game's bottom bar) ================= */
   const TAB_HOME = '<svg class="tab-glyph" viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M7 1h2v1h1v1h1v1h1v1h1v1h1v1h1v2h-1v6H9v-4H7v4H2V9H1V7h1V6h1V5h1V4h1V3h1V2h1z"/></svg>';
@@ -3954,6 +4238,7 @@ function createSolver() {
   function haptic(ms) { try { if (userTouched && navigator.vibrate) navigator.vibrate(ms || 8); } catch (e) { /* ignore */ } }
   function setTheme(t) {
     document.documentElement.setAttribute('data-theme', t);
+    if (scene.ctx) { scene.skyKey = ''; sceneShow(); }
     document.querySelector('meta[name="theme-color"]').setAttribute('content', t === 'light' ? '#dcdfeb' : '#0a0c12');
     try { localStorage.setItem(STORAGE.theme, t); } catch (e) { /* ignore */ }
   }
@@ -3984,6 +4269,8 @@ function createSolver() {
       case 'home': e.preventDefault(); if (ui.pickerSheet.hidden && ui.infoSheet.hidden && ui.guideSheet.hidden) goHome(); else closeSheets(); break;
       case 'skin': setSkin({ modern: 'retro', retro: 'pixel', pixel: 'game', game: 'modern' }[skin]); toast(SKINS[skin]); break;
       case 'skin-pick': setSkin(el.dataset.skin); toast(SKINS[skin]); break;
+      case 'bg-pick': setBg(el.dataset.bg); toast(`Background: ${BG_NAMES[bgPref]}${bgPref === 'auto' ? ' (a new one each time you open PORE)' : ''}`); break;
+      case 'bg-motion': setBgMotion(el.dataset.motion === 'on'); toast(bgMotion ? 'Background moves' : 'Background still: saves battery'); break;
       case 'icon-style': setIconStyle(iconStyle === 'modern' ? 'pixelhd' : 'modern'); toast(ICON_STYLES[iconStyle].label); break;
       case 'reload': location.reload(); break;
       case 'next-tip': {
@@ -4329,6 +4616,7 @@ function createSolver() {
     try { const saved = localStorage.getItem(STORAGE.icons); iconStyle = ICON_STYLES[saved] ? saved : DEFAULT_ICONS; } catch (e) { /* ignore */ }
     applyLook();
     try { setSkin(localStorage.getItem(STORAGE.skin)); } catch (e) { setSkin('modern'); }
+    bgLoad(); syncBgPicker();
     try { setFont(localStorage.getItem(STORAGE.font)); } catch (e) { setFont('vt323'); }
     ui.catGrid.innerHTML = Object.values(CATS).map(c => `<div><span>${c.label} <b>${c.pct}</b></span><small>${c.who}</small></div>`).join('');
     const date = (ITEM_DB.fetched || '').slice(0, 10);
