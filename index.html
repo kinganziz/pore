@@ -1455,6 +1455,12 @@
   .slot.slot.add::before { display: none; }
   .slot.slot.add { color: var(--soft); }
   .slot.slot.add svg { width: 30%; }
+  /* all the categories: the strip scrolls sideways when they don't fit */
+  .inv-cats { justify-content: flex-start; overflow-x: auto; scrollbar-width: none; gap: 2px; padding-left: 10px; padding-right: 10px; }
+  .inv-cats::-webkit-scrollbar { display: none; }
+  .inv-cat { flex: 0 0 auto; width: 42px; }
+  .inv-cat .pixel { width: 24px; height: 24px; filter: none; transition: transform .15s; }
+  .inv-cat.on .pixel { transform: scale(1.18); }
 </style>
 </head>
 <body>
@@ -4842,27 +4848,30 @@ function createSolver() {
   // the whole bag: search on top, the slots and a slot editor, and the category icons right above the tab bar (like the game)
   function renderCharms(force) {
     if (!ui.charmsBody || (!force && ui.charmsSheet.hidden)) return;
-    const cats = [['all', 'All'], ['items', 'Items'], ['charms', 'Charms'], ['coins', 'Coins']];
+    // every category the bag can hold: all, each item type (like the game's filter row), charms and coins
+    const cats = [['all', 'All'], ...TYPES.map(t => ['t:' + t[0], t[1]]), ['charms', 'Charms'], ['coins', 'Coins']];
     ui.charmsBody.innerHTML = `<label class="inv-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></svg><input type="search" placeholder="Search by name" value="${esc(invQ)}" data-field="inv-q" aria-label="Search the inventory"></label>` +
       `<div id="invGrid"></div>`;
     // the category icons: a fixed strip at the foot of the sheet, right above the tab bar (like the game)
-    const catArt = { all: CAT_ALL, items: CAT_SWORD, charms: CAT_CLOVER, coins: CAT_COINS };   // small pixel icons drawn for the categories
-    document.getElementById('invCats').innerHTML = cats.map(([k, l]) => `<button type="button" role="tab" class="inv-cat ${invTab === k ? 'on' : ''}" data-action="inv-tab" data-tab="${k}" aria-selected="${invTab === k}" aria-label="${l}" title="${l}">${catArt[k]}</button>`).join('');
+    const catArt = k => ({ all: CAT_ALL, items: CAT_SWORD, charms: CAT_CLOVER, coins: CAT_COINS })[k] || filterIcon(k.slice(2));   // item types use the item list's type icons
+    document.getElementById('invCats').innerHTML = cats.map(([k, l]) => `<button type="button" role="tab" class="inv-cat ${invTab === k ? 'on' : ''}" data-action="inv-tab" data-tab="${k}" aria-selected="${invTab === k}" aria-label="${l}" title="${l}">${catArt(k)}</button>`).join('');
+    const on = document.querySelector('#invCats .inv-cat.on'); if (on) on.scrollIntoView({ block: 'nearest', inline: 'center' });
     invRenderGrid();
   }
   function invRenderGrid() {
     const box = document.getElementById('invGrid'); if (!box) return;
     const q = invQ.trim().toLowerCase(), hit = name => !q || name.toLowerCase().includes(q);
-    const show = k => invTab === 'all' || invTab === k;
+    const show = k => invTab === 'all' || invTab === k || (k === 'items' && invTab.startsWith('t:'));
+    const typeOk = it => !invTab.startsWith('t:') || it.type === invTab.slice(2);
     let grid = '', editor = '', hint = '';
     if (show('coins')) for (const k of ['gold', 'wb']) { const nm = k === 'gold' ? 'Gold' : 'WB tokens'; if (hit(nm)) grid += invSlot(k, INV_COIN_SVG[k], inv[k] != null ? (inv[k] >= 1000 ? invQty(inv[k]) : inv[k] + '') : '', { cls: inv[k] == null ? 'blank' : '', glow: k === 'gold' ? '#f6c453' : '#b78cff', label: nm }); }
     if (show('charms')) for (const c of CHARMS) if (hit(c.name)) grid += invSlot(c.key, iconSVG(c.key), charmStock[c.key] ? invQty(charmStock[c.key]) : '', { cls: charmOff.has(c.key) ? 'off' : '', glow: '#ff9d3c', label: c.name, lv: '×' + c.factor });
     if (show('items')) {
-      const owned = Object.keys(inv.items).filter(k => ITEM_BY_KEY.has(k)).map(k => ITEM_BY_KEY.get(k)).filter(it => hit(it.name)).sort((a, b) => a.name.localeCompare(b.name));
+      const owned = Object.keys(inv.items).filter(k => ITEM_BY_KEY.has(k)).map(k => ITEM_BY_KEY.get(k)).filter(it => hit(it.name) && typeOk(it)).sort((a, b) => a.name.localeCompare(b.name));
       grid += owned.map(it => invSlot(it.key, iconSVG(it.key), invQty(inv.items[it.key] || 0), { cls: inv.items[it.key] ? '' : 'blank', glow: '#3aa84a', label: it.name, lv: 'I' })).join('');
       if (!q) grid += `<button type="button" class="slot add" data-action="inv-add" aria-label="Add an item" title="Add an item"><svg viewBox="0 0 8 8" shape-rendering="crispEdges"><path fill="currentColor" d="M3 0h2v3h3v2H5v3H3V5H0V3h3z"/></svg></button>`;
     }
-    hint = { all: 'Everything you own. Plans fill themselves in and check against it; ticking a step uses things up.', items: 'Base (P1) copies you own. Tap + to add an item.', charms: 'Tap a charm to set your stock or keep it out of plans.', coins: 'Gold pays fees, world boss (WB) tokens pay boss weapons. Empty = not tracked.' }[invTab];
+    hint = invTab.startsWith('t:') ? `${(TYPES.find(t => 't:' + t[0] === invTab) || [0, 'Items'])[1]} you own (base copies). Tap + to add one.` : { all: 'Everything you own. Plans fill themselves in and check against it; ticking a step uses things up.', items: 'Base (P1) copies you own. Tap + to add an item.', charms: 'Tap a charm to set your stock or keep it out of plans.', coins: 'Gold pays fees, world boss (WB) tokens pay boss weapons. Empty = not tracked.' }[invTab];
     const it = invSel && ITEM_BY_KEY.get(invSel), c = invSel && CHARMS.find(x => x.key === invSel);
     if (it && invSel in inv.items) editor = `<div class="inv-edit"><div class="ie-head">${iconSVG(it.key)}<b>${esc(it.name)}</b><small>base copies (P1)</small></div>${invStepper('inv-item', it.key, inv.items[it.key] || 0, it.name + ' base copies')}` +
       `<div class="ie-acts"><button type="button" data-action="pick" data-key="${it.key}">Plan it ›</button><button type="button" class="danger" data-action="inv-del" data-key="${it.key}">Remove</button></div></div>`;
@@ -4947,7 +4956,7 @@ function createSolver() {
         else { const n = Math.max(0, (charmStock[k] || 0) + d); if (n) charmStock[k] = n; else delete charmStock[k]; saveJSON(STORAGE.cstock, charmStock); if (state.item) renderResults(); if (!ui.guideSheet.hidden) renderGuide(); }
         haptic(5); renderCharms(); break;
       }
-      case 'inv-add': invAdding = true; closeCharms({ fromHistory: true }); openPicker({ fromHistory: true }); replaceEntry({ sheet: 'picker' }); toast('Pick the item you own'); break;
+      case 'inv-add': invAdding = true; if (invTab.startsWith('t:')) picker.type = invTab.slice(2); closeCharms({ fromHistory: true }); openPicker({ fromHistory: true }); replaceEntry({ sheet: 'picker' }); toast('Pick the item you own'); break;
       case 'inv-del': delete inv.items[el.dataset.key]; invSel = null; invSave(); renderCharms(); if (state.item === el.dataset.key) { state.stock = 0; persist(); renderResults(); } break;
       case 'clear-search': picker.q = ''; ui.searchInput.value = ''; el.hidden = true; renderPickerList(); ui.searchInput.focus(); break;
       case 'filter': picker.type = el.dataset.type; renderFilters(); renderPickerList(); break;
@@ -4957,7 +4966,7 @@ function createSolver() {
         if (invAdding) {   // adding to the inventory: back to it with the item listed
           invAdding = false;
           if (!(el.dataset.key in inv.items)) { inv.items[el.dataset.key] = 0; invSave(); }
-          if (invTab !== 'all') invTab = 'items'; invSel = el.dataset.key;
+          if (invTab !== 'all' && !invTab.startsWith('t:')) invTab = 'all'; invSel = el.dataset.key;
           closePicker({ fromHistory: true }); openCharms({ fromHistory: true }); replaceEntry({ sheet: 'charms' });
           setTimeout(() => { const f = document.querySelector(`[data-field="inv-item"][data-key="${el.dataset.key}"]`); if (f) f.focus(); }, 60);
           break;
