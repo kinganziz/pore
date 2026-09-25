@@ -184,7 +184,7 @@ function parseSvg(svg) {
   ops.forEach((o, i) => {
     const fill = ramp(o.fill), stroke = ramp(o.stroke);
     const inkOf = s => (s && lum(s.mid) < 0.35 ? s.mid : null);
-    if (fill && o.op >= 0.3) layers.push({ kind: 'fill', subs: o.subs, ramp: fill, ink: inkOf(stroke), op: o.op });
+    if (fill && o.op >= 0.3) layers.push({ kind: 'fill', subs: o.subs, ramp: fill, ink: inkOf(stroke), op: o.op, rimmed: !!inkOf(stroke) && o.sw >= 1.2 });
     if (stroke && o.sw > 0) {
       const dark = lum(stroke.mid) < 0.3;
       if (fill && dark) return;                                   // a shape's outline: redrawn later
@@ -265,6 +265,19 @@ function compile(svg) {
   }
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (tint[y][x] && col[y][x])
     for (const li of tint[y][x]) col[y][x] = mix(col[y][x], layers[li].ramp.mid, Math.min(1, layers[li].op * 1.2));
+  // parts drawn with a dark outline over another part keep that outline where they overlap it (knee guards,
+  // visors, gems): the pixels of the part below that touch them take their ink
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const li = own[y][x]; if (li < 0) continue;
+    let rim = -1;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + dx, ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue;
+      const nj = own[ny][nx];
+      if (nj > li && layers[nj].rimmed && size[nj] >= 3) rim = Math.max(rim, nj);
+    }
+    if (rim >= 0) col[y][x] = hex(toHex(layers[rim].ink));
+  }
   // one clean outline around the silhouette, in the neighbouring part's own ink
   const out = col.map(r => r.slice());
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {

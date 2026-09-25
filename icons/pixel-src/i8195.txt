@@ -7,13 +7,14 @@ d #3a1e06
 e #ffd8a0
 f #c24e14
 g #f6b62e
-h #4cc8b4
-i #ffffff
-j #1c6c68
-k #1c100a
-l #b88a64
-m #7a4e32
-n #46291a
+h #082826
+i #4cc8b4
+j #ffffff
+k #1c6c68
+l #1c100a
+m #b88a64
+n #7a4e32
+o #46291a
 --
 ........................
 ........................
@@ -27,15 +28,15 @@ n #46291a
 ..............baabbbcb..
 .............bcbbbbbbcb.
 .........ddbbefbbbbbefb.
-.....bbbdggcecceeeeecfb.
-...bbeeeechheccccccccfb.
-..beecccfhiheccccccccfb.
-.beccccccchjeccccccccfb.
-.bcfffffffggcfffffffffb.
-klllllllllmglllllllllmk.
-kmmmmmmmmmmlmmmmmmmmmnk.
-.kmnnnnnnnnnnnnnmmmmnnk.
-..kkkkkkkkkkkkkkmnnnkk..
-................kkkk....
+.....bbbdghhecceeeeecfb.
+...bbeeeehiihccccccccfb.
+..beeccchijihccccccccfb.
+.becccccchikhccccccccfb.
+.bllllllllhhllllllllllb.
+lmmmmmmmmmngmmmmmmmmmnl.
+lnnnnnnnnnnmnnnnnnnnnol.
+.lnooooooooooooonnnnool.
+..llllllllllllllnoooll..
+................llll....
 ........................
 ........................

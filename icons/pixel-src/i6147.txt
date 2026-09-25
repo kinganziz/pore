@@ -7,10 +7,11 @@ d #371f0c
 e #b0600c
 f #fff2a6
 g #855b16
-h #ffffff
-i #ea3450
-j #ffb8c0
-k #8a1024
+h #360610
+i #ffffff
+j #ea3450
+k #ffb8c0
+l #8a1024
 --
 ........................
 ........................
@@ -21,11 +22,11 @@ k #8a1024
 .deffffcefcffceeffffced.
 .defccceefcgcceefccceed.
 .deceeeeefcccceeceeeeed.
-.aceeeeefcceeccceeeeeca.
-.affffffccehifccfffffea.
-.aceeeccccejkfcccceeeea.
-..aaaafccceikfccceaaaa..
-.....afccccffccccea.....
+.aceeeeefccehccceeeeeca.
+.affffffcceijhccfffffea.
+.aceeecccchklhcccceeeea.
+..aaaafccchjlhccceaaaa..
+.....afcccchhccccea.....
 .....afccccccccccea.....
 .....afccccccccccea.....
 .....afcggggggggcea.....
