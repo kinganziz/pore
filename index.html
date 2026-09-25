@@ -1828,36 +1828,24 @@
         <p class="why-name"><b>PORE</b> stands for <b>Plan Once, Reclaim Evenings</b>. And fittingly, to <i>pore over</i> something is to study it for hours: PORE pores over the wiki, the maps and the numbers, so you don't have to.</p>
       </div>
       <h3>How it works</h3>
-      <p>Refining combines two copies of the same item. The <b>base</b> item goes up one level and gains stats from the <b>material</b> item. A "perfect" refine uses two identical items, so a perfect P10 normally eats 512 base items (1 → 2 → 4 → … → 512).</p>
-      <p><b>World boss weapons</b> can only be refined up to <b>P5</b> (16 base items the standard way), so PORE lists them in their own group and caps their plans at P5. Their refining fees are paid in world boss tokens (WB) instead of gold: 125 at P2, 250 at P3, 375 at P4 and 500 at P5.</p>
-      <p>PORE searches every other way to combine items. Because stat gains are rounded down and every refine adds at least +2, weaker materials often reach the very same stats. The planner keeps only the cheapest way to reach each stat combination at each level and builds up to your target, so the answer is the cheapest plan under the chosen formula.</p>
-      <h3>Stat formula (per stat)</h3>
-      <div class="formula"><span class="nw">new = floor( base +</span> <span class="nw">max(2, material × rate) )</span></div>
-      <p>The result is one level above the base. The material can be any level up to the base level. Each stat uses the rate of its category:</p>
-      <div class="cat-grid" id="catGrid"></div>
-      <p style="margin-top:8px">Stats not listed on the wiki's refining page (elemental damage, mana regeneration, node or monster encounter chance, critical evade) are assigned a category by best guess. They are marked with a dashed outline on the item card and you can change the category there.</p>
-      <h3>±1 surprises and the formula lab</h3>
-      <p>The game sometimes lands one point off this formula, most likely because it evaluates the same maths in floating point, or applies one penalty ratio to every stat of a multi-stat item. PORE handles this three ways:</p>
+      <p>Refining combines two copies of the same item: the <b>base</b> goes up one level and gains stats from the <b>material</b>. Done the standard way, a perfect P10 takes <b>512</b> base items.</p>
+      <p>PORE looks at every other way to combine them. Weaker materials often give the very same stats, so the plan it finds usually needs far fewer base items. Pick an item, choose a level, and PORE walks you through each refine.</p>
+      <p><b>World boss weapons</b> go up to <b>P5</b> only, and their fees are paid in world boss tokens (WB) instead of gold.</p>
+      <h3>Reading a plan</h3>
       <ul>
-        <li><b>Record what you got.</b> Tap the pencil on any step and enter the real in-game result. PORE re-plans everything downstream with your number.</li>
-        <li><b>Safe planning.</b> The "Safe" switch in the Target card plans with the lowest result of every plausible variant, so no refine can come up short at a rounding boundary.</li>
-        <li><b>Formula lab.</b> Every recorded observation is tested against all candidate formulas. When one variant explains your observations better than the default, the lab shows it and you can switch to it.</li>
+        <li><b>Base items</b>: the plain, unrefined copies to collect. PORE keeps this number as low as it can.</li>
+        <li><b>Gold</b>: the refining fees for the whole plan.</li>
+        <li><b>Charms</b>: PORE uses the fewest charms that make each refine a sure success, and only the charms you switch on.</li>
+        <li><b>P4</b> is a level-4 item with perfect stats; <b>L4</b> is a level-4 item below perfect. Each one shows the exact stats it needs.</li>
+        <li><b>⚠ test this</b> marks a refine the game might land one point off. Do those first.</li>
       </ul>
-      <h3>What the plan counts</h3>
-      <ul>
-        <li><b>Base items (P1)</b>: unrefined copies you must collect. This is what PORE minimises.</li>
-        <li><b>Gold</b>: the sum of refining fees from the wiki table (250 gold at level 2 up to 3,000 gold at level 10).</li>
-        <li><b>Charm factor</b>: how much the base success chance must be multiplied to reach 100%. Charms stack multiplicatively, so a ×20 could be a ×4 Clover with a ×5 Horseshoe. Multi-refining divides the chance by the number of items in the batch (success = base × charm ÷ items), so a batch of N needs N times the factor, but only one set of charms per action. You can stack any number of charms (up to 5 types per refine) and they are used up either way, so PORE refines each batch in one action with the fewest charms that reach 100%, using only the charms you switch on.</li>
-      </ul>
+      <h3>If a result comes out different</h3>
+      <p>Tap the pencil on that step and enter what you got. PORE re-plans the rest around it. The <b>Safe</b> switch plans with a little margin, so no refine can come up short.</p>
       <h3>Items you already have</h3>
-      <p>Owned items are used for free wherever they fit, and their quantity is respected exactly for small inventories. With very large inventories PORE caps the search and slots the leftovers in greedily. The plan is then marked "approximate": still valid, possibly a little more expensive than the true optimum.</p>
-      <h3>Labels</h3>
-      <p><b>P4</b> means a level-4 item with perfect stats. <b>L4</b> means a level-4 item whose stats are below perfect. Every chip shows the exact stats the item must have, so you can check your inventory against it. <b>⚠ test this</b> marks a refine that sits on a rounding boundary: the plausible formula variants disagree there, so the game could give ±1. Test those first and record the result with the pencil.</p>
-      <h3>Data</h3>
-      <p>Items and stats come from the <a href="https://wiki.pixel-odyssey.app/" target="_blank" rel="noopener">official Pixel Odyssey wiki</a>; the icons are PORE's own pixel art (data fetched <span class="dataDate"></span>). Refining rules follow the wiki's <a href="https://wiki.pixel-odyssey.app/Mechanics/Refining" target="_blank" rel="noopener">Refining</a> page and the formula the community verified in-game. PORE is a fan-made tool by anz · <a href="https://github.com/kinganziz/pore" target="_blank" rel="noopener">source on GitHub</a>.</p>
+      <p>Add refined copies you own and PORE uses them for free wherever they fit. Counts you enter in Inventory show whether you can do a plan right now.</p>
+      <h3>Good to know</h3>
+      <p>Everything is saved on this device only. Item details come from the <a href="https://wiki.pixel-odyssey.app/" target="_blank" rel="noopener">Pixel Odyssey wiki</a>; the pictures are PORE's own. PORE is unofficial and not made by the game's developers.</p>
       <p class="credit">Made by <b>anz</b>, to give players their time back.</p>
-      <h3>App</h3>
-      <p>Pull-to-refresh is turned off so scrolling never reloads the page by accident. Your item, targets, charms and progress are saved on this device. New versions announce themselves with a "New version ready" message. To update by hand, use <b>Check for update</b> in Settings.</p>
     </div>
   </div>
 </div>
@@ -3336,8 +3324,8 @@ function createSolver() {
     const others = sameFormulaItems(item).length;
     const label = others ? `${esc(item.name)} <span class="rec-plus">+ ${others} same-formula item${others === 1 ? '' : 's'}</span>` : esc(item.name);
     const com = communityFor(item);
-    const comLine = com === null ? '' : com.length ? line('Community reports <span class="rec-plus">(GitHub, this formula)</span>', recordStats(com))
-      : `<div class="rec-none">No community reports for this formula yet. "Report on GitHub" shares yours with everyone.</div>`;
+    const comLine = com === null ? '' : com.length ? line('Other players <span class="rec-plus">(this formula)</span>', recordStats(com))
+      : `<div class="rec-none">No results from other players for this formula yet. "Share my results" adds yours.</div>`;
     return `<div class="record">${line(label, here)}${all.total !== here.total ? line('All items', all) : ''}${comLine}</div>`;
   }
 
@@ -4581,7 +4569,7 @@ function createSolver() {
       <div class="card" id="labCard">
         <div class="section-title"><h3>In-game record</h3><span class="hint">${total} refine${total === 1 ? '' : 's'} tested</span></div>
         ${recordHTML(item, obs)}
-        <div class="lab-intro">After each refine in-game, tap the pencil on its step: <b>✓ Exactly this</b> if it matched, or enter what you got. A different result re-plans your path and helps pin down the exact formula; "Report on GitHub" shares your record.</div>
+        <div class="lab-intro">After each refine in-game, tap the pencil on its step: <b>✓ Exactly this</b> if it matched, or enter what you got. A different result re-plans your path; "Share my results" lets other players benefit too.</div>
         ${suggestion}
         ${rows ? `<div class="list-title">Recorded refines${sameFormulaItems(item).length ? ' (shared by all same-formula items)' : ''}</div><div class="obs-list">${rows}</div>` : ''}
         <details class="detail" ${total ? 'open' : ''}>
@@ -4589,7 +4577,7 @@ function createSolver() {
           <div class="fit">${fitRows}</div>
         </details>
         <div class="btn-row" style="margin-top:12px">
-          <button class="btn small primary" type="button" data-action="obs-report" ${total ? '' : 'disabled'}>Report on GitHub</button>
+          <button class="btn small primary" type="button" data-action="obs-report" ${total ? '' : 'disabled'}>Share my results</button>
           <button class="btn small" type="button" data-action="obs-copy" ${total ? '' : 'disabled'}>Copy observations (JSON)</button>
           ${total ? `<button class="btn small ghost" type="button" data-action="obs-clear">Clear all</button>` : ''}
         </div>
@@ -5165,8 +5153,9 @@ function createSolver() {
     g.fillStyle = col('--muted'); g.font = `40px ${font}`;
     g.fillText(`${fmt(a.refines)} refines · ${feeText(item, a.gold)}`, pad + 60, pad + 790);
     // footer
-    g.fillStyle = col('--accent'); g.font = `44px ${disp}`; g.fillText('PORE', pad + 60, H - pad - 60);
-    g.fillStyle = col('--muted'); g.font = `36px ${font}`; g.fillText('kinganziz.github.io/pore', pad + 220, H - pad - 62);
+    g.fillStyle = col('--good'); g.font = `38px ${font}`; g.fillText('Less grind. More life.', pad + 60, H - pad - 75);
+    g.fillStyle = col('--accent'); g.font = `44px ${disp}`; g.fillText('PORE', pad + 60, H - pad - 25);
+    g.fillStyle = col('--muted'); g.font = `36px ${font}`; g.fillText('kinganziz.github.io/pore', pad + 220, H - pad - 27);
     return new Promise(ok => c.toBlob(ok, 'image/png'));
   }
   async function sharePlanImage() {
@@ -5996,7 +5985,7 @@ function createSolver() {
     try { setSkin(localStorage.getItem('pore.skin.chosen') ? localStorage.getItem(STORAGE.skin) : 'pixel'); } catch (e) { setSkin('pixel'); }
     bgLoad(); refreshBgStrips(); syncBgPicker();
     try { setFont(localStorage.getItem(STORAGE.font)); } catch (e) { setFont('vt323'); }
-    ui.catGrid.innerHTML = Object.values(CATS).map(c => `<div><span>${c.label} <b>${c.pct}</b></span><small>${c.who}</small></div>`).join('');
+    if (ui.catGrid) ui.catGrid.innerHTML = Object.values(CATS).map(c => `<div><span>${c.label} <b>${c.pct}</b></span><small>${c.who}</small></div>`).join('');
     const date = (ITEM_DB.fetched || '').slice(0, 10);
     if (ui.dataDate) ui.dataDate.textContent = `data ${date}`;
     document.querySelectorAll('.dataDate').forEach(el => el.textContent = date);
