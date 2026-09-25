@@ -1319,6 +1319,35 @@
   :root .topbar.topbar .icon-btn.icon-btn[aria-pressed="true"] { background: none !important; color: var(--accent) !important; box-shadow: none !important; }
   :root .topbar .icon-btn.icon-btn svg { filter: drop-shadow(1px 1px 0 rgba(0, 0, 0, .45)); }
   :root .topbar .icon-btn.icon-btn:active { transform: scale(.88) !important; }
+  /* ---------- inventory and the ready check ---------- */
+  .inv-h { margin: 18px 4px 8px; font-size: 16px; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; text-shadow: 1px 1px 0 rgba(0, 0, 0, .5); }
+  .inv-h small { color: var(--soft); text-transform: none; letter-spacing: 0; font-size: 12px; margin-left: 6px; text-shadow: none; }
+  .inv-coins { display: grid; gap: 6px; }
+  .inv-coin { display: grid; grid-template-columns: 28px 1fr 130px; align-items: center; gap: 10px; padding: 4px; }
+  .inv-coin-ic svg { width: 24px; height: 24px; display: block; filter: drop-shadow(1px 1px 0 rgba(0, 0, 0, .45)); }
+  .inv-coin-l { font-size: 16px; }
+  .inv-coin input, .inv-item input { background: none !important; border: 0 !important; border-bottom: 2px solid var(--line-2) !important; border-radius: 0 !important;
+    box-shadow: none !important; color: var(--text); text-align: right; padding: 4px 2px; width: 100%; }
+  .inv-coin input:focus, .inv-item input:focus { outline: none; border-bottom-color: var(--gold) !important; }
+  .inv-items { display: grid; gap: 2px; }
+  .inv-item { display: grid; grid-template-columns: 40px 1fr 70px 30px; align-items: center; gap: 10px; padding: 4px; }
+  .inv-item .pixel { width: 36px; height: 36px; filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, .45)); }
+  .inv-nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .inv-x { border: 0; background: none; color: var(--soft); opacity: .6; cursor: pointer; height: 34px; }
+  .inv-x svg { width: 11px; height: 11px; display: block; margin: 0 auto; }
+  .inv-x:hover { opacity: 1; color: var(--bad); }
+  .inv-empty { color: var(--soft); margin: 4px; }
+  .inv-add { justify-self: start; margin-top: 8px; }
+  .ready-card { display: grid; gap: 8px; }
+  .rc-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .rc-ok { color: var(--good); } .rc-short { color: var(--warn); } .rc-unk { color: var(--muted); font-weight: 400; }
+  .rc-lines { display: grid; gap: 4px; }
+  .rc-line { display: grid; grid-template-columns: 22px auto 1fr; align-items: center; gap: 8px; font-size: 13px; }
+  .rc-line .pixel { width: 20px; height: 20px; grid-column: 1; }
+  .rc-line span { grid-column: 2; }
+  .rc-line small { grid-column: 3; text-align: right; color: var(--muted); }
+  .rc-line.ok small { color: var(--good); } .rc-line.short small b { color: var(--warn); }
+  .proj-ready { color: var(--good); } .proj-short { color: var(--warn); }
 </style>
 </head>
 <body>
@@ -1419,7 +1448,7 @@
 <div class="sheet-backdrop" id="charmsSheet" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="charmsTitle">
     <div class="sheet-head">
-      <h2 id="charmsTitle">Charms</h2>
+      <h2 id="charmsTitle">Inventory</h2>
       <button class="icon-btn" type="button" data-action="close-charms" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     <div class="sheet-body" id="charmsBody"></div>
@@ -2689,6 +2718,84 @@ function createSolver() {
     return CHARMS.filter(x => c.use[x.key]).map(x => `${c.use[x.key] > 1 ? c.use[x.key] + '× ' : ''}${esc(x.name)}`).join(' + ') + ` (×${compactFactor(c.prod)})`;
   }
   let charmStock = {};
+  /* ---------- inventory: coins and base (P1) items you own; charms keep their own stock above ----------
+     gold / wb: null = not tracked. items[key] = base copies of that item. PORE fills a plan's "Base items in
+     stock" from it, checks every plan against it, and ticking a step uses up that step's base items, fee and
+     charms (only amounts you track); unticking gives back exactly what the tick took (log). */
+  let inv = { gold: null, wb: null, items: {}, log: {} };
+  const INV_KEY = 'pore.inv.v1';
+  function invLoad() { const v = loadJSON(INV_KEY, null); inv = Object.assign({ gold: null, wb: null, items: {}, log: {} }, v && typeof v === 'object' ? v : {}); }
+  function invSave() { saveJSON(INV_KEY, inv); }
+  const invTracked = k => k === 'gold' ? inv.gold != null : k === 'wb' ? inv.wb != null : false;
+  // what one step (a batch of refines) takes: fresh base items, the fee, and the charms of its one action
+  function stepNeeds(st, item) {
+    const fresh = nd => (nd.L === 1 && nd.k !== 1 ? 1 : 0);
+    const base = st.count * (fresh(st.base) + fresh(st.mat));
+    const fee = feeAt(item, st.L) * st.count, boss = isBossItem(item);
+    const c = charmFor(st), charms = c.combo ? Object.assign({}, c.combo.use) : {};
+    return { base, gold: boss ? 0 : fee, wb: boss ? fee : 0, charms };
+  }
+  function invStep(id, on, st) {
+    if (!last || !last.analysis || !state.item || state.item === 'custom') return;
+    st = st || (stepIndex && stepIndex.get(id)) || last.analysis.steps.find(x => stepId(x) === id);
+    if (!st) return;
+    const lk = doneKey() + '|' + id, key = state.item;
+    if (on) {
+      if (inv.log[lk]) return;
+      const need = stepNeeds(st, last.item), took = { base: 0, gold: 0, wb: 0, charms: {} };
+      if (inv.items[key] != null) { took.base = Math.min(inv.items[key], need.base); inv.items[key] -= took.base; }
+      if (inv.gold != null) { took.gold = Math.min(inv.gold, need.gold); inv.gold -= took.gold; }
+      if (inv.wb != null) { took.wb = Math.min(inv.wb, need.wb); inv.wb -= took.wb; }
+      for (const [k, n] of Object.entries(need.charms)) if (charmStock[k] > 0) { const t = Math.min(charmStock[k], n); took.charms[k] = t; charmStock[k] -= t; }
+      inv.log[lk] = took;
+    } else {
+      const took = inv.log[lk]; if (!took) return;
+      if (took.base) inv.items[key] = (inv.items[key] || 0) + took.base;
+      if (took.gold) inv.gold = (inv.gold || 0) + took.gold;
+      if (took.wb) inv.wb = (inv.wb || 0) + took.wb;
+      for (const [k, n] of Object.entries(took.charms || {})) charmStock[k] = (charmStock[k] || 0) + n;
+      delete inv.log[lk];
+    }
+    invSave(); saveJSON(STORAGE.cstock, charmStock);
+    if (key in inv.items) state.stock = inv.items[key];
+    renderCharms();
+  }
+  // the plan's stock follows the inventory (and a stock typed into a plan is kept in the inventory)
+  function invPull() {
+    const key = state.item; if (!key || key === 'custom') return;
+    if (key in inv.items) state.stock = inv.items[key];
+    else if (state.stock) { inv.items[key] = state.stock; invSave(); }
+  }
+  // what the steps not ticked yet still need, against what the inventory says you have
+  function readyCheck(item, steps, done) {
+    const need = { base: 0, gold: 0, wb: 0, charms: {} };
+    for (const st of steps) if (!done.has(stepId(st))) {
+      const n = stepNeeds(st, item);
+      need.base += n.base; need.gold += n.gold; need.wb += n.wb;
+      for (const [k, v] of Object.entries(n.charms)) need.charms[k] = (need.charms[k] || 0) + v;
+    }
+    const lines = [], short = [];
+    const have = { base: inv.items[item.key] != null ? inv.items[item.key] : null, gold: inv.gold, wb: inv.wb };
+    const line = (label, n, h, fmtN) => {
+      if (!n) return;
+      if (h == null) { lines.push({ label, text: `${fmtN(n)} needed`, cls: 'unk' }); return; }
+      const miss = Math.max(0, n - h);
+      lines.push({ label, text: miss ? `${fmtN(n)} needed · you have ${fmtN(h)} · <b>${fmtN(miss)} short</b>` : `${fmtN(n)} needed · you have ${fmtN(h)}`, cls: miss ? 'short' : 'ok' });
+      if (miss) short.push(`${fmtN(miss)} ${label.toLowerCase()}`);
+    };
+    line('Base items', need.base, have.base, fmt);
+    if (isBossItem(item)) line('WB tokens', need.wb, have.wb, fmt); else line('Gold', need.gold, have.gold, v => fmtGold(v));
+    const tracked = charmLimited();
+    for (const c of CHARMS) {
+      const n = need.charms[c.key]; if (!n) continue;
+      if (!tracked) { lines.push({ label: c.name, text: `${n} needed`, cls: 'unk', icon: c.key }); continue; }
+      const h = charmStock[c.key] || 0, miss = Math.max(0, n - h);
+      lines.push({ label: c.name, icon: c.key, text: miss ? `${n} needed · you have ${h} · <b>${miss} short</b>` : `${n} needed · you have ${h}`, cls: miss ? 'short' : 'ok' });
+      if (miss) short.push(`${miss} ${c.name}`);
+    }
+    const unknown = lines.some(l => l.cls === 'unk'), left = steps.filter(st => !done.has(stepId(st))).length;
+    return { lines, short, unknown, left, ready: !short.length && !unknown && left > 0 };
+  }
   const charmLimited = () => CHARMS.some(c => charmStock[c.key] > 0);
   // one refine action per recipe with the fewest charms; totals per charm and what your stock falls short of
   let charmCache = { key: null, val: null };
@@ -3365,20 +3472,21 @@ function createSolver() {
     jumpTo(0); renderAll(); scheduleSolve(0);
   }
   const TAB_PROJECTS = '<svg class="tab-glyph" viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M3 1h10v14H3v-1H2V2h1zM4 3v10h8V3zM5 4h6v1H5zM5 6h6v1H5zM5 8h4v1H5zM5 10h5v1H5z"/></svg>';
+  const TAB_BAG = '<svg class="tab-glyph" viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M6 1h4v1h1v2h2v1h1v9h-1v1H3v-1H2V5h1V4h2V2h1zM7 2v2h2V2zM4 6v7h8V6zM6 7h4v2H6z"/></svg>';
   const TAB_SETTINGS = '<svg class="tab-glyph" viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M7 0h2v2h1V1h2v2h1v2h2v2h-1v2h1v2h-2v2h-1v1h-2v-1H9v2H7v-2H6v1H4v-2H3v-2H1V9h1V7H1V5h2V3h1V1h2v1h1zM7 5v1H6v1H5v2h1v1h1v1h2v-1h1V9h1V7h-1V6H9V5z"/></svg>';
   function renderTabbar() {
     const tab = (id, icon, label, badge) => `<button class="tab" type="button" data-action="tab" data-tab="${id}"><span class="tab-icon">${icon}${badge ? `<i class="tab-badge">${badge}</i>` : ''}</span><span class="tab-label">${label}</span></button>`;
     ui.tabbar.innerHTML = tab('home', TAB_HOME, 'Home') +
       tab('items', iconSVG((ITEMS.find(it => it.name === 'Iron Sword') || ITEMS[0]).key), 'Items') +
       tab('projects', TAB_PROJECTS, 'Projects', projects.length || '') +
-      tab('charms', iconSVG((CHARMS.find(c => c.name === 'Clover') || CHARMS[0]).key), 'Charms') +
+      tab('inventory', TAB_BAG, 'Inventory') +
       tab('settings', TAB_SETTINGS, 'Settings');   // Help lives in the top bar (?)
     renderProjects();
     syncTabbar();
   }
   // which tab a screen belongs to: an open plan (and its guide) lives under Projects
   function currentTab() {
-    return !ui.pickerSheet.hidden ? 'items' : !ui.infoSheet.hidden ? 'help' : !ui.projectsSheet.hidden ? 'projects' : !ui.charmsSheet.hidden ? 'charms' : !ui.settingsSheet.hidden ? 'settings'
+    return !ui.pickerSheet.hidden ? 'items' : !ui.infoSheet.hidden ? 'help' : !ui.projectsSheet.hidden ? 'projects' : !ui.charmsSheet.hidden ? 'inventory' : !ui.settingsSheet.hidden ? 'settings'
       : (state.item || !ui.guideSheet.hidden) ? 'projects' : 'home';
   }
   let updateWaiting = false;   // a new version is installed and waits for a reload
@@ -3396,7 +3504,7 @@ function createSolver() {
   function replaceEntry(extra, url) { try { history.replaceState(navEntry(extra), '', url || location.href); } catch (e) { /* ignore */ } }
   function tabGo(id) {
     haptic(8);
-    const open = { items: !ui.pickerSheet.hidden, help: !ui.infoSheet.hidden, projects: !ui.projectsSheet.hidden, charms: !ui.charmsSheet.hidden, settings: !ui.settingsSheet.hidden, guide: !ui.guideSheet.hidden };
+    const open = { items: !ui.pickerSheet.hidden, help: !ui.infoSheet.hidden, projects: !ui.projectsSheet.hidden, inventory: !ui.charmsSheet.hidden, settings: !ui.settingsSheet.hidden, guide: !ui.guideSheet.hidden };
     if (open[id]) return;
     if (id === 'home') bgNext();   // Auto background: a new scene on every Home tap
     const inSheet = Object.values(open).some(Boolean);
@@ -3413,7 +3521,7 @@ function createSolver() {
     }
     else if (id === 'items') sheet('picker', openPicker);
     else if (id === 'projects') sheet('projects', openProjects);
-    else if (id === 'charms') sheet('charms', openCharms);
+    else if (id === 'inventory') sheet('charms', openCharms);
     else if (id === 'settings') sheet('settings', openSettings);
     else if (id === 'help') sheet('info', openInfo);
   }
@@ -3421,7 +3529,7 @@ function createSolver() {
   // Swipe sideways on an empty part of any screen to move between the tab pages (Home, Items, Projects, Charms, Settings).
   // Ignored where something scrolls sideways already, on inputs, at the screen edges (the phone's own back
   // gesture) and for mostly vertical moves.
-  const TAB_ORDER = ['home', 'items', 'projects', 'charms', 'settings'];
+  const TAB_ORDER = ['home', 'items', 'projects', 'inventory', 'settings'];
   let swipe = null;
   function swipeBlocked(el) {
     for (let n = el; n && n !== document.body; n = n.parentElement) {
@@ -3546,6 +3654,14 @@ function createSolver() {
     }
   }
 
+  let readyNow = null;
+  function readyHTML(rc) {
+    if (!rc || !rc.left) return '';
+    const head = rc.ready ? '<b class="rc-ok">✓ Ready: you have everything for the remaining refines</b>'
+      : rc.short.length ? `<b class="rc-short">Missing: ${rc.short.join(' · ')}</b>` : '<b class="rc-unk">Add what you own in Inventory to see whether you can do this now</b>';
+    return `<div class="card ready-card ${rc.ready ? 'ok' : rc.short.length ? 'short' : 'unk'}"><div class="rc-head">${head}<button class="mini" type="button" data-action="tab" data-tab="inventory">Inventory</button></div>` +
+      `<div class="rc-lines">${rc.lines.map(l => `<div class="rc-line ${l.cls}">${l.icon ? iconSVG(l.icon) : ''}<span>${esc(l.label)}</span><small>${l.text}</small></div>`).join('')}</div></div>`;
+  }
   function renderResults() {
     const item = last ? last.item : resolveItem();
     if (item) sceneShow();   // the same world keeps moving behind the plan, dimmed
@@ -3612,7 +3728,9 @@ function createSolver() {
     const groups = new Map();
     {
       const tot = a.steps.length, dn = a.steps.filter(st => done.has(stepId(st))).length;
-      if (currentProject() || dn > 0) upsertProject({ done: dn, total: tot });
+      const rc = readyCheck(item, a.steps, done);
+      readyNow = rc;
+      if (currentProject() || dn > 0) upsertProject({ done: dn, total: tot, ready: rc.ready ? 1 : rc.short.length ? 0 : null, short: rc.short.slice(0, 3).join(' · ') });
     }
     stepIndex = new Map();
     for (const st of a.steps) { if (!groups.has(st.L)) groups.set(st.L, []); groups.get(st.L).push(st); }
@@ -3732,6 +3850,7 @@ function createSolver() {
           <button class="btn small ghost" type="button" data-action="share-image" aria-label="Share image" title="Share image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="M21 16l-5-5-9 9"/></svg></button>
         </div>
       </div>
+      ${readyHTML(readyNow)}
 
       ${showLadder ? `<div class="card">
         <div class="section-title"><h3>Cost by target level</h3><span class="hint">tap a level to plan it</span></div>
@@ -4012,8 +4131,10 @@ function createSolver() {
     if (fromHistory) ui.pickerBody.scrollTop = picker.scroll || 0;   // same filters, search and position as before
     setTimeout(() => { if (matchMedia('(min-width: 720px)').matches) ui.searchInput.focus(); else ui.pickerSheet.querySelector('[data-action="close-picker"]').focus(); }, 50);
   }
+  let invAdding = false;
   function closePicker(opts) {
     if (ui.pickerSheet.hidden) return;
+    if (!(opts && opts.fromHistory && invAdding)) invAdding = false;
     if (!(opts && (opts.fromHistory || opts.keepHistory)) && sheetOnTop('picker')) { history.back(); return; }
     picker.scroll = ui.pickerBody.scrollTop;
     if (!(opts && opts.keepHistory)) compareMode = false;
@@ -4156,6 +4277,7 @@ function createSolver() {
   }
   function setDone(id, on) {
     const set = loadDone();
+    if (set.has(id) !== !!on) invStep(id, on);
     if (on) set.add(id); else set.delete(id);
     saveJSON(doneKey(), Array.from(set));
   }
@@ -4272,7 +4394,7 @@ function createSolver() {
         `<button class="proj-open" type="button" data-action="project-open" data-id="${esc(pr.id)}">${icon}` +
         `<span class="proj-main"><b>${esc(pr.name)} <small>→ P${pr.L}</small></b>` +
         `<span class="proj-bar"><i style="width:${pct}%"></i></span>` +
-        `<small>${pr.total ? `${pr.done || 0}/${pr.total} steps done` : 'not started'}${pr.star ? ' · ★' : ''}</small></span>` +
+        `<small>${pr.total ? `${pr.done || 0}/${pr.total} steps done` : 'not started'}${pr.star ? ' · ★' : ''}${pr.ready === 1 ? ' · <span class="proj-ready">✓ ready</span>' : pr.ready === 0 && pr.short ? ` · <span class="proj-short">short: ${esc(pr.short)}</span>` : ''}</small></span>` +
         `${i === 0 ? '<span class="proj-go">Continue ›</span>' : ''}</button>` +
         `<button class="proj-x" type="button" data-action="project-remove" data-id="${esc(pr.id)}" aria-label="Remove ${esc(pr.name)} from my projects" title="Remove from my projects"><svg viewBox="0 0 7 7" shape-rendering="crispEdges"><path fill="currentColor" d="M0 0h2v1h1v1h1V1h1V0h2v2H6v1H5v1h1v1h1v2H5V6H4V5H3v1H2v1H0V5h1V4h1V3H1V2H0z"/></svg></button></div>`;
     }).join('');
@@ -4509,13 +4631,14 @@ function createSolver() {
   // Undo: a snapshot of the ticks and recorded results taken just before a change; the toast offers to put it back.
   function undoPoint() {
     const key = last && last.sig ? doneKey() : null;
-    return { key, done: key ? loadJSON(key, []) : null, obs: JSON.stringify(observations) };
+    return { key, done: key ? loadJSON(key, []) : null, obs: JSON.stringify(observations), inv: JSON.stringify(inv), cstock: JSON.stringify(charmStock) };
   }
   function toastUndo(msg, snap) {
     toast(`${msg} · tap to undo`, () => {
       ui.toast.classList.remove('show'); ui.toast.onclick = null;
       const obsChanged = snap.obs !== JSON.stringify(observations);
       if (snap.key) saveJSON(snap.key, snap.done);
+      if (snap.inv) { inv = JSON.parse(snap.inv); invSave(); charmStock = JSON.parse(snap.cstock); saveJSON(STORAGE.cstock, charmStock); invPull(); renderCharms(); }   // what the ticks used comes back
       observations = JSON.parse(snap.obs); saveJSON(STORAGE.obs, observations);
       if (obsChanged) { last = null; renderItem(); renderTarget(); renderOwned(); persist(); scheduleSolve(0); }
       else { renderResults(); if (!ui.guideSheet.hidden) renderGuide(); }
@@ -4551,7 +4674,7 @@ function createSolver() {
     document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0a0c12');
     try { localStorage.setItem(STORAGE.theme, t === 'light' ? 'light' : 'dark'); } catch (e) { /* ignore */ }
   }
-  function renderAll() { renderItem(); renderTarget(); renderOwned(); renderResults(); persist(); renderTabbar(); }
+  function renderAll() { invPull(); renderItem(); renderTarget(); renderOwned(); renderResults(); persist(); renderTabbar(); }
   function afterChange() { renderTarget(); renderOwned(); persist(); scheduleSolve(); }
   function closeSheets() { closePicker(); closeInfo(); closeGuide(); closeProjects(); closeCharms(); closeSettings(); }
   // Projects and Settings: plain sheets with a history entry each, like Help
@@ -4572,13 +4695,20 @@ function createSolver() {
   // The charms inventory: which charms PORE may use (tap to switch one off) and, optionally, how many you have
   function renderCharms(force) {
     if (!ui.charmsBody || (!force && ui.charmsSheet.hidden)) return;
-    ui.charmsBody.innerHTML = `<p class="charms-intro">Tap a charm to switch it off if it's too rare to spend. PORE picks the fewest charms for every refine; they're used up either way.</p>` +
+    const coin = (k, label, icon) => `<label class="inv-coin"><span class="inv-coin-ic">${icon}</span><span class="inv-coin-l">${label}</span><input class="num" type="number" inputmode="numeric" min="0" step="1" value="${inv[k] != null ? inv[k] : ''}" placeholder="not tracked" data-field="inv-${k}" aria-label="${label} you have"></label>`;
+    const owned = Object.keys(inv.items).filter(k => ITEM_BY_KEY.has(k)).map(k => ITEM_BY_KEY.get(k)).sort((a, b) => a.name.localeCompare(b.name));
+    ui.charmsBody.innerHTML = `<p class="charms-intro">Keep what you own here: every plan fills itself in and checks whether you can do it. Ticking a step uses up its base items, fee and charms.</p>` +
+      `<h3 class="inv-h">Coins</h3><div class="inv-coins">${coin('gold', 'Gold', '<svg viewBox="0 0 8 8" shape-rendering="crispEdges"><path fill="#f6c453" d="M2 0h4v1h1v1h1v4H7v1H6v1H2V7H1V6H0V2h1V1h1z"/><path fill="#b8862a" d="M3 2h2v1H3zM3 5h2v1H3zM2 3h1v2H2z"/></svg>')}${coin('wb', 'WB tokens', '<svg viewBox="0 0 8 8" shape-rendering="crispEdges"><path fill="#b78cff" d="M3 0h2v1h1v1h1v1h1v2H7v1H6v1H5v1H3V7H2V6H1V5H0V3h1V2h1V1h1z"/><path fill="#ffffff" d="M3 2h1v1H3zM2 3h1v1H2z"/></svg>')}</div>` +
+      `<h3 class="inv-h">Base items <small>P1 copies you own</small></h3>` +
+      `<div class="inv-items">${owned.map(it => `<div class="inv-item">${iconSVG(it.key)}<span class="inv-nm">${esc(it.name)}</span><input class="num small" type="number" inputmode="numeric" min="0" step="1" value="${inv.items[it.key] || ''}" placeholder="0" data-field="inv-item" data-key="${it.key}" aria-label="${esc(it.name)} base copies"><button class="inv-x" type="button" data-action="inv-del" data-key="${it.key}" aria-label="Remove ${esc(it.name)}" title="Remove"><svg viewBox="0 0 7 7" shape-rendering="crispEdges"><path fill="currentColor" d="M0 0h2v1h1v1h1V1h1V0h2v2H6v1H5v1h1v1h1v2H5V6H4V5H3v1H2v1H0V5h1V4h1V3H1V2H0z"/></svg></button></div>`).join('') || '<p class="inv-empty">No items yet.</p>'}` +
+      `<button class="btn small inv-add" type="button" data-action="inv-add">+ Add an item</button></div>` +
+      `<h3 class="inv-h">Charms <small>tap one to keep it out of plans</small></h3>` +
       `<div class="charm-inv">${CHARMS.map(c => {
         const off = charmOff.has(c.key);
         return `<div class="ci ${off ? 'off' : 'on'}"><button type="button" class="ci-pick" data-action="charm" data-key="${c.key}" aria-pressed="${!off}" title="${esc(c.desc || c.name)}">${iconSVG(c.key)}<span class="cn">${esc(c.name)}</span><b>×${c.factor}</b></button>` +
           `<label class="ci-stock"><span>have</span><input class="num small" type="number" inputmode="numeric" min="0" step="1" value="${charmStock[c.key] || ''}" placeholder="–" data-field="cstock" data-key="${c.key}" aria-label="${esc(c.name)} in stock"></label></div>`;
       }).join('')}</div>` +
-      `<div class="charms-foot">${charmOff.size ? '<button class="mini" type="button" data-action="charm-all">Use all charms</button>' : ''}<small>Stock is optional: it only warns you when a plan needs more than you have.</small></div>`;
+      `<div class="charms-foot">${charmOff.size ? '<button class="mini" type="button" data-action="charm-all">Use all charms</button>' : ''}<small>Leave a count empty if you don't want PORE to track it.</small></div>`;
   }
   function openSettings(opts) { refreshBgStrips(); syncBgPicker(); openPlainSheet('settings', ui.settingsSheet, opts); }
   function closeSettings(opts) { closePlainSheet('settings', ui.settingsSheet, opts); }
@@ -4646,11 +4776,20 @@ function createSolver() {
       case 'close-projects': closeProjects(); break;
       case 'close-settings': closeSettings(); break;
       case 'close-charms': closeCharms(); break;
+      case 'inv-add': invAdding = true; closeCharms({ fromHistory: true }); openPicker({ fromHistory: true }); replaceEntry({ sheet: 'picker' }); toast('Pick the item you own'); break;
+      case 'inv-del': delete inv.items[el.dataset.key]; invSave(); renderCharms(); if (state.item === el.dataset.key) { state.stock = 0; persist(); renderResults(); } break;
       case 'clear-search': picker.q = ''; ui.searchInput.value = ''; el.hidden = true; renderPickerList(); ui.searchInput.focus(); break;
       case 'filter': picker.type = el.dataset.type; renderFilters(); renderPickerList(); break;
       case 'sort': picker.sort = el.dataset.sort; renderPickerList(); break;
       case 'picker-view': picker.view = ['grid', 'icons'].includes(el.dataset.view) ? el.dataset.view : 'list'; try { localStorage.setItem('pore.pickerview', picker.view); } catch (e2) { /* ignore */ } renderPickerList(); break;
       case 'pick':
+        if (invAdding) {   // adding to the inventory: back to it with the item listed
+          invAdding = false;
+          if (!(el.dataset.key in inv.items)) { inv.items[el.dataset.key] = 0; invSave(); }
+          closePicker({ fromHistory: true }); openCharms({ fromHistory: true }); replaceEntry({ sheet: 'charms' });
+          setTimeout(() => { const f = document.querySelector(`[data-field="inv-item"][data-key="${el.dataset.key}"]`); if (f) f.focus(); }, 60);
+          break;
+        }
         haptic();
         if (compareMode) {
           compareMode = false;
@@ -4666,6 +4805,7 @@ function createSolver() {
         if (!last || !last.analysis) break;
         const L = Number(el.dataset.level), ids = last.analysis.steps.filter(st => st.L === L).map(stepId);
         const snap = undoPoint(), set = loadDone(), all = ids.every(x => set.has(x));
+        ids.forEach(x => { if (all ? set.has(x) : !set.has(x)) invStep(x, !all); });
         ids.forEach(x => (all ? set.delete(x) : set.add(x)));
         saveJSON(doneKey(), Array.from(set)); haptic(12);
         const head = el.closest('.lvl-head'), at = head ? fxAt(head) : null;
@@ -4864,6 +5004,7 @@ function createSolver() {
       const set = loadDone();
       if (el.checked) set.add(el.dataset.step); else set.delete(el.dataset.step);
       saveJSON(doneKey(), Array.from(set));
+      invStep(el.dataset.step, el.checked);
       haptic(el.checked ? 12 : 6);
       const card = el.closest('.step'); if (card) card.classList.toggle('done', el.checked);
       const total = document.querySelectorAll('.step').length, done = document.querySelectorAll('.step.done').length;
@@ -4927,7 +5068,20 @@ function createSolver() {
     }
     if (f === 'stock') {
       state.stock = Math.max(0, Math.min(99999, Math.round(Number(el.value)) || 0));
+      if (state.item && state.item !== 'custom') { inv.items[state.item] = state.stock; invSave(); }   // kept in the inventory
       persist(); renderResults();
+      return;
+    }
+    if (f === 'inv-gold' || f === 'inv-wb') {
+      const k = f.slice(4), v = el.value.trim();
+      inv[k] = v === '' ? null : Math.max(0, Math.round(Number(v)) || 0);
+      invSave(); if (state.item) renderResults();
+      return;
+    }
+    if (f === 'inv-item') {
+      const n = Math.max(0, Math.min(99999, Math.round(Number(el.value)) || 0));
+      inv.items[el.dataset.key] = n; invSave();
+      if (state.item === el.dataset.key) { state.stock = n; persist(); renderResults(); }
       return;
     }
   });
@@ -4979,6 +5133,7 @@ function createSolver() {
     document.querySelectorAll('.dataDate').forEach(el => el.textContent = date);
     projects = loadJSON(STORAGE.projects, []);
     charmStock = loadJSON(STORAGE.cstock, {}) || {};
+    invLoad();
     charmOff = new Set((loadJSON(STORAGE.charmoff, []) || []).filter(k => CHARMS.some(c => c.key === k)));
     loadCommunity();   // the cached copy now, a refresh from GitHub in the background when it is older than 6 h
     document.getElementById('backupFile').addEventListener('change', e => {
