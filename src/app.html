@@ -25,6 +25,7 @@
     d.setAttribute('data-skin', 'modern'); d.setAttribute('data-finish', 'retro');   // every look has the 3D finish
     if (sk === 'pixel' || sk === 'game') d.setAttribute('data-flavor', sk);
     d.setAttribute('data-font', g('pore.font') === 'jersey' ? 'jersey' : 'vt323');   // VT323 is the default reading font
+    var lt = g('pore.light.v1'); if (lt === 'lit' || lt === 'soft') d.setAttribute('data-light', lt);   // Lighting: flat (none), lit, lit with soft icons
   })();
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1734,6 +1735,29 @@
   .home-continue { border: 0; background: none; padding: 2px 6px; font: inherit; font-size: 14px; color: #ffe08a; cursor: pointer; text-shadow: 1px 1px 0 rgba(0, 0, 0, .7); }
   .home-continue b { color: #fff; }
   :root[data-sky="day"] .home-continue { color: #9a4a00; text-shadow: 0 0 8px rgba(255, 255, 255, .8); } :root[data-sky="day"] .home-continue b { color: #1b1f33; }
+  /* ---------- Lighting: lit (panels raised, slots and fields sunk in, all lit from the top-left like the icons) ---------- */
+  :root[data-light] { --lit-hi: rgba(255, 255, 255, .13); --lit-lo: rgba(0, 0, 0, .38); --lit-drop: 3px 3px 0 rgba(0, 0, 0, .42);
+    --raised: inset 1px 1px 0 var(--lit-hi), inset -1px -1px 0 var(--lit-lo), var(--lit-drop);
+    --sunk: inset 2px 2px 0 rgba(0, 0, 0, .45), inset -1px -1px 0 rgba(255, 255, 255, .07); }
+  /* raised panels: cards, item cards, list rows, the results card */
+  :root[data-light] :is(.card, .ip-card, .map-row, .inv-row, .proj-open, .inv-back) { box-shadow: var(--raised) !important; }
+  :root[data-light] :is(.map-row, .inv-row) { background: color-mix(in srgb, var(--bg-2) 70%, transparent); margin-bottom: 4px; border-radius: 12px; }
+  :root[data-light] :is(.map-row, .inv-row):active { box-shadow: var(--sunk) !important; transform: translate(1px, 1px); }
+  /* sunk wells: item slots and tiles, picture frames, fields and number slots */
+  :root[data-light] .slot.slot { background: rgba(0, 0, 0, .3) !important; box-shadow: var(--sunk) !important; border-radius: 10px; overflow: visible; }
+  :root[data-light] .slot.slot.sel { box-shadow: var(--sunk), 0 0 0 2px var(--gold) !important; }
+  :root[data-light] :is(.place-tile .pt-pic, .npc-pic, .ir-ic) { background: rgba(0, 0, 0, .28); box-shadow: var(--sunk); border-radius: 10px; }
+  :root[data-light] .place-tile .pt-pic { padding: 4px; }
+  :root[data-light] :is(.inv-search, .home-search, .pick-search, .search) { background: rgba(0, 0, 0, .32) !important; box-shadow: var(--sunk) !important; border-color: rgba(255, 255, 255, .06) !important; }
+  :root[data-light] :is(.boss-stats > div, .hero .tile, .inv-stepper .num) { box-shadow: var(--sunk) !important; }
+  /* the category strip and the tab bar: raised keys, the chosen one pressed in */
+  :root[data-light] .inv-cats .inv-cat { border-radius: 10px; box-shadow: var(--raised); background: color-mix(in srgb, var(--bg-2) 80%, transparent); }
+  :root[data-light] .inv-cats .inv-cat.on { box-shadow: var(--sunk); background: rgba(0, 0, 0, .35); transform: translate(1px, 1px); }
+  :root[data-light] .tab:not(.on) .tab-icon { filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, .45)); }
+  :root[data-light] .tab.on { box-shadow: var(--sunk) !important; }
+  :root[data-light] .gm-opts button.on { box-shadow: var(--sunk); border-radius: 8px; }
+  /* soft icons: the same, with the icons a little calmer */
+  :root[data-light="soft"] svg.pixel { filter: saturate(.8) contrast(.95); }
 </style>
 </head>
 <body>
@@ -1860,6 +1884,9 @@
       </div></div>
       <div class="gm-row"><span class="gm-l">Screensaver <small>the scene fills the screen when you leave PORE open</small></span><div class="gm-opts" role="group" aria-label="Screensaver">
         <button type="button" data-action="saver" data-saver="0">Off</button><button type="button" data-action="saver" data-saver="60">1 min</button><button type="button" data-action="saver" data-saver="300">5 min</button>
+      </div></div>
+      <div class="gm-row"><span class="gm-l">Lighting <small>panels and slots lit like the icons</small></span><div class="gm-opts" role="group" aria-label="Lighting">
+        <button type="button" data-action="light" data-light="flat">Flat</button><button type="button" data-action="light" data-light="lit">Lit</button><button type="button" data-action="light" data-light="soft">Lit, soft icons</button>
       </div></div>
       <div class="gm-row"><span class="gm-l">Font</span><div class="gm-opts" role="group" aria-label="Font">
         <button type="button" data-action="font" data-font="jersey" style="font-family: 'Jersey 15', sans-serif">Jersey</button><button type="button" data-action="font" data-font="vt323" style="font-family: 'VT323', monospace">VT323</button>
@@ -2506,10 +2533,18 @@ __SOLVER_JS__
     if (topbar) document.documentElement.style.setProperty('--topbar-h', '0px');   // the menu gem floats: screens start at the very top   // exact: a rounded value left a hairline gap
   }
   let readFont = 'vt323';   // default reading font; Jersey 15 is the alternative (help page switch)
+  function lightNow() { return document.documentElement.getAttribute('data-light') || 'flat'; }
+  function setLight(v) {
+    const d = document.documentElement;
+    if (v === 'lit' || v === 'soft') d.setAttribute('data-light', v); else d.removeAttribute('data-light');
+    document.querySelectorAll('[data-action="light"]').forEach(b => b.classList.toggle('on', b.dataset.light === lightNow()));
+    try { localStorage.setItem('pore.light.v1', lightNow()); } catch (e) { /* ignore */ }
+  }
   function setFont(f) {
     readFont = f === 'jersey' ? 'jersey' : 'vt323';
     document.documentElement.setAttribute('data-font', readFont);
     document.querySelectorAll('[data-action="font"]').forEach(b => b.classList.toggle('on', b.dataset.font === readFont));
+    document.querySelectorAll('[data-action="light"]').forEach(b => b.classList.toggle('on', b.dataset.light === lightNow()));
     try { localStorage.setItem(STORAGE.font, readFont); } catch (e) { /* ignore */ }
     syncTopbar();
   }
@@ -5396,6 +5431,7 @@ __SOLVER_JS__
         el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
         break;
       }
+      case 'light': setLight(el.dataset.light); toast({ flat: 'Lighting: flat', lit: 'Lighting: lit', soft: 'Lighting: lit, soft icons' }[lightNow()]); break;
       case 'font': setFont(el.dataset.font); toast(readFont === 'vt323' ? 'Font: VT323' : 'Font: Jersey 15'); break;
       case 'check-update': {
         if (!swReg || updateWaiting) { toast(updateWaiting ? 'Updating…' : 'Reloading'); location.reload(); break; }   // a waiting update: take it now
