@@ -5287,7 +5287,7 @@ __SOLVER_JS__
     const goodArt = t => { const g = GOODS.find(x => x.name === (GOOD_TYPES.find(y => y[0] === t) || [])[3]) || GOODS.find(x => x.type === t); return g ? iconSVG(g.key) : ''; };
     const clover = CHARMS.find(c => c.name === 'Clover') || CHARMS[0];
     const allArt = () => `<span class="cat-quad">${['Iron Sword', 'Potion of Luck', 'Gold ore', 'Apple'].map(n => { const x = ITEMS.find(i => i.name === n) || GOODS.find(i => i.name === n); return x ? iconSVG(x.key) : ''; }).join('')}</span>`;
-    const catArt = k => ({ all: allArt(), maps: iconSVG('u-map'), npcs: iconSVG('n-merchant'), monsters: mobIcon('Green Slime', ''), chests: glyphIcon('chest'), encounters: glyphIcon('enc'), library: BOOK_ICON, bosses: bossIcon('Goblin King', ''), charms: clover ? iconSVG(clover.key) : '', coins: iconSVG('u-gold') })[k] || (k.startsWith('g:') ? goodArt(k.slice(2)) : filterIcon(k.slice(2)));   // item types use the item list's type icons
+    const catArt = k => ({ all: allArt(), maps: iconSVG('u-map'), npcs: iconSVG('n-merchant'), monsters: mobIcon('Green Slime', ''), chests: iconSVG('u-chest'), encounters: iconSVG('u-encounter'), library: iconSVG('u-library'), bosses: bossIcon('Goblin King', ''), charms: clover ? iconSVG(clover.key) : '', coins: iconSVG('u-gold') })[k] || (k.startsWith('g:') ? goodArt(k.slice(2)) : filterIcon(k.slice(2)));   // item types use the item list's type icons
     const strip = document.getElementById('invCats'), sx = strip.scrollLeft;
     strip.innerHTML = cats.map(([k, l]) => `<button type="button" role="tab" class="inv-cat ${invTab === k ? 'on' : ''}" data-action="inv-tab" data-tab="${k}" aria-selected="${invTab === k}" aria-label="${l}" title="${l}">${catArt(k)}<i class="cat-n" data-cat="${k}" hidden></i></button>`).join('');
     strip.scrollLeft = sx;   // stays where the player left it
@@ -5355,7 +5355,7 @@ __SOLVER_JS__
     if (invTab === 'chests' && !onChest) {   // the chests, smallest first, with a few of what they give and the key
       const list = CHEST_LIST.filter(c => !q || `${c.name} ${(anyItem(c.key) || {}).name || ''}`.toLowerCase().includes(q));
       box.innerHTML = (list.length ? placeList(list.map(c => { const kk = c.key && anyItem(c.key);
-        return { attrs: `data-action="inv-chest" data-chest="${esc(c.name)}"`, name: c.name, face: kk ? iconSVG(c.key, 'npc-face') : '', big: kk ? iconSVG(c.key, 'pt-face') : glyphIcon('chest'),
+        return { attrs: `data-action="inv-chest" data-chest="${esc(c.name)}"`, name: c.name, face: kk ? iconSVG(c.key, 'npc-face') : '', big: kk ? iconSVG(c.key, 'pt-face') : iconSVG('u-chest', 'pt-face'),
           pic: collage([...c.drops.entries()].sort((a, b) => (TIER[a[1]] || 0) - (TIER[b[1]] || 0))), sub: `${c.drops.size} items`, desc: kk ? `opens with ${esc(kk.name)}` : '' }; })) : '<p class="inv-hint">Nothing matches.</p>') +
         '<p class="inv-hint">Every chest, with the key that opens it. Tap one to see what it gives, common to epic.</p>';
       invRenderPop();
@@ -5447,9 +5447,9 @@ __SOLVER_JS__
     const mobStats = m => [['Power', m.power], ['HP', m.hp], ['Attack', m.atk], ['Defense', m.def], ['Speed', m.spd], ['Luck', m.luck]].filter(x => x[1]);
     const ch = onChest && CHESTS.get(invChest), en = onEnc && ENCS.get(invEnc);
     box.innerHTML = (onChest ? `<button type="button" class="inv-back" data-action="inv-chest-back">‹ All chests</button>` +
-      `<div class="npc-head">${ch.key && anyItem(ch.key) ? iconSVG(ch.key, 'npc-face') : glyphIcon('chest')}<small>${ch.key && anyItem(ch.key) ? `Opens with ${itemLink(ch.key)}` : 'A chest'} · ${ch.drops.size} items</small></div>` : '') +
+      `<div class="npc-head">${iconSVG('u-chest', 'npc-face')}<small>${ch.key && anyItem(ch.key) ? `Opens with ${itemLink(ch.key)}` : 'A chest'} · ${ch.drops.size} items</small></div>` : '') +
       (onEnc ? `<button type="button" class="inv-back" data-action="inv-enc-back">‹ All encounters</button>` +
-      `<div class="npc-head">${glyphIcon('enc').replace('class="pixel"', 'class="pixel npc-face"')}<small>${[...en.locs].map(l => MAP_KEYS.has(l) ? `<button type="button" class="ip-map" data-action="inv-place" data-q="${esc(l)}">${esc(l)}</button>` : esc(l)).join(', ') || 'while exploring'}</small></div>` +
+      `<div class="npc-head">${iconSVG('u-encounter', 'npc-face')}<small>${[...en.locs].map(l => MAP_KEYS.has(l) ? `<button type="button" class="ip-map" data-action="inv-place" data-q="${esc(l)}">${esc(l)}</button>` : esc(l)).join(', ') || 'while exploring'}</small></div>` +
       (en.desc ? `<p class="enc-desc">${esc(en.desc)}</p>` : '') : '') +
       (onMob ? `<button type="button" class="inv-back" data-action="inv-mob-back">‹ All monsters</button>` +
       `<div class="boss-head">${mobIcon(invMob, 'boss-pic')}<div><small>${esc(ELEMENT(mb.element))} monster${mb.locs.size ? ' · ' + [...mb.locs].map(l => MAP_KEYS.has(l) ? `<button type="button" class="ip-map" data-action="inv-place" data-q="${esc(l)}">${esc(l)}</button>` : esc(l)).join(', ') : ''}</small>${mb.desc ? `<p>${esc(mb.desc)}</p>` : ''}</div></div>` +

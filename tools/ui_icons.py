@@ -120,7 +120,47 @@ def map_(ic):
     ])
 
 
-ICONS = {"u-map": map_, "u-home": home, "u-projects": projects, "u-bag": bag, "u-settings": settings, "u-gold": gold, "u-wb": wb}
+def chest(ic):
+    """a wooden treasure chest with a domed lid, gold bands and a lock"""
+    band = C("#fff2a6", "#f6c030", "#b8780c", "#3a1e06")
+    return "".join([
+        shape(ic, "M8 32 L56 32 L56 56 L8 56 Z", WOOD, ic.lg(WOOD, 0, 0, 1, 1)),
+        shape(ic, "M8 32 C8 18 18 12 32 12 C46 12 56 18 56 32 Z", C("#f0b878", "#b8743e", "#7a4420", "#2a1406"), ic.lg(WOOD, 0, 0, 0.6, 1)),
+        shape(ic, "M8 30 L56 30 L56 36 L8 36 Z", band, ic.lg(band, 0, 0, 0, 1), sw=1.6),
+        shape(ic, "M14 14 L20 13 L20 56 L14 56 Z", band, sw=1.4), shape(ic, "M44 13 L50 14 L50 56 L44 56 Z", band, sw=1.4),
+        shape(ic, "M27 30 L37 30 L37 42 L27 42 Z", band, ic.lg(band), sw=1.6), dot(32, 36, 1.8, "#3a1e06"),
+        line("M24 18 C28 15 34 15 38 16", HL, 2, 0.6),
+    ])
+
+
+def encounter(ic):
+    """a speech bubble with a big exclamation mark: something is here"""
+    bub = C("#fffaea", "#f4e2b0", "#c9a36a", "#3a2410")
+    return "".join([
+        shape(ic, "M10 12 C10 8 12 6 16 6 L48 6 C52 6 54 8 54 12 L54 40 C54 44 52 46 48 46 L30 46 L18 58 L20 46 L16 46 C12 46 10 44 10 40 Z", bub, ic.lg(bub, 0, 0, 1, 1)),
+        shape(ic, "M28 12 L36 12 L34 32 L30 32 Z", C("#ffe27a", "#f6a020", "#b8600c", "#3a1a04"), sw=1.6),
+        circle(ic, 32, 39, 3.6, C("#ffe27a", "#f6a020", "#b8600c", "#3a1a04"), sw=1.6),
+        line("M15 12 L15 36", HL, 1.8, 0.6),
+    ])
+
+
+def library(ic):
+    """three books: two standing, one leaning, and a closed one on top"""
+    red, blue, green = C("#ff9a9a", "#d8404a", "#8a1822", "#2c0608"), C("#9ad0ff", "#3a7ad8", "#1e4088", "#0a1430"), C("#a8f0a0", "#3aa84a", "#1e6a28", "#0a260e")
+    page = C("#fffaf0", "#f4ead8", "#c8b89a", "#3a2a1a")
+    return "".join([
+        shape(ic, "M10 18 L22 18 L22 56 L10 56 Z", red, ic.lg(red, 0, 0, 1, 0)),
+        line("M10 24 L22 24 M10 50 L22 50", "#ffd23a", 2),
+        shape(ic, "M24 12 L36 12 L36 56 L24 56 Z", blue, ic.lg(blue, 0, 0, 1, 0)),
+        line("M24 18 L36 18 M24 50 L36 50", "#ffd23a", 2),
+        shape(ic, "M40 20 L50 16 L60 52 L50 56 Z", green, ic.lg(green, 0, 0, 1, 0)),
+        shape(ic, "M6 56 L58 56 L58 60 L6 60 Z", C("#c8905a", "#8a5a2a", "#5a3414", "#2a1406"), sw=1.6),
+        shape(ic, "M26 30 L34 30 L34 38 L26 38 Z", page, sw=1.2),
+        line("M13 22 L13 46", HL, 1.6, 0.6),
+    ])
+
+
+ICONS = {"u-chest": chest, "u-encounter": encounter, "u-library": library, "u-map": map_, "u-home": home, "u-projects": projects, "u-bag": bag, "u-settings": settings, "u-gold": gold, "u-wb": wb}
 
 
 def main() -> None:
