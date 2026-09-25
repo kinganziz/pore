@@ -2401,9 +2401,11 @@ __SOLVER_JS__
      gold / wb: null = not tracked. items[key] = base copies of that item. PORE fills a plan's "Base items in
      stock" from it, checks every plan against it, and ticking a step uses up that step's base items, fee and
      charms (only amounts you track); unticking gives back exactly what the tick took (log). */
-  let inv = { gold: null, wb: null, items: {}, log: {} };
+  let inv = { gold: null, wb: null, items: {}, log: {}, added: {} };   // added[key]: when you last started owning it (newest first in the bag)
   const INV_KEY = 'pore.inv.v1';
-  function invLoad() { const v = loadJSON(INV_KEY, null); inv = Object.assign({ gold: null, wb: null, items: {}, log: {} }, v && typeof v === 'object' ? v : {}); }
+  function invLoad() { const v = loadJSON(INV_KEY, null); inv = Object.assign({ gold: null, wb: null, items: {}, log: {}, added: {} }, v && typeof v === 'object' ? v : {}); if (!inv.added) inv.added = {}; }
+  // set an item's count; one that goes from none to some is stamped, so it comes first in the bag
+  function invSetItem(key, n) { if (n > 0 && !(inv.items[key] > 0)) inv.added[key] = Date.now(); inv.items[key] = n; }
   function invSave() { saveJSON(INV_KEY, inv); }
   const invTracked = k => k === 'gold' ? inv.gold != null : k === 'wb' ? inv.wb != null : false;
   // what one step (a batch of refines) takes: fresh base items, the fee, and the charms of its one action
@@ -4433,7 +4435,7 @@ __SOLVER_JS__
     if (show('items')) {
       // every item has a slot: the ones you own first (with their count), the rest in grey, like the charms
       const has = it => (inv.items[it.key] || 0) > 0;
-      const list = ITEMS.filter(it => it.key !== 'custom' && hit(it.name) && typeOk(it)).sort((a, b) => (has(b) - has(a)) || a.name.localeCompare(b.name));
+      const list = ITEMS.filter(it => it.key !== 'custom' && hit(it.name) && typeOk(it)).sort((a, b) => (has(b) - has(a)) || (has(a) ? (inv.added[b.key] || 0) - (inv.added[a.key] || 0) : 0) || a.name.localeCompare(b.name));   // owned first, the latest added on top
       grid += list.map(it => invSlot(it.key, iconSVG(it.key), has(it) ? invQty(inv.items[it.key]) : '', { cls: has(it) ? '' : 'off', glow: '#3aa84a', label: it.name, lv: has(it) ? 'I' : '' })).join('');
     }
     hint = invTab.startsWith('t:') ? `${(TYPES.find(t => 't:' + t[0] === invTab) || [0, 'Items'])[1]}: tap one to set how many base copies you own.` : { all: 'Tap anything to set how many you own; grey means none. Plans fill themselves in and check against it, and ticking a step uses things up.', items: 'Tap an item to set how many base (P1) copies you own.', charms: 'Tap a charm to set your stock or keep it out of plans.', coins: 'Gold pays fees, world boss (WB) tokens pay boss weapons. Empty = not tracked.' }[invTab];
@@ -4517,7 +4519,7 @@ __SOLVER_JS__
       case 'inv-sel': invSel = invSel === el.dataset.key ? null : el.dataset.key; haptic(6); invRenderGrid(); break;
       case 'inv-step': {
         const k = el.dataset.key, d = Number(el.dataset.d);
-        if (el.dataset.field === 'inv-item') { inv.items[k] = Math.max(0, (inv.items[k] || 0) + d); invSave(); if (state.item === k) { state.stock = inv.items[k]; persist(); renderResults(); } }
+        if (el.dataset.field === 'inv-item') { invSetItem(k, Math.max(0, (inv.items[k] || 0) + d)); invSave(); if (state.item === k) { state.stock = inv.items[k]; persist(); renderResults(); } }
         else { const n = Math.max(0, (charmStock[k] || 0) + d); if (n) charmStock[k] = n; else delete charmStock[k]; saveJSON(STORAGE.cstock, charmStock); if (state.item) renderResults(); if (!ui.guideSheet.hidden) renderGuide(); }
         haptic(5); renderCharms(); break;
       }
@@ -4814,7 +4816,7 @@ __SOLVER_JS__
     }
     if (f === 'stock') {
       state.stock = Math.max(0, Math.min(99999, Math.round(Number(el.value)) || 0));
-      if (state.item && state.item !== 'custom') { inv.items[state.item] = state.stock; invSave(); }   // kept in the inventory
+      if (state.item && state.item !== 'custom') { invSetItem(state.item, state.stock); invSave(); }   // kept in the inventory
       persist(); renderResults();
       return;
     }
@@ -4828,7 +4830,7 @@ __SOLVER_JS__
     if (f === 'inv-q') { invQ = el.value; invSel = null; invRenderGrid(); return; }
     if (f === 'inv-item') {
       const n = Math.max(0, Math.min(99999, Math.round(Number(el.value)) || 0));
-      inv.items[el.dataset.key] = n; invSave();
+      invSetItem(el.dataset.key, n); invSave();
       clearTimeout(invBadgeT); invBadgeT = setTimeout(() => { const k = el.dataset.key, pos = el.selectionStart; invRenderGrid(); const g = document.querySelector(`[data-field="inv-item"][data-key="${k}"]`); if (g && document.activeElement !== g) { g.focus(); try { g.setSelectionRange(pos, pos); } catch (e) { /* number inputs */ } } }, 700);
       if (state.item === el.dataset.key) { state.stock = n; persist(); renderResults(); }
       return;
