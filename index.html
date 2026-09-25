@@ -1289,6 +1289,35 @@
   #projectsBody .proj-x svg { width: 12px; height: 12px; display: block; margin: 0 auto; }   /* a square pixel cross (the font's x was tall and narrow) */
   #projectsBody .proj-x:hover, #projectsBody .proj-x:focus-visible { opacity: 1; color: var(--bad); }
   @media (prefers-reduced-motion: reduce) { #projectsBody .proj-open::before { animation: none; } }
+  /* ---------- Charms: a frameless inventory, like Projects ---------- */
+  #charmsSheet .sheet, #charmsSheet .sheet-head .icon-btn { border: 0 !important; box-shadow: none !important; }
+  #charmsSheet .sheet-head .icon-btn { background: none !important; position: absolute; right: 10px; color: var(--muted); }
+  #charmsSheet .sheet-head { justify-content: center; position: relative; padding-top: 18px; }
+  #charmsSheet .sheet-head h2 { flex: 0 1 auto; text-align: center; font-size: 24px; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); text-shadow: 2px 2px 0 rgba(0, 0, 0, .55); }
+  .charms-intro { margin: 0 4px 14px; text-align: center; color: var(--muted); font-size: 14px; }
+  .charm-inv { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 14px 8px; }
+  .ci { display: grid; justify-items: center; gap: 6px; }
+  .ci-pick { display: grid; justify-items: center; gap: 2px; width: 100%; padding: 8px 4px 6px; border: 0; border-radius: 14px; background: none; color: var(--text); cursor: pointer;
+    transition: transform .12s, background .15s, opacity .2s, filter .2s; }
+  .ci-pick .pixel { width: 52px; height: 52px; filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, .45)); transition: transform .2s; }
+  .ci.on .ci-pick { background: radial-gradient(60% 55% at 50% 38%, color-mix(in srgb, var(--gold) 22%, transparent), transparent 75%); }
+  .ci.on .ci-pick .pixel { animation: hb-bob 1.8s steps(4, jump-none) infinite alternate; }
+  .ci-pick .cn { font-size: 14px; text-shadow: 1px 1px 0 rgba(0, 0, 0, .5); }
+  .ci-pick b { font-size: 13px; color: var(--gold); }
+  .ci.off .ci-pick { opacity: .38; filter: grayscale(.8); }
+  .ci.off .ci-pick .cn { text-decoration: line-through; }
+  .ci-pick:active { transform: scale(.94); }
+  .ci-stock { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--soft); }
+  .ci-stock input { width: 48px; text-align: center; background: none !important; border: 0 !important; border-bottom: 2px solid var(--line-2) !important; border-radius: 0 !important;
+    box-shadow: none !important; color: var(--text); padding: 2px 0; }
+  .ci-stock input:focus { outline: none; border-bottom-color: var(--gold) !important; }
+  .charms-foot { display: grid; justify-items: center; gap: 8px; margin: 18px 4px 8px; text-align: center; color: var(--soft); }
+  @media (prefers-reduced-motion: reduce) { .ci.on .ci-pick .pixel { animation: none; } }
+  /* ---------- top bar: icons only, no frames; a switched-on control shows in the accent colour ---------- */
+  :root .topbar .icon-btn.icon-btn { background: none !important; border: 0 !important; box-shadow: none !important; color: var(--text); width: 38px; }
+  :root .topbar.topbar .icon-btn.icon-btn[aria-pressed="true"] { background: none !important; color: var(--accent) !important; box-shadow: none !important; }
+  :root .topbar .icon-btn.icon-btn svg { filter: drop-shadow(1px 1px 0 rgba(0, 0, 0, .45)); }
+  :root .topbar .icon-btn.icon-btn:active { transform: scale(.88) !important; }
 </style>
 </head>
 <body>
@@ -1383,6 +1412,16 @@
       <button class="icon-btn" type="button" data-action="close-projects" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     <div class="sheet-body" id="projectsBody"></div>
+  </div>
+</div>
+
+<div class="sheet-backdrop" id="charmsSheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="charmsTitle">
+    <div class="sheet-head">
+      <h2 id="charmsTitle">Charms</h2>
+      <button class="icon-btn" type="button" data-action="close-charms" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="sheet-body" id="charmsBody"></div>
   </div>
 </div>
 
@@ -1972,7 +2011,7 @@ function createSolver() {
   /* ================= state ================= */
   const state = { item: null, custom: null, L: 10, w: 0, wl: 0, t: {}, o: [], k: {}, stock: 0, view: 'up', m: 'exact', cf: 0, ch: {} };
   const ui = {};
-  ['projectsSheet', 'projectsBody', 'settingsSheet', 'tabbar', 'itemBody', 'itemHint', 'targetCard', 'targetBody', 'targetHint', 'ownedCard', 'ownedBody', 'resultsBody', 'pickerSheet', 'pickerBody', 'filters', 'searchInput', 'infoSheet', 'guideSheet', 'guideBody', 'toast', 'fx', 'themeBtn', 'infoBtn', 'catGrid', 'dataDate']
+  ['projectsSheet', 'projectsBody', 'charmsSheet', 'charmsBody', 'settingsSheet', 'tabbar', 'itemBody', 'itemHint', 'targetCard', 'targetBody', 'targetHint', 'ownedCard', 'ownedBody', 'resultsBody', 'pickerSheet', 'pickerBody', 'filters', 'searchInput', 'infoSheet', 'guideSheet', 'guideBody', 'toast', 'fx', 'themeBtn', 'infoBtn', 'catGrid', 'dataDate']
     .forEach(id => ui[id] = document.getElementById(id));
   const picker = { q: '', type: 'ALL', sort: 'name', view: 'grid' };   // views: list, grid (icon + name + cost), icons
   try { const v = localStorage.getItem('pore.pickerview'); if (['list', 'grid', 'icons'].includes(v)) picker.view = v; } catch (e) { /* ignore */ }
@@ -2088,6 +2127,7 @@ function createSolver() {
     if (st.sheet !== 'guide') closeGuide({ fromHistory: true });
     if (st.sheet !== 'projects') closeProjects({ fromHistory: true });
     if (st.sheet !== 'settings') closeSettings({ fromHistory: true });
+    if (st.sheet !== 'charms') closeCharms({ fromHistory: true });
     const m = /[#&]s=([A-Za-z0-9_-]+)/.exec(location.hash);
     const want = m ? m[1] : '';
     const have = state.item ? b64url(JSON.stringify(encodeState(true))) : '';
@@ -3330,14 +3370,14 @@ function createSolver() {
     ui.tabbar.innerHTML = tab('home', TAB_HOME, 'Home') +
       tab('items', iconSVG((ITEMS.find(it => it.name === 'Iron Sword') || ITEMS[0]).key), 'Items') +
       tab('projects', TAB_PROJECTS, 'Projects', projects.length || '') +
-      tab('settings', TAB_SETTINGS, 'Settings') +
-      tab('help', TAB_HELP, 'Help');
+      tab('charms', iconSVG((CHARMS.find(c => c.name === 'Clover') || CHARMS[0]).key), 'Charms') +
+      tab('settings', TAB_SETTINGS, 'Settings');   // Help lives in the top bar (?)
     renderProjects();
     syncTabbar();
   }
   // which tab a screen belongs to: an open plan (and its guide) lives under Projects
   function currentTab() {
-    return !ui.pickerSheet.hidden ? 'items' : !ui.infoSheet.hidden ? 'help' : !ui.projectsSheet.hidden ? 'projects' : !ui.settingsSheet.hidden ? 'settings'
+    return !ui.pickerSheet.hidden ? 'items' : !ui.infoSheet.hidden ? 'help' : !ui.projectsSheet.hidden ? 'projects' : !ui.charmsSheet.hidden ? 'charms' : !ui.settingsSheet.hidden ? 'settings'
       : (state.item || !ui.guideSheet.hidden) ? 'projects' : 'home';
   }
   let updateWaiting = false;   // a new version is installed and waits for a reload
@@ -3355,7 +3395,7 @@ function createSolver() {
   function replaceEntry(extra, url) { try { history.replaceState(navEntry(extra), '', url || location.href); } catch (e) { /* ignore */ } }
   function tabGo(id) {
     haptic(8);
-    const open = { items: !ui.pickerSheet.hidden, help: !ui.infoSheet.hidden, projects: !ui.projectsSheet.hidden, settings: !ui.settingsSheet.hidden, guide: !ui.guideSheet.hidden };
+    const open = { items: !ui.pickerSheet.hidden, help: !ui.infoSheet.hidden, projects: !ui.projectsSheet.hidden, charms: !ui.charmsSheet.hidden, settings: !ui.settingsSheet.hidden, guide: !ui.guideSheet.hidden };
     if (open[id]) return;
     if (id === 'home') bgNext();   // Auto background: a new scene on every Home tap
     const inSheet = Object.values(open).some(Boolean);
@@ -3363,7 +3403,7 @@ function createSolver() {
     if (inSheet && id === 'home' && !state.item) { closeSheets(); return; }
     // anything else switches in place: the sheet is hidden without stepping back in history and the next screen
     // takes over its history entry, so the screen underneath never flashes up in between
-    if (inSheet) { closePicker({ fromHistory: true }); closeInfo({ fromHistory: true }); closeGuide({ fromHistory: true }); closeProjects({ fromHistory: true }); closeSettings({ fromHistory: true }); }
+    if (inSheet) { closePicker({ fromHistory: true }); closeInfo({ fromHistory: true }); closeGuide({ fromHistory: true }); closeProjects({ fromHistory: true }); closeCharms({ fromHistory: true }); closeSettings({ fromHistory: true }); }
     const sheet = (name, openFn) => { openFn({ fromHistory: inSheet }); if (inSheet) replaceEntry({ sheet: name }); };
     if (id === 'home') {
       if (!state.item) window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
@@ -3372,14 +3412,15 @@ function createSolver() {
     }
     else if (id === 'items') sheet('picker', openPicker);
     else if (id === 'projects') sheet('projects', openProjects);
+    else if (id === 'charms') sheet('charms', openCharms);
     else if (id === 'settings') sheet('settings', openSettings);
     else if (id === 'help') sheet('info', openInfo);
   }
 
-  // Swipe sideways on an empty part of any screen to move between the tab pages (Home, Items, Projects, Settings, Help).
+  // Swipe sideways on an empty part of any screen to move between the tab pages (Home, Items, Projects, Charms, Settings).
   // Ignored where something scrolls sideways already, on inputs, at the screen edges (the phone's own back
   // gesture) and for mostly vertical moves.
-  const TAB_ORDER = ['home', 'items', 'projects', 'settings', 'help'];
+  const TAB_ORDER = ['home', 'items', 'projects', 'charms', 'settings'];
   let swipe = null;
   function swipeBlocked(el) {
     for (let n = el; n && n !== document.body; n = n.parentElement) {
@@ -3397,7 +3438,8 @@ function createSolver() {
     const t = e.changedTouches[0], dx = t.clientX - swipe.x, dy = t.clientY - swipe.y, quick = performance.now() - swipe.at < 700;
     swipe = null;
     if (!quick || Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.8) return;
-    const i = TAB_ORDER.indexOf(currentTab()) + (dx < 0 ? 1 : -1);
+    const at = TAB_ORDER.indexOf(currentTab()); if (at < 0) return;   // Help is not a tab page
+    const i = at + (dx < 0 ? 1 : -1);
     if (i >= 0 && i < TAB_ORDER.length) tabGo(TAB_ORDER[i]);
   }, { passive: true });
 
@@ -4510,7 +4552,7 @@ function createSolver() {
   }
   function renderAll() { renderItem(); renderTarget(); renderOwned(); renderResults(); persist(); renderTabbar(); }
   function afterChange() { renderTarget(); renderOwned(); persist(); scheduleSolve(); }
-  function closeSheets() { closePicker(); closeInfo(); closeGuide(); closeProjects(); closeSettings(); }
+  function closeSheets() { closePicker(); closeInfo(); closeGuide(); closeProjects(); closeCharms(); closeSettings(); }
   // Projects and Settings: plain sheets with a history entry each, like Help
   function openPlainSheet(name, el, opts) {
     if (!el.hidden) return;
@@ -4524,6 +4566,19 @@ function createSolver() {
   }
   function openProjects(opts) { renderProjects(true); openPlainSheet('projects', ui.projectsSheet, opts); }
   function closeProjects(opts) { closePlainSheet('projects', ui.projectsSheet, opts); }
+  function openCharms(opts) { renderCharms(true); openPlainSheet('charms', ui.charmsSheet, opts); }
+  function closeCharms(opts) { closePlainSheet('charms', ui.charmsSheet, opts); }
+  // The charms inventory: which charms PORE may use (tap to switch one off) and, optionally, how many you have
+  function renderCharms(force) {
+    if (!ui.charmsBody || (!force && ui.charmsSheet.hidden)) return;
+    ui.charmsBody.innerHTML = `<p class="charms-intro">Tap a charm to switch it off if it's too rare to spend. PORE picks the fewest charms for every refine; they're used up either way.</p>` +
+      `<div class="charm-inv">${CHARMS.map(c => {
+        const off = charmOff.has(c.key);
+        return `<div class="ci ${off ? 'off' : 'on'}"><button type="button" class="ci-pick" data-action="charm" data-key="${c.key}" aria-pressed="${!off}" title="${esc(c.desc || c.name)}">${iconSVG(c.key)}<span class="cn">${esc(c.name)}</span><b>×${c.factor}</b></button>` +
+          `<label class="ci-stock"><span>have</span><input class="num small" type="number" inputmode="numeric" min="0" step="1" value="${charmStock[c.key] || ''}" placeholder="–" data-field="cstock" data-key="${c.key}" aria-label="${esc(c.name)} in stock"></label></div>`;
+      }).join('')}</div>` +
+      `<div class="charms-foot">${charmOff.size ? '<button class="mini" type="button" data-action="charm-all">Use all charms</button>' : ''}<small>Stock is optional: it only warns you when a plan needs more than you have.</small></div>`;
+  }
   function openSettings(opts) { refreshBgStrips(); syncBgPicker(); openPlainSheet('settings', ui.settingsSheet, opts); }
   function closeSettings(opts) { closePlainSheet('settings', ui.settingsSheet, opts); }
   function renderProjects(force) {
@@ -4589,6 +4644,7 @@ function createSolver() {
       case 'close-info': closeInfo(); break;
       case 'close-projects': closeProjects(); break;
       case 'close-settings': closeSettings(); break;
+      case 'close-charms': closeCharms(); break;
       case 'clear-search': picker.q = ''; ui.searchInput.value = ''; el.hidden = true; renderPickerList(); ui.searchInput.focus(); break;
       case 'filter': picker.type = el.dataset.type; renderFilters(); renderPickerList(); break;
       case 'sort': picker.sort = el.dataset.sort; renderPickerList(); break;
@@ -4644,8 +4700,8 @@ function createSolver() {
       case 'owned-qty': { const o = state.o[Number(el.dataset.idx)]; if (!o) return; o.q = Math.max(1, Math.min(999, o.q + Number(el.dataset.delta))); haptic(); afterChange(); break; }
       case 'view': state.view = el.dataset.view; persist(); renderResults(); break;
       case 'reset-progress': saveJSON(doneKey(), []); renderResults(); toast('Progress reset'); break;
-      case 'charm': { const k = el.dataset.key; if (charmOff.has(k)) charmOff.delete(k); else charmOff.add(k); saveJSON(STORAGE.charmoff, Array.from(charmOff)); haptic(); renderResults(); if (!ui.guideSheet.hidden) renderGuide(); break; }
-      case 'charm-all': charmOff.clear(); saveJSON(STORAGE.charmoff, []); haptic(); renderResults(); if (!ui.guideSheet.hidden) renderGuide(); break;
+      case 'charm': { const k = el.dataset.key; if (charmOff.has(k)) charmOff.delete(k); else charmOff.add(k); saveJSON(STORAGE.charmoff, Array.from(charmOff)); haptic(); renderResults(); renderCharms(); if (!ui.guideSheet.hidden) renderGuide(); break; }
+      case 'charm-all': charmOff.clear(); saveJSON(STORAGE.charmoff, []); haptic(); renderResults(); renderCharms(); if (!ui.guideSheet.hidden) renderGuide(); break;
       case 'share': share(); break;
       case 'share-image': sharePlanImage(); break;
       case 'copy-plan': copy(planText(), 'Plan copied'); break;
