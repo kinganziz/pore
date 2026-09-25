@@ -304,6 +304,17 @@ def sword_extra(ic, kind: str, cx, T, B, w) -> str:
     elif kind.startswith("glow"):
         color = kind.split(":", 1)[1] if ":" in kind else "#bff4ff"
         out += [sparkle(cx + w + 6, T + 10, 4, color), sparkle(cx - w - 5, T + 26, 3, color)]
+    elif kind == "maw":   # a mouth down the blade: dark slit, fangs from both sides, an eye near the guard
+        top, bot = T + 13, B - 9
+        out.append(f'<path d="M{f(cx)} {f(top)} C{f(cx + w * 0.75)} {f(top + 9)} {f(cx + w * 0.75)} {f(bot - 9)} {f(cx)} {f(bot)} '
+                   f'C{f(cx - w * 0.75)} {f(bot - 9)} {f(cx - w * 0.75)} {f(top + 9)} {f(cx)} {f(top)} Z" fill="#1a0606"/>')
+        y = top + 5
+        while y < bot - 4:
+            out.append(f'<path d="M{f(cx - w * 0.62)} {f(y - 2.2)} L{f(cx + 0.8)} {f(y)} L{f(cx - w * 0.62)} {f(y + 2.2)} Z" fill="#fff8e6"/>')
+            out.append(f'<path d="M{f(cx + w * 0.62)} {f(y + 0.3)} L{f(cx - 0.8)} {f(y + 2.5)} L{f(cx + w * 0.62)} {f(y + 4.7)} Z" fill="#fff8e6"/>')
+            y += 5
+        out.append(dot(cx, B - 4.5, 2.6, "#ffe24a"))
+        out.append(dot(cx, B - 4.5, 1.2, "#1a0606"))
     elif kind == "rock":
         for x, y, r in ((cx - w * 0.4, T + 18, 2.2), (cx + w * 0.3, T + 28, 2.6), (cx - w * 0.2, T + 38, 1.8)):
             out.append(dot(x, y, r, "#2c3442", 0.35))
@@ -327,7 +338,7 @@ def dagger(ic, blade, *args, **kw):
 
 def axe(ic, head, handle=None, kind="crescent", double=False, edge=None):
     handle = handle or PAL["wood"]
-    s = tube(ic, "M32 2 L32 70", handle, 5)
+    s = tube(ic, "M32 8 L32 70", handle, 5)
     heads = {
         "crescent": "M33 7 L20 4 C10 6 4 16 4 27 C4 35 8 41 12 43 C14 34 22 29 33 28 Z",
         "wedge": "M33 8 L16 3 C11 12 9 22 11 33 L33 27 Z",
@@ -339,7 +350,7 @@ def axe(ic, head, handle=None, kind="crescent", double=False, edge=None):
     if double:
         s.append(shape(ic, mirror_x(d), head, ic.lg(head, 1, 0, 0, 1)))
     s.append(line("M8 26 C10 16 14 10 20 7", edge or HL, 2.2, 0.7) if kind != "cleaver" else line("M10 30 L10 10", edge or HL, 2.2, 0.7))
-    s.append(f'<rect x="28.5" y="4" width="7" height="26" rx="2" fill="{ic.lg(PAL["shadow"], 0, 0, 1, 0)}" stroke="#0a0a12" stroke-width="1.4"/>')
+    s.append(f'<rect x="28.5" y="4" width="7" height="26" rx="2" fill="{ic.lg(PAL["slate"], 0, 0, 1, 0)}" stroke="{PAL["slate"][3]}" stroke-width="1.4"/>')
     s.append(circle(ic, 32, 72, 3.4, handle, sw=1.4))
     return rot(s, -40)
 
@@ -378,6 +389,18 @@ def staff(ic, shaft, top="orb", gem_=None, accent=None, thin=False, rings=True):
             s += tube(ic, d, gem_, 3.2)
         for x, y in ((20, 4), (44, 2), (32, 5), (22, 14), (45, 11)):
             s.append(dot(x, y, 2.4, "#ff9ad8"))
+    elif top == "coil":    # a glowing spiral around a star orb
+        s += tube(ic, "M32 24 C22 24 17 14 23 7 C29 0 42 2 43 11 C44 18 36 21 32 17 C29 14 31 10 35 10", accent, 3.2)
+        s += gem(ic, 34, 12.5, 4.4, gem_)
+        s.append(sparkle(19, 5, 3.4, "#fff4b0"))
+        s.append(sparkle(46, 21, 2.8, "#bff4ff"))
+    elif top == "sprout":  # roots cup an earth orb, two leaves on top
+        s += tube(ic, "M32 25 C24 23 21 17 23 10", shaft, 3.2) + tube(ic, "M32 25 C40 23 43 17 41 10", shaft, 3.2)
+        s += gem(ic, 32, 14, 7.5, gem_)
+        s.append(dot(29, 16, 2.4, "#7a5a2c", 0.55))
+        s.append(dot(35.5, 12, 1.8, "#7a5a2c", 0.55))
+        s.append(shape(ic, "M32 6.5 C28 0 21 -1 16 1.5 C20 7 26 8 32 6.5 Z", PAL["leaf"], sw=1.4))
+        s.append(shape(ic, "M32 6.5 C36 0 43 -1 48 1.5 C44 7 38 8 32 6.5 Z", PAL["leaf"], sw=1.4))
     elif top == "maw":
         s.append(circle(ic, 32, 11, 11, PAL["violet"], sw=2))
         for d, c in (("M22 8 C26 2 36 1 42 6", "#9dff4a"), ("M22 14 C26 20 38 21 42 15", "#34d8e0"), ("M25 11 C28 7 36 7 39 11", "#ffe04a")):
@@ -421,12 +444,15 @@ def mace(ic, head, shaft=None, kind="spiked", studs=False):
         s.append(circle(ic, 32, 16, 11, head))
         s.append(dot(28.5, 12.5, 2.4, HL, 0.6))
     elif kind == "club":
+        if studs:   # iron spikes poking out on both sides (drawn first: the club covers their bases)
+            for (bx, by, tx, ty) in ((25, 12, 11, 10), (26, 26, 12.5, 28), (39, 11, 53, 9), (38.5, 25, 52, 27)):
+                s.append(shape(ic, f"M{bx} {by - 4.6} L{tx} {ty} L{bx} {by + 4.6} Z", PAL["steel"], ic.lg(PAL["steel"]), 1.8))
         s.append(shape(ic, "M29.5 74 L27.5 36 C21 24 21 6 32 2 C43 6 43 24 36.5 36 L34.5 74 Z", head, ic.lg(head, 0, 0, 1, 0)))
         s.append(line("M28 30 C26 20 27 10 30 6", HL, 2, 0.45))
         s.append(line("M35 20 L37 26 M31 14 L33 19", head[2], 1.4, 0.7))
         if studs:
-            for x, y in ((27, 16), (37, 12), (33, 26), (26, 28)):
-                s += gem(ic, x, y, 2, PAL["steel"])
+            for x, y in ((29, 15), (35, 24)):
+                s.append(dot(x, y, 1.6, head[3], 0.6))
     elif kind == "drumstick":
         s += tube(ic, "M32 34 L32 66", PAL["bone"], 5)
         s.append(circle(ic, 29, 68, 3.6, PAL["bone"], sw=1.6))
@@ -650,9 +676,11 @@ def hat(ic, kind, pal, band=None, accent=None):
         s.append(line("M24 20 C28 24 36 24 40 20", pal[2], 2, 0.7))
         s.append(f'<path d="M16.5 36 C24 39 40 39 47.5 36 L48 41.5 C40 44.5 24 44.5 16 41.5 Z" fill="{band[1]}" stroke="{band[3]}" stroke-width="1.2"/>')
     elif kind == "sunhat":
-        s.append(shape(ic, "M2 42 C2 34 16 32 32 32 C48 32 62 34 62 42 C62 50 48 54 32 54 C16 54 2 50 2 42 Z", pal))
-        s.append(shape(ic, "M18 38 C18 24 24 14 32 14 C40 14 46 24 46 38 C38 42 26 42 18 38 Z", pal))
-        s.append(f'<path d="M18.2 33 C26 36 38 36 45.8 33 L46 38 C38 41.5 26 41.5 18 38 Z" fill="{band[1]}" stroke="{band[3]}" stroke-width="1.2"/>')
+        s.append(shape(ic, "M2 42 C2 34 16 32 32 32 C48 32 62 34 62 42 C62 50 48 54 32 54 C16 54 2 50 2 42 Z", pal, ic.lg(pal, 0, 0, 0, 1)))
+        s.append(f'<path d="M5 45 C12 50 22 52 32 52 C42 52 52 50 59 45 C57 50 46 54 32 54 C18 54 7 50 5 45 Z" fill="{pal[2]}"/>')
+        s.append(shape(ic, "M18 38 C18 24 24 14 32 14 C40 14 46 24 46 38 C38 42 26 42 18 38 Z", pal, ic.lg((pal[0], pal[0], pal[1]), 0, 0, 0, 1)))
+        s.append(f'<path d="M18.2 31.5 C26 35 38 35 45.8 31.5 L46 38 C38 42 26 42 18 38 Z" fill="{band[1]}" stroke="{band[3]}" stroke-width="1.4"/>')
+        s.append(line("M23 28 C23 22 26 18 30 17", HL, 2.2, 0.6))
     elif kind == "wizard":
         s.append(shape(ic, "M6 50 C6 44 18 42 32 42 C46 42 58 44 58 50 C58 55 46 58 32 58 C18 58 6 55 6 50 Z", band))
         s.append(shape(ic, "M14 48 C18 34 22 22 30 12 C36 4 46 2 54 6 C46 8 42 14 42 22 C42 32 46 40 50 48 C38 52 26 52 14 48 Z", pal))
@@ -725,19 +753,25 @@ def glasses(ic):
 
 def mask(ic, kind):
     s = []
-    if kind == "horror":
+    if kind == "horror":   # a hockey mask: slanted eye holes, red chevrons, rows of breathing holes
         s.append(shape(ic, "M32 4 C46 4 54 16 54 32 C54 48 44 60 32 60 C20 60 10 48 10 32 C10 16 18 4 32 4 Z", PAL["cream"]))
-        for x, y in ((24, 28), (40, 28)):
-            s.append(f'<ellipse cx="{x}" cy="{y}" rx="5.5" ry="4.5" fill="#1a1612"/>')
-        for x, y in ((18, 16), (26, 14), (38, 14), (46, 16), (20, 40), (28, 44), (36, 44), (44, 40), (32, 50), (24, 50), (40, 50), (32, 20)):
-            s.append(dot(x, y, 1.4, "#6a5a48", 0.8))
-        s.append(line("M44 8 L40 14 L44 18", "#c8323c", 1.6))
-    elif kind == "kitsune":
-        s.append(shape(ic, "M12 6 L22 18 C26 16 38 16 42 18 L52 6 L54 30 C54 46 44 58 32 58 C20 58 10 46 10 30 Z", PAL["white"]))
-        s.append(f'<path d="M15 12 L21 19 L16 22 Z M49 12 L43 19 L48 22 Z" fill="#e8384a"/>')
-        s.append(line("M20 32 C22 29 26 29 28 31 M36 31 C38 29 42 29 44 32", "#1a1a22", 2.2))
-        s.append(line("M18 38 L24 40 M46 38 L40 40 M32 26 L32 20", "#e8384a", 2))
-        s.append(shape(ic, "M28 46 C28 50 36 50 36 46 Z", PAL["red"], sw=1.2))
+        eye = "M13 26 C16 19 25 19 29.5 26.5 C25.5 33 17 33 13 26 Z"
+        s.append(f'<path d="{eye}" fill="#1a1612"/><path d="{mirror_x(eye)}" fill="#1a1612"/>')
+        for d in ("M26 7 L32 15 L38 7 Z", "M12 36 L21 32 L21 41 Z", mirror_x("M12 36 L21 32 L21 41 Z")):
+            s.append(f'<path d="{d}" fill="#d42a36" stroke="#6a0a12" stroke-width="1"/>')
+        for x, y in ((26, 40), (32, 40), (38, 40), (29, 46.5), (35, 46.5), (32, 53)):
+            s.append(dot(x, y, 2.5, "#3a3026"))
+        s.append(line("M32 18 L32 33", "#b9a888", 1.6, 0.7))
+    elif kind == "kitsune":   # a white fox mask: red ears and markings, closed smiling eyes
+        s.append(shape(ic, "M11 4 L23 17 C27 15.5 37 15.5 41 17 L53 4 L55 30 C55 46 45 58 32 58 C19 58 9 46 9 30 Z", PAL["white"]))
+        s.append(f'<path d="M14 11 L22 19 L15.5 25 Z" fill="#e8384a"/><path d="{mirror_x("M14 11 L22 19 L15.5 25 Z")}" fill="#e8384a"/>')
+        s.append(shape(ic, "M32 18 C28.5 23 29.5 28 32 30 C34.5 28 35.5 23 32 18 Z", PAL["red"], sw=1.2))
+        s.append(line("M16 33 C19 28.5 25 28.5 28 32.5", "#1a1a22", 3.4))
+        s.append(line(mirror_x("M16 33 C19 28.5 25 28.5 28 32.5"), "#1a1a22", 3.4))
+        s.append(line("M12 40 L21 42", "#e8384a", 3.2))
+        s.append(line(mirror_x("M12 40 L21 42"), "#e8384a", 3.2))
+        s.append(f'<path d="M28.5 43 L35.5 43 L32 47 Z" fill="#1a1a22"/>')
+        s.append(line("M27 51 C30 53.5 34 53.5 37 51", "#e8384a", 2))
     elif kind == "mystery":
         s.append(shape(ic, "M12 10 L18 16 C24 14 40 14 46 16 L52 10 L54 34 C54 48 44 58 32 58 C20 58 10 48 10 34 Z", PAL["red"]))
         s.append(pattern_marks("checker", 10, 14, 54, 56))
@@ -795,7 +829,13 @@ def shirt(ic, pal, long_=False, pattern=None):
         d = "M20 8 L26 6 C28 10 36 10 38 6 L44 8 L52 16 L57 46 L49 47 L46 26 L46 56 L18 56 L18 26 L15 47 L7 46 L12 16 Z"
     else:
         d = "M20 8 L26 6 C28 10 36 10 38 6 L44 8 L57 18 L51 29 L46 25 L46 56 L18 56 L18 25 L13 29 L7 18 Z"
-    s = [shape(ic, d, pal, ic.lg(pal, 0.1, 0, 0.9, 1))]
+    s = [shape(ic, d, pal, ic.lg(pal, 0, 0, 0, 1))]
+    if long_:
+        s.append(line("M8 42.5 L15.6 43.5", pal[2], 2.6))
+        s.append(line(mirror_x("M8 42.5 L15.6 43.5"), pal[2], 2.6))
+        s.append(line("M32 11 L32 55", pal[2], 1.4, 0.7))
+        for y in (18, 27, 36, 45):
+            s.append(dot(32, y, 1.7, pal[3], 0.75))
     if pattern == "chain":
         for j in range(8):
             for i in range(6):
@@ -805,27 +845,23 @@ def shirt(ic, pal, long_=False, pattern=None):
                     s.append(f'<circle cx="{f(x)}" cy="{f(y)}" r="1.7" fill="none" stroke="{pal[3]}" stroke-width=".9" opacity=".6"/>')
     s.append(line("M26 6.5 C28 12 36 12 38 6.5", pal[3], 1.8, 0.8))
     s.append(line("M22 14 L22 50", HL, 1.8, 0.4))
+    s.append(line("M42 14 L42 50", HL, 1.8, 0.4))
     return "".join(s)
 
 
 def greaves(ic, pal, trim=None, pattern=None):
     legs = ("M11 12 L53 12 L54 53 C54 56.5 52 58 49 58 L37 58 C35 58 34 56.5 34 54.5 L32.4 29 L31.6 29 "
             "L30 54.5 C30 56.5 29 58 27 58 L15 58 C12 58 10 56.5 10 53 Z")
-    s = [shape(ic, legs, pal, ic.lg(pal, 0, 0, 1, 0.3))]
+    s = [shape(ic, legs, pal, ic.lg(pal, 0, 0, 0, 1))]   # top to bottom: both legs shade alike
     if pattern:
         s.append(pattern_marks(pattern, 10, 12, 54, 56))
     band = trim or pal
     s.append(f'<rect x="9" y="6" width="46" height="9" rx="3" fill="{ic.lg(band, 0, 0, 0, 1)}" stroke="{band[3]}" stroke-width="2"/>')
-    s.append(dot(32, 10.5, 2.2, (trim or PAL["steel"])[0]))
-    for cx in (20.5, 43.5):
-        for y in (20, 25):   # plate lines on the thighs
-            s.append(line(f"M{cx - 8} {y} C{cx - 3} {y + 1.6} {cx + 3} {y + 1.6} {cx + 8} {y}", pal[3], 1.5, 0.55))
-        knee = f"M{cx - 7} 36 L{cx} 31 L{cx + 7} 36 L{cx + 5.5} 42.5 L{cx} 45.5 L{cx - 5.5} 42.5 Z"
-        s.append(shape(ic, knee, band, ic.lg(band, 0, 0, 0, 1), 1.6))
-        s.append(dot(cx, 38.5, 1.5, band[3], 0.6))
+    for cx in (20.8, 43.2):
+        knee = f"M{cx - 7} 36 L{cx} 30.5 L{cx + 7} 36 L{cx + 5.5} 43 L{cx} 46 L{cx - 5.5} 43 Z"
+        s.append(shape(ic, knee, band, ic.lg(band, 0, 0, 0, 1), 1.8))
     if trim:
         s.append(line("M11.5 54.5 L29.5 54.5 M34.5 54.5 L52.5 54.5", trim[1], 2.6))
-    s.append(line("M15 17 L14 50 M38 32 L38.5 50", HL, 1.8, 0.45))
     return "".join(s)
 
 def lifebuoy(ic):
@@ -856,14 +892,12 @@ def boot(ic, pal, trim=None, pattern=None, kind="boot", gem_=None):
         if gem_:
             s += gem(ic, 22, 38, 3.4, gem_)
         s.append(line("M12 40 C16 36 22 34 28 34", HL, 2, 0.6))
-    elif kind == "sandal":
-        sole = "M32 3 C43 3 47 13 46 24 C45 34 44 44 44 51 C44 57 39 61 32 61 C25 61 20 57 20 51 C20 44 19 34 18 24 C17 13 21 3 32 3 Z"
-        parts = [shape(ic, sole, PAL["sand"], ic.lg(PAL["sand"], 0, 0, 1, 1))]
-        parts.append(f'<path d="M32 7 C40 7 42 15 41 24 C40 34 40 44 40 50 C40 54 36 57 32 57 C28 57 24 54 24 50 C24 44 24 34 23 24 C22 15 24 7 32 7 Z" fill="{PAL["sand"][2]}" opacity=".3"/>')
-        parts += tube(ic, "M19 30 L32 13 L45 30", pal, 4.2)
-        parts += tube(ic, "M20 47 C26 51 38 51 44 47", pal, 4.2)
-        parts.append(circle(ic, 32, 13, 3, pal, sw=1.4))
-        s.append(rot(parts, -25))
+    elif kind == "sandal":   # seen from above: a foot-shaped sole, a thong strap, an ankle strap
+        sole = "M32 3 C44 3 48 13 47 24 C46 34 45 44 45 51 C45 57 39.5 61 32 61 C24.5 61 19 57 19 51 C19 44 18 34 17 24 C16 13 20 3 32 3 Z"
+        s.append(shape(ic, sole, PAL["sand"], ic.lg(PAL["sand"], 0, 0, 0, 1)))
+        s += tube(ic, "M17.6 30 L32 12.8 L46.4 30", pal, 4.8)
+        s += tube(ic, "M19.2 46 C25 50.5 39 50.5 44.8 46", pal, 4.8)
+        s.append(circle(ic, 32, 12.8, 3.2, pal, sw=1.4))
     elif kind == "clog":   # a Dutch clog from the side: upturned toe, tall heel, opening on top, painted flower
         body = "M3 31 C6 31 10 32 16 31 L31 25 C34 24 37 23.5 40 23.5 L56 21 C60 20.5 62 24 62 29 L62 46 C62 53 58 57 51 57 L22 57 C13 57 8 51 5.5 43 C4 39 2.6 35 3 31 Z"
         s.append(shape(ic, body, pal, ic.lg(pal, 0, 0, 0.6, 1)))
@@ -972,8 +1006,8 @@ def ring(ic, metal, style="plain", gem_=None):
             s.append(shape(ic, "M32 12 L44 4 L44 18 Z", PAL["ruby"], sw=1.4))
             s.append(circle(ic, 32, 12, 3.4, PAL["ruby"], sw=1.2))
     elif style == "mana":
-        s.append(f'<rect x="17" y="20" width="30" height="10" rx="5" fill="{ic.lg(m, 0, 0, 0, 1)}" stroke="{m[3]}" stroke-width="2"/>')
-        s += gem(ic, 32, 25, 3.6, PAL["sapphire"])
+        s.append(f'<rect x="16" y="19.2" width="32" height="9.6" rx="4.8" fill="{ic.lg(m, 0, 0, 0, 1)}" stroke="{m[3]}" stroke-width="2"/>')
+        s.append(circle(ic, 32, 24, 3.2, PAL["sapphire"], sw=1.4))   # 2 pixels wide: symmetric at 20x20
     elif style == "flat":
         s.append(f'<rect x="18" y="21" width="28" height="8" rx="3" fill="{m[0]}" stroke="{m[3]}" stroke-width="2"/>')
         s.append(line("M22 25 L42 25", m[2], 1.4, 0.6))
@@ -1047,16 +1081,17 @@ def necklace(ic, metal, pendant=None, kind="mining"):
 
 # ----------------------------------------------------------------------------- tools
 def glove(ic, pal, pattern=None, cuff=None):
-    d = ("M18 58 L16 36 C12 32 9 26 12 23 C15 21 18 25 21 29 L21 12 C21 9 25 9 25 12 L25 27 L26 8 C26 5 30 5 30 8 "
-         "L30 27 L32 9 C32 6 36 6 36 9 L35 28 L38 14 C38 11 42 11 42 14 L41 34 C41 42 39 48 41 58 Z")
-    s = [shape(ic, d, pal, ic.lg(pal, 0, 0, 1, 1))]
+    d = ("M18.6 50 L18.6 36 L13 30 C10.5 27.5 11 23.5 14.5 23.5 C16.5 23.5 17.8 25 18.6 27 "
+         "L18.6 12 C18.6 9 23 9 23 12 L23 26 L25 26 L25 8 C25 5 29.4 5 29.4 8 L29.4 26 L31.4 26 "
+         "L31.4 10 C31.4 7 35.8 7 35.8 10 L35.8 26 L37.8 26 L37.8 14 C37.8 11 42.2 11 42.2 14 "
+         "L42.2 38 C42.2 44 41.4 47 41.4 50 Z")
+    s = [shape(ic, d, pal, ic.lg(pal, 0, 0, 0, 1))]
     if pattern == "scales":
-        for x, y in ((22, 38), (28, 36), (34, 38), (25, 44), (31, 44), (37, 44), (28, 50), (34, 50)):
+        for x, y in ((23, 36), (29, 34), (35, 36), (26, 42), (32, 42), (38, 42)):
             s.append(f'<path d="M{x - 2.4} {y} A2.4 2.4 0 0 0 {x + 2.4} {y}" fill="none" stroke="{pal[0]}" stroke-width="1.2" opacity=".6"/>')
-    s.append(f'<rect x="16" y="50" width="26" height="9" rx="2.5" fill="{ic.lg(cuff or pal, 0, 0, 0, 1)}" stroke="{(cuff or pal)[3]}" stroke-width="1.6"/>')
-    s.append(line("M23 14 L23 26 M28 10 L28 25 M33 12 L33 26", HL, 1.4, 0.45))
+    s.append(f'<rect x="16" y="48" width="28.8" height="9.6" rx="2.5" fill="{ic.lg(cuff or pal, 0, 0, 0, 1)}" stroke="{(cuff or pal)[3]}" stroke-width="1.6"/>')
+    s.append(line("M20.8 13 L20.8 24 M27.2 9 L27.2 24 M33.6 11 L33.6 24", HL, 1.3, 0.4))
     return "".join(s)
-
 
 def broom(ic):
     s = tube(ic, "M10 6 L40 40", PAL["darkwood"], 3.6)
@@ -1077,12 +1112,16 @@ def lantern(ic):
 
 
 def torch(ic):
-    s = tube(ic, "M50 60 L28 28", PAL["darkwood"], 6)
-    s.append(f'<rect x="21" y="21" width="15" height="9" rx="2.5" transform="rotate(-55 28.5 25.5)" fill="{ic.lg(PAL["slate"], 0, 0, 0, 1)}" stroke="#141216" stroke-width="1.6"/>')
-    s.append(shape(ic, "M24 26 C8 24 4 10 12 1 C14 8 19 9 19 4 C24 9 31 8 29 0 C40 8 40 22 28 27 Z", PAL["fire"], ic.lg(PAL["fire"], 0.4, 0, 0.6, 1)))
-    s.append(shape(ic, "M23 24 C15 22 13 15 17 9 C19 13 23 13 24 9 C29 13 30 21 23 24 Z", PAL["yellow"], sw=0.8))
+    s = tube(ic, "M50 61 L30 31", PAL["darkwood"], 6)
+    for t in (0.72, 0.82):   # cloth wraps near the top of the handle
+        x, y = 50 + (30 - 50) * t, 61 + (31 - 61) * t
+        s.append(line(f"M{f(x - 4)} {f(y - 2.6)} L{f(x + 4)} {f(y + 2.6)}", "#d8c09c", 3))
+    s.append(shape(ic, "M19 27 L35 27 L32 35 L22 35 Z", PAL["slate"], ic.lg(PAL["slate"], 0, 0, 0, 1), 1.8))
+    s.append(shape(ic, "M27 29 C15 28 12 18 18 10 C19 15 22 16 22 12 C22 7 25 3 29 1 C28 7 34 9 34 15 C36 13 36 10 35 8 C41 14 40 26 27 29 Z",
+                   PAL["fire"], ic.lg(PAL["fire"], 0.5, 0, 0.5, 1)))
+    s.append(shape(ic, "M27 27 C21 26 19.5 20 22.5 15 C23.5 18 25.5 18 26.5 15 C28.5 18 32 20 31 24 C30.5 26 29 27 27 27 Z", PAL["yellow"], sw=1))
+    s.append(f'<path d="M27 26 C25 25.5 24.5 23 26 21 C26.5 22.5 27.5 22.5 28 21 C29 23 28.8 25.6 27 26 Z" fill="#fffbe8"/>')
     return "".join(s)
-
 
 def telescope(ic):
     s = [f'<rect x="4" y="24" width="26" height="16" rx="3" fill="{ic.lg(PAL["gold"], 0, 0, 0, 1)}" stroke="#3a1e06" stroke-width="2"/>',
@@ -1130,11 +1169,11 @@ SPECS = {
     "Club": lambda ic: mace(ic, P["wood"], kind="club"),
     "Cool Stick": lambda ic: wand(ic, P["wood"], "leaf", P["olive"]),
     "Copper Sword": lambda ic: sword(ic, P["copper"], P["emerald"], shape_="straight", w=5.5),
-    "Cosmic Coil": lambda ic: staff(ic, P["purpurite"], "coral", P["purpurite"], rings=False),
+    "Cosmic Coil": lambda ic: staff(ic, P["violet"], "coil", P["cyan"], P["pink"], rings=False),
     "Dawn's Justice": lambda ic: sword(ic, C("#fff6c0", "#ffb03a", "#d05a1c", "#3e1406"), P["shadow"], shape_="straight", w=7.5, gshape="wing", gw=14, gem_=P["sapphire"], pgem=P["sapphire"]),
     "Drakespine Blade": lambda ic: sword(ic, P["plum"], P["mint"], shape_="double_serrated", w=6.5, gshape="spiky", gem_=P["mint"]),
     "Duststrike": lambda ic: sword(ic, P["sand"], P["sand"], shape_="wavy", w=9, gw=10, extra="rock"),
-    "Earth Staff": lambda ic: staff(ic, C("#d4a09a", "#8a5a5a", "#4c2c30", "#1c0e10"), "crook", P["leaf"]),
+    "Earth Staff": lambda ic: staff(ic, P["wood"], "sprout", P["emerald"]),
     "Earthshaper": lambda ic: sword(ic, C("#c8ffb0", "#f0a8a0", "#a45062", "#2e1016"), P["salmon"], shape_="straight", w=7, gshape="cross", gw=13, extra="vines"),
     "Expert Staff": lambda ic: staff(ic, P["darkwood"], "claw", P["leaf"], P["white"]),
     "Frostcurse": lambda ic: dagger(ic, P["ice"], P["azurite"], shape_="serrated", w=6, T=2, extra="glow:#ffffff"),
@@ -1147,7 +1186,7 @@ SPECS = {
     "Green Death": lambda ic: sword(ic, P["mint"], P["teal"], shape_="straight", w=7, gshape="round", gw=11),
     "Horn Dancer": lambda ic: sword(ic, P["slate"], P["fire"], shape_="taper", w=6, gshape="spiky", gw=12, gem_=P["ruby"]),
     "Howling Edge": lambda ic: sword(ic, P["pink"], P["magenta"], shape_="curved", w=7, gshape="cross", gw=11),
-    "Hungry Blade": lambda ic: chakram(ic, P["fire"]),
+    "Hungry Blade": lambda ic: sword(ic, P["fire"], P["gold"], shape_="straight", w=8, gw=13, gshape="spiky", extra="maw", fuller=False),
     "Ice Sword": lambda ic: sword(ic, P["ice"], P["shadow"], shape_="straight", w=5, gw=10, gem_=P["emerald"]),
     "Infernal Brand": lambda ic: sword(ic, C("#fff4b0", "#ff8a5a", "#d8306a", "#3e0822"), P["shadow"], shape_="wavy", w=7.5, extra="flames"),
     "Infernal Fork": lambda ic: trident(ic, C("#ffc4f0", "#e060b0", "#7a2a70", "#2a0826"), P["violet"], ornate=True),
@@ -1220,7 +1259,7 @@ SPECS = {
     "Silver Helmet": lambda ic: knight(ic, P["silver"], "slit", crest="plume", crest_pal=P["sand"]),
     "Sleepy Wizard Hat": lambda ic: hat(ic, "wizard", P["sapphire"], band=P["navy"], accent=P["orange"]),
     "Soldier Helmet": lambda ic: knight(ic, P["steel"], "t", crest="plume", crest_pal=P["red"]),
-    "Sunhat": lambda ic: hat(ic, "sunhat", P["yellow"], band=P["orange"]),
+    "Sunhat": lambda ic: hat(ic, "sunhat", C("#fff6cc", "#f0cc68", "#b8862a", "#3a2408"), band=P["red"]),
     "Volcanic Helmet": lambda ic: knight(ic, P["volcanic"], "open", pattern="cracks"),
     "Windguard Helmet": lambda ic: knight(ic, P["magenta"], "slit", pattern="streaks", crest="fin", crest_pal=P["cyan"]),
     "Witches Hat": lambda ic: hat(ic, "witch", P["slate"], band=P["shadow"]),
@@ -1237,7 +1276,7 @@ SPECS = {
     "Forestguard Chestplate": lambda ic: chestplate(ic, P["plum"], pattern="vines"),
     "Frostguard Chestplate": lambda ic: chestplate(ic, P["plum"], trim=C("#fff0ff", "#e6c0e8", "#9a78a8", "#2e1e38"), pattern="frost"),
     "Gold Chestplate": lambda ic: chestplate(ic, P["gold"], emblem=P["ruby"]),
-    "Long sleeve Shirt": lambda ic: shirt(ic, P["white"], long_=True),
+    "Long sleeve Shirt": lambda ic: shirt(ic, C("#ffffff", "#eceff5", "#c3c9d6", "#2a2c34"), long_=True),
     "Platinum Chestplate": lambda ic: chestplate(ic, P["platinum"], trim=P["steel"], emblem=P["ice"]),
     "Purple Cloak": lambda ic: cloak(ic, P["shadow"], trim=P["purpurite"]),
     "Purpurite Chestplate": lambda ic: chestplate(ic, P["purpurite"], pattern="checker"),
@@ -1274,7 +1313,7 @@ SPECS = {
     "Magic Loafers": lambda ic: boot(ic, P["orange"], kind="loafer", gem_=P["teal"]),
     "Platinum Boots": lambda ic: boot(ic, P["platinum"], trim=P["ice"]),
     "Purpurite Shoes": lambda ic: boot(ic, P["amethyst"], trim=P["purpurite"]),
-    "Sandals": lambda ic: boot(ic, P["copper"], kind="sandal"),
+    "Sandals": lambda ic: boot(ic, P["darkwood"], kind="sandal"),
     "Shackle": lambda ic: boot(ic, P["slate"], kind="shackle"),
     "Silver Batons": lambda ic: boot(ic, P["silver"], trim=P["iron"]),
     "Soldier Boots": lambda ic: boot(ic, P["iron"], trim=P["red"]),
