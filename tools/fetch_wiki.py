@@ -293,6 +293,51 @@ def encounters_of(index):
     return out
 
 
+def library_of(index):
+    """Spells (who sells them), talents, obols and books (which maps drop their pages), for the Library."""
+    import ast
+    def lit(v):
+        if isinstance(v, (list, dict)):
+            return v
+        try:
+            return ast.literal_eval(str(v))
+        except Exception:
+            return None
+    name_of = lambda v: re.sub(r"^\[\[|\]\]$", "", str(v or "")).split("|")[0].strip()
+    num = lambda v: int(float(v)) if str(v).replace(".", "", 1).isdigit() else 0
+    by = {}
+    for path, meta in index.items():
+        fm = (meta or {}).get("frontmatter") or {}
+        by.setdefault(fm.get("fileClass"), []).append(fm)
+    sold = {}   # spell or item name -> [(npc, price)]
+    for fm in by.get("npc", []):
+        for o in lit(fm.get("obj_for_gold")) or []:
+            if isinstance(o, dict):
+                sold.setdefault(name_of(o.get("obj")), []).append([fm.get("name"), num(o.get("price"))])
+    spells = []
+    for fm in by.get("spell", []):
+        levels = lit(fm.get("mastery_descriptions")) or {}
+        spells.append({"name": fm.get("name"), "element": str(fm.get("element") or ""), "mana": num(fm.get("manaCost")), "cooldown": num(fm.get("cooldown")),
+                       "levels": [str(levels[k]) for k in sorted(levels, key=lambda x: int(x) if str(x).isdigit() else 0)] if isinstance(levels, dict) else [],
+                       "sold": sold.get(fm.get("name"), [])})
+    talents = [{"name": fm.get("name"), "desc": re.sub(r"\{\{value\d*\}\}", "X", str(fm.get("description") or "")).strip(), "level": num(fm.get("unlockLevel"))}
+               for fm in by.get("talent", []) if fm.get("name")]
+    obols = [{"name": fm.get("name"), "stat": str(fm.get("stat") or "").replace("_", " "), "tier": str(fm.get("tier") or ""), "value": num(fm.get("statValue"))}
+             for fm in by.get("obol", []) if fm.get("name")]
+    where_book = {}
+    for fm in by.get("location", []):
+        for d in lit(fm.get("drops")) or []:
+            if isinstance(d, dict):
+                where_book.setdefault(name_of(d.get("drop")), []).append(fm.get("name"))
+    pages = {}
+    for fm in by.get("collectible", []):
+        pages[name_of(fm.get("ref"))] = pages.get(name_of(fm.get("ref")), 0) + 1
+    books = [{"name": fm.get("name"), "pages": pages.get(fm.get("name"), 0), "where": sorted(set(where_book.get(fm.get("name"), [])))}
+             for fm in by.get("book", []) if fm.get("name")]
+    return {"spells": sorted(spells, key=lambda x: x["name"]), "talents": sorted(talents, key=lambda x: (x["level"], x["name"])),
+            "obols": sorted(obols, key=lambda x: (x["stat"], x["value"])), "books": sorted(books, key=lambda x: x["name"])}
+
+
 def main() -> None:
     offline = "--offline" in sys.argv
     CACHE_DIR.mkdir(exist_ok=True)
@@ -419,6 +464,7 @@ def main() -> None:
     bosses = bosses_of(index)
     monsters = monsters_of(index)
     encounters = encounters_of(index)
+    library = library_of(index)
 
     stat_names = sorted({name for it in items for name in it["stats"]})
     payload = {
@@ -435,6 +481,7 @@ def main() -> None:
         "bosses": bosses,
         "monsters": monsters,
         "encounters": encounters,
+        "library": library,
     }
     OUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     OUT_FILE.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")

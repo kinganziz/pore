@@ -1759,6 +1759,14 @@
   .craft-calc .cc-made { margin-top: 6px; font-size: 12px; color: var(--soft); }
   .shop-route { margin: 0 0 8px; padding: 8px 10px; border-radius: 10px; background: color-mix(in srgb, var(--gold) 12%, transparent); font-size: 13px; }
   .shop-route > span { color: var(--gold); font-weight: 700; margin-right: 4px; } .shop-route i { color: var(--soft); font-style: normal; }
+  .lib-h { margin: 14px 2px 6px; font-size: 14px; color: var(--gold); letter-spacing: 1px; text-transform: uppercase; } .lib-h small { color: var(--soft); font-size: 12px; }
+  .lib-h:first-child { margin-top: 0; }
+  .lib-row { border-radius: 10px; margin-bottom: 4px; background: color-mix(in srgb, var(--bg-2) 60%, transparent); }
+  .lib-row summary { list-style: none; cursor: pointer; padding: 8px 12px; display: grid; gap: 1px; }
+  .lib-row summary::-webkit-details-marker { display: none; }
+  .lib-row summary b { font-size: 15px; } .lib-row summary small { color: var(--soft); font-size: 12px; }
+  .lib-row[open] summary b { color: var(--gold); }
+  .lib-body { padding: 0 12px 10px; font-size: 13px; color: var(--soft); line-height: 1.4; } .lib-body ol { margin: 0 0 6px; padding-left: 20px; } .lib-body p { margin: 0 0 4px; }
 </style>
 </head>
 <body>
@@ -2050,6 +2058,7 @@ __SOLVER_JS__
   const encList = () => encSorted || (encSorted = [...ENCS.values()].filter(e => e.drops.size).sort((a, b) => Math.min(...[...a.locs].map(mapAt), 99) - Math.min(...[...b.locs].map(mapAt), 99) || a.name.localeCompare(b.name)));
   const chestDrop = (key, chest) => { const c = CHESTS.get(chest), t = c && c.drops.get(key); return t ? [TIER[t] || 0, '#' + t] : [0, '']; };
   const encDrop = (key, enc) => { const n = ENCS.get(enc), d = n && n.drops.get(key); return d ? [d[0], 'x' + d[1]] : [0, '']; };
+  const BOOK_ICON = '<svg class="pixel" viewBox="0 0 8 8" shape-rendering="crispEdges" aria-hidden="true"><path fill="#8a4ac8" d="M1 1h5v6H1z"/><path fill="#f4e8d0" d="M6 1h1v6H6z"/><path fill="#ffd23a" d="M2 3h3v1H2z"/></svg>';
   const glyphIcon = kind => `<svg class="pixel" viewBox="0 0 8 8" shape-rendering="crispEdges" aria-hidden="true"><path fill="${SRC_GLYPH[kind][0]}" d="${SRC_GLYPH[kind][1]}"/></svg>`;
   const mobDrop = (key, mob) => { const m = MOBS.get(mob), c = m && m.drops.get(key); return c == null ? [0, ''] : [c, 'drops it']; };
   const mobIcon = (name, cls) => iconSVG('m-' + name.toLowerCase().replace(/'/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''), cls || 'npc-face');   // our own portrait of each monster
@@ -5222,12 +5231,12 @@ __SOLVER_JS__
     if (!ui.charmsBody || (!force && ui.charmsSheet.hidden)) return;
     // every category the bag can hold: all, charms, each item type (like the game's filter row), coins
     if (invGear && invTab.startsWith('g:')) invTab = 'all';
-    const cats = [['all', 'All'], ['maps', 'Maps'], ['npcs', 'NPCs'], ['monsters', 'Monsters'], ['bosses', 'World bosses'], ['chests', 'Chests'], ['encounters', 'Encounters'], ['charms', 'Charms'], ...TYPES.map(t => ['t:' + t[0], t[1]]), ...(invGear ? [] : GOOD_TYPES.map(t => ['g:' + t[0], t[1]])), ['coins', 'Coins']];
+    const cats = [['all', 'All'], ['maps', 'Maps'], ['npcs', 'NPCs'], ['monsters', 'Monsters'], ['bosses', 'World bosses'], ['chests', 'Chests'], ['encounters', 'Encounters'], ['library', 'Library'], ['charms', 'Charms'], ...TYPES.map(t => ['t:' + t[0], t[1]]), ...(invGear ? [] : GOOD_TYPES.map(t => ['g:' + t[0], t[1]])), ['coins', 'Coins']];
     const catName = (cats.find(c => c[0] === invTab) || cats[0])[1];
     const nameEl = document.getElementById('invCatName'); if (nameEl) nameEl.textContent = invTab === 'all' ? (invGear ? 'Gear only' : '') : invTab === 'maps' && invMap ? invMap : invTab === 'npcs' && invNpc ? invNpc : invTab === 'monsters' && invMob ? invMob : invTab === 'chests' && invChest ? invChest : invTab === 'encounters' && invEnc ? invEnc : invTab === 'bosses' && invBoss ? invBoss : catName;
-    const detail = !!((invTab === 'maps' && invMap) || (invTab === 'npcs' && invNpc) || (invTab === 'monsters' && invMob) || (invTab === 'bosses' && invBoss) || (invTab === 'chests' && invChest) || (invTab === 'encounters' && invEnc));   // one map, NPC, monster or boss open: no view buttons
-    const mapList = (invTab === 'maps' && !invMap) || (invTab === 'npcs' && !invNpc) || (invTab === 'monsters' && !invMob) || invTab === 'bosses' || (invTab === 'chests' && !invChest) || (invTab === 'encounters' && !invEnc);   // the list of maps: no gear filter or item views to pick
-    ui.charmsBody.innerHTML = `<label class="inv-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></svg><input type="search" placeholder="${mapList ? (invTab === 'npcs' ? 'Search NPCs' : invTab === 'monsters' ? 'Search monsters' : invTab === 'chests' ? 'Search chests' : invTab === 'encounters' ? 'Search encounters' : invTab === 'bosses' ? 'Search bosses' : 'Search maps') : 'Search items or places'}" value="${esc(invQ)}" data-field="inv-q" aria-label="Search the inventory">` +
+    const detail = !!((invTab === 'maps' && invMap) || (invTab === 'npcs' && invNpc) || (invTab === 'monsters' && invMob) || (invTab === 'bosses' && invBoss) || (invTab === 'chests' && invChest) || (invTab === 'encounters' && invEnc) || invTab === 'library');   // one map, NPC, monster or boss open: no view buttons
+    const mapList = (invTab === 'maps' && !invMap) || (invTab === 'npcs' && !invNpc) || (invTab === 'monsters' && !invMob) || invTab === 'bosses' || (invTab === 'chests' && !invChest) || (invTab === 'encounters' && !invEnc) || invTab === 'library';   // the list of maps: no gear filter or item views to pick
+    ui.charmsBody.innerHTML = `<label class="inv-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></svg><input type="search" placeholder="${mapList ? (invTab === 'npcs' ? 'Search NPCs' : invTab === 'monsters' ? 'Search monsters' : invTab === 'chests' ? 'Search chests' : invTab === 'encounters' ? 'Search encounters' : invTab === 'library' ? 'Search spells, talents, obols, books' : invTab === 'bosses' ? 'Search bosses' : 'Search maps') : 'Search items or places'}" value="${esc(invQ)}" data-field="inv-q" aria-label="Search the inventory">` +
       (mapList || detail ? '' : `<button type="button" class="inv-gear ${invGear ? 'on' : ''}" data-action="inv-gear" aria-pressed="${invGear}" aria-label="Gear only: hide what you cannot equip" title="Gear only">${iconSVG((ITEMS.find(it => it.name === 'Iron Sword') || ITEMS[0]).key)}</button>`) +
       (detail ? '</label>' : `<span class="inv-views" role="group" aria-label="View">${['grid', 'list', 'icons'].map(v => `<button type="button" class="${(mapList ? placeView : invView) === v ? 'on' : ''}" data-action="inv-view" data-view="${v}" aria-label="${v === 'grid' ? 'Tiles with names' : v === 'list' ? 'List' : 'Icons only'}" title="${v === 'grid' ? 'Tiles' : v === 'list' ? 'List' : 'Icons'}">${INV_VIEW_SVG[v]}</button>`).join('')}</span></label>`) +
       `<div id="invGrid"></div>`;
@@ -5235,7 +5244,7 @@ __SOLVER_JS__
     const goodArt = t => { const g = GOODS.find(x => x.name === (GOOD_TYPES.find(y => y[0] === t) || [])[3]) || GOODS.find(x => x.type === t); return g ? iconSVG(g.key) : ''; };
     const clover = CHARMS.find(c => c.name === 'Clover') || CHARMS[0];
     const allArt = () => `<span class="cat-quad">${['Iron Sword', 'Potion of Luck', 'Gold ore', 'Apple'].map(n => { const x = ITEMS.find(i => i.name === n) || GOODS.find(i => i.name === n); return x ? iconSVG(x.key) : ''; }).join('')}</span>`;
-    const catArt = k => ({ all: allArt(), maps: iconSVG('u-map'), npcs: iconSVG('n-merchant'), monsters: mobIcon('Green Slime', ''), chests: glyphIcon('chest'), encounters: glyphIcon('enc'), bosses: bossIcon('Goblin King', ''), charms: clover ? iconSVG(clover.key) : '', coins: iconSVG('u-gold') })[k] || (k.startsWith('g:') ? goodArt(k.slice(2)) : filterIcon(k.slice(2)));   // item types use the item list's type icons
+    const catArt = k => ({ all: allArt(), maps: iconSVG('u-map'), npcs: iconSVG('n-merchant'), monsters: mobIcon('Green Slime', ''), chests: glyphIcon('chest'), encounters: glyphIcon('enc'), library: BOOK_ICON, bosses: bossIcon('Goblin King', ''), charms: clover ? iconSVG(clover.key) : '', coins: iconSVG('u-gold') })[k] || (k.startsWith('g:') ? goodArt(k.slice(2)) : filterIcon(k.slice(2)));   // item types use the item list's type icons
     const strip = document.getElementById('invCats'), sx = strip.scrollLeft;
     strip.innerHTML = cats.map(([k, l]) => `<button type="button" role="tab" class="inv-cat ${invTab === k ? 'on' : ''}" data-action="inv-tab" data-tab="${k}" aria-selected="${invTab === k}" aria-label="${l}" title="${l}">${catArt(k)}<i class="cat-n" data-cat="${k}" hidden></i></button>`).join('');
     strip.scrollLeft = sx;   // stays where the player left it
@@ -5285,6 +5294,21 @@ __SOLVER_JS__
       return;
     }
     const collage = drops => `<span class="npc-pic">${drops.slice(0, 4).map(([k]) => iconSVG(k)).join('')}</span>`;
+    if (invTab === 'library') {   // spells, talents, obols and books: reference lists, each entry opens in place
+      const L = ITEM_DB.library || {}, has = t => !q || t.toLowerCase().includes(q);
+      const sec = (title, list) => list.length ? `<h3 class="lib-h">${title} <small>${list.length}</small></h3>${list.join('')}` : '';
+      const entry = (name, sub, body) => `<details class="lib-row"><summary><b>${esc(name)}</b><small>${sub}</small></summary><div class="lib-body">${body}</div></details>`;
+      const spells = (L.spells || []).filter(x => has(`${x.name} ${x.element}`)).map(x => entry(x.name, `${esc(ELEMENT(x.element))} · ${x.mana} mana · ${x.cooldown}s cooldown`,
+        `<ol>${x.levels.map(l => `<li>${esc(l)}</li>`).join('')}</ol>` + (x.sold.length ? `<p>Sold by ${x.sold.map(([n, pr]) => `${NPCS.has(n) ? `<button type="button" class="ip-map" data-action="inv-place" data-q="${esc(n)}">${esc(n)}</button>` : esc(n)} for ${fmtGold(pr)} gold`).join(', ')}</p>` : '')));
+      const talents = (L.talents || []).filter(x => has(x.name)).map(x => entry(x.name, x.level ? `unlocks at level ${x.level}` : 'from the start', `<p>${esc(x.desc)}</p>`));
+      const obols = (L.obols || []).filter(x => has(`${x.name} ${x.stat}`)).map(x => entry(x.name, `+${x.value} ${esc(x.stat)} · ${esc(x.tier)}`, `<p>An obol adds +${x.value} ${esc(x.stat)}.</p>`));
+      const books = (L.books || []).filter(x => has(x.name)).map(x => entry(x.name, `${x.pages ? x.pages + ' pages' : 'book'}${x.where.length ? ' · ' + x.where.length + ' maps' : ''}`,
+        x.where.length ? `<p>Pages drop in ${x.where.map(l => MAP_KEYS.has(l) ? `<button type="button" class="ip-map" data-action="inv-place" data-q="${esc(l)}">${esc(l)}</button>` : esc(l)).join(', ')}.</p>` : '<p>The wiki does not say where its pages drop.</p>'));
+      const html = sec('Spells', spells) + sec('Talents', talents) + sec('Obols', obols) + sec('Books', books);
+      box.innerHTML = (html || '<p class="inv-hint">Nothing matches.</p>') + '<p class="inv-hint">From the wiki. Tap an entry to open it.</p>';
+      invRenderPop();
+      return;
+    }
     if (invTab === 'chests' && !onChest) {   // the chests, smallest first, with a few of what they give and the key
       const list = CHEST_LIST.filter(c => !q || `${c.name} ${(anyItem(c.key) || {}).name || ''}`.toLowerCase().includes(q));
       box.innerHTML = (list.length ? placeList(list.map(c => { const kk = c.key && anyItem(c.key);
