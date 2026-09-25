@@ -1067,7 +1067,8 @@
   .home-hero .home-hint { text-shadow: 1px 1px 0 rgba(0, 0, 0, .7); color: rgba(255, 255, 255, .75); }
   :root[data-theme="light"] .home-hero .home-kicker { color: #fff4c0; }
   /* the same see-through panels on every screen as on the start screen */
-  .card:not(.hero) { background: color-mix(in srgb, var(--surface) 84%, transparent) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+  .card:not(.hero) { background: linear-gradient(color-mix(in srgb, var(--surface) 84%, transparent), color-mix(in srgb, var(--surface) 84%, transparent)),
+      color-mix(in srgb, var(--bg) var(--veil, 0%), transparent) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }   /* --veil: set from the scene's brightness */
   .tip { background: color-mix(in srgb, var(--surface) 88%, transparent); }
   /* ---------- the landscape behind planning screens: still and dim ---------- */
   body.has-item #scene { display: block; }   /* full brightness everywhere, like the start screen */
@@ -1155,7 +1156,7 @@
   
   :root[data-flavor="game"] .hb-dots i.on { background: #ffd84a; }
   /* the landscape shows through the sheets too */
-  .sheet { background: color-mix(in srgb, var(--bg-2) 50%, transparent); }
+  .sheet { background: color-mix(in srgb, var(--bg-2) var(--sheet-a, 50%), transparent); }
   body.locked #scene { display: block; }
   body.locked :is(main.app, body > footer) { visibility: hidden; }   /* only the world shows through a sheet, not the page under it */
   .sheet-backdrop { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(4, 6, 12, .35); }
@@ -1869,7 +1870,7 @@ __SOLVER_JS__
     if (skin === 'modern') { d.removeAttribute('data-flavor'); d.removeAttribute('data-finish'); }
     else { d.setAttribute('data-flavor', skin); d.setAttribute('data-finish', 'retro'); }
     syncTopbar();
-    if (scene.ctx) { scene.skyKey = ''; sceneShow(); }
+    if (scene.ctx) { scene.skyKey = ''; scene.measured = false; sceneShow(); }
     const b = document.querySelector('[data-action="skin"]');
     if (b) b.setAttribute('aria-pressed', String(skin !== 'modern'));
     document.querySelectorAll('[data-action="skin-pick"]').forEach(x => x.classList.toggle('on', x.dataset.skin === skin));
@@ -2382,6 +2383,7 @@ __SOLVER_JS__
 
   function sceneSetup() {
     const c = scene.el || (scene.el = document.getElementById('scene'));
+    if (bgNow === 'none') { document.documentElement.style.setProperty('--veil', '0%'); document.documentElement.style.setProperty('--sheet-a', '92%'); }
     if (!c || bgNow === 'none') return false;
     // one world pixel is the same size across and down: about 240 across a phone, at most 3 screen pixels on big
     // screens (which see more land instead of a blown-up picture)
@@ -2390,7 +2392,7 @@ __SOLVER_JS__
     scene.px = px;
     if (scene.key !== key) {
       scene.key = key; scene.W = W; scene.H = H; c.width = W; c.height = H;
-      scene.ctx = c.getContext('2d'); scene.skyKey = '';
+      scene.ctx = c.getContext('2d', { willReadFrequently: false }); scene.skyKey = ''; scene.measured = false;
       const r = sceneRand(11 + BG_SCENES.indexOf(bgNow));
       const st = scene.st = {
         stars: Array.from({ length: 110 }, () => ({ x: r() * W, y: r() * H * 0.5, p: r() * 6.28, b: r() < 0.18 })),
@@ -2698,6 +2700,28 @@ __SOLVER_JS__
     const { ctx: g, W, H } = scene, pal = bgPalette();
     if (!calm) scene.x += dt * 0.012;                        // walking speed (the land holds still on working screens)
     (SCENE_DRAW[bgNow] || SCENE_DRAW.hills)(g, W, H, pal, performance.now() / 1000, dt);
+    if (!scene.measured) { scene.measured = true; bgVeil(); }
+  }
+  // Panels are see-through, so how solid they need to be depends on the scene behind them: a bright scene (Snow at
+  // night, dark sea by day) makes them more solid so text stays readable, a scene close to the page colour keeps
+  // them clear. Measured once per scene, look and theme from the drawn picture.
+  function bgVeil() {
+    let veil = 0;
+    try {
+      const { ctx: g, W, H } = scene, d = g.getImageData(0, 0, W, H).data, light = document.documentElement.dataset.theme === 'light';
+      let sum = 0, far = 0, n = 0;
+      for (let i = 0; i < d.length; i += 4 * 5) {
+        const l = (0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]) / 255;
+        sum += l; n++;
+        if (light ? l < 0.45 : l > 0.55) far++;   // pixels that fight the text colour
+      }
+      const mean = sum / n, frac = far / n;
+      veil = light ? (0.78 - mean) * 1.1 + frac * 0.9 : (mean - 0.14) * 1.4 + frac * 1.2;
+      veil = Math.max(0, Math.min(0.78, veil));
+    } catch (e) { /* ignore */ }
+    const r = document.documentElement.style;
+    r.setProperty('--veil', Math.round(veil * 100) + '%');
+    r.setProperty('--sheet-a', Math.round(50 + veil * 45) + '%');
   }
   // Home: full motion. Plan and the sheets: the land holds still and only small things move, about six frames a
   // second, so a plan left open while playing costs next to no battery and nothing tugs at the eye.
@@ -3879,7 +3903,7 @@ __SOLVER_JS__
   function haptic(ms) { try { if (userTouched && navigator.vibrate) navigator.vibrate(ms || 8); } catch (e) { /* ignore */ } }
   function setTheme(t) {
     document.documentElement.setAttribute('data-theme', t);
-    if (scene.ctx) { scene.skyKey = ''; sceneShow(); }
+    if (scene.ctx) { scene.skyKey = ''; scene.measured = false; sceneShow(); }
     document.querySelector('meta[name="theme-color"]').setAttribute('content', t === 'light' ? '#dcdfeb' : '#0a0c12');
     try { localStorage.setItem(STORAGE.theme, t); } catch (e) { /* ignore */ }
   }
