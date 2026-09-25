@@ -97,11 +97,14 @@ def gold(ic):
 
 
 def wb(ic):
+    """a bronze coin with a real square hole: the coin and the raised rim around the hole are cut through (even-odd)"""
+    coin = "M7 32 A25 25 0 1 0 57 32 A25 25 0 1 0 7 32 Z M25 25 L39 25 L39 39 L25 39 Z"
+    rim = "M19 19 L45 19 L45 45 L19 45 Z M25 25 L39 25 L39 39 L25 39 Z"
+    odd = ' fill-rule="evenodd"'
     return "".join([
-        circle(ic, 32, 32, 25, BRONZE, ic.lg(BRONZE, 0.2, 0, 0.8, 1)),
-        f'<circle cx="32" cy="32" r="19" fill="none" stroke="{BRONZE[2]}" stroke-width="2"/>',
-        shape(ic, "M20 20 L44 20 L44 44 L20 44 Z", C("#8a5424", "#6a3a14", "#4a2808", "#2e1606"), sw=1.8),
-        shape(ic, "M26 26 L38 26 L38 38 L26 38 Z", C(INK, INK, INK, "#2e1606"), sw=1.2),
+        shape(ic, coin, BRONZE, ic.lg(BRONZE, 0.2, 0, 0.8, 1), extra=odd),
+        f'<path d="M13 32 A19 19 0 1 0 51 32 A19 19 0 1 0 13 32 Z" fill="none" stroke="{BRONZE[2]}" stroke-width="2"/>',
+        shape(ic, rim, C("#e8a868", "#b0703a", "#7a4a1e", "#2e1606"), extra=odd, sw=1.8),
         line("M14 26 C16 18 22 12 30 10", HL, 2.6, 0.7),
     ])
 

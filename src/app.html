@@ -155,9 +155,7 @@
   .icon-btn:active { transform: scale(.93); }
   .icon-btn svg { width: 18px; height: 18px; }
   .ico-moon { display: none; }
-  .hd-btn { width: auto; min-width: 38px; padding: 0 9px; font-family: var(--display); font-weight: 800; font-size: 12px; letter-spacing: .04em; color: var(--muted); }
   .skin-btn[aria-pressed="true"] { background: linear-gradient(135deg, var(--accent), var(--accent-2)); border-color: transparent; color: #fff; }
-  .hd-btn[aria-pressed="true"] { background: linear-gradient(135deg, var(--accent), var(--accent-2)); border-color: transparent; color: #fff; }
   :root[data-sky="day"] .ico-moon { display: block; }
   :root[data-sky="day"] .ico-sun { display: none; }
 
@@ -656,7 +654,6 @@
     .topbar .topbar-actions { gap: 4px; }
     .topbar .icon-btn { width: 32px; height: 32px; }
     .topbar .icon-btn svg { width: 16px; height: 16px; }
-    .topbar .hd-btn { min-width: 32px; padding: 0 4px; font-size: 11px; }
     .stat-row { gap: 8px; padding: 10px; }
     .stat-row .val { min-width: 34px; font-size: 18px; }
     .cat-select select { max-width: 104px; font-size: 11px; padding: 6px 22px 6px 8px; }
@@ -1167,7 +1164,7 @@
   :root[data-finish="retro"] :is(.card, .home-best, .deal, .proj-open, .proj-x, .coach-bubble, .talk, .tip, .icon-btn, .btn:not(.ghost), .chip-btn, .tile-item, .icon-only, .charm-chip, .row) {
     box-shadow: 3px 3px 0 rgba(0, 0, 0, .4); }
   /* filled highlights: flat colour with a pixel bevel (light top edge, dark bottom edge) */
-  :root[data-finish="retro"] :is(.btn.primary, .chip-btn.on, .seg.accent button.on, .step-num, .logo, .skin-btn[aria-pressed="true"], .hd-btn[aria-pressed="true"], .toast.tappable, .tab.on, .home-cta, .guide-cta) {
+  :root[data-finish="retro"] :is(.btn.primary, .chip-btn.on, .seg.accent button.on, .step-num, .logo, .skin-btn[aria-pressed="true"], .toast.tappable, .tab.on, .home-cta, .guide-cta) {
     background: var(--accent) !important;
     box-shadow: inset 0 3px 0 rgba(255, 255, 255, .22), inset 0 -3px 0 rgba(0, 0, 0, .28), 3px 3px 0 rgba(0, 0, 0, .45) !important; }
   :root[data-finish="retro"] .chip-btn.on.gold { background: #f6b73c !important; }
@@ -1573,7 +1570,6 @@
     <button class="icon-btn skin-btn" type="button" data-action="skin" aria-pressed="false" aria-label="Pixel game theme" title="Pixel game theme">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h12a4 4 0 0 1 4 4v2a4 4 0 0 1-7 2.6L14 16h-4l-1 .6A4 4 0 0 1 2 14v-2a4 4 0 0 1 4-4z"/><path d="M7 11v3M5.5 12.5h3"/><path d="M16 12h.01M18 14h.01"/></svg>
     </button>
-    <button class="icon-btn hd-btn" type="button" data-action="icon-style" aria-pressed="false" aria-label="HD icons" title="HD icons (smooth drawings instead of pixel art)">HD</button>
     <button class="icon-btn" id="infoBtn" type="button" aria-label="How PORE works" title="How it works">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17h.01"/></svg>
     </button>
@@ -2202,7 +2198,6 @@ __SOLVER_JS__
   }
   function applyLook() {
     document.documentElement.setAttribute('data-icons', iconStyle);
-    syncHdButton();
   }
   // The pixel game theme is an option (gamepad button); the modern design is the default.
   // pinned level headers sit exactly under the top bar, whatever its height (theme, fonts, phone width)
@@ -2235,18 +2230,6 @@ __SOLVER_JS__
     if (b) b.setAttribute('aria-pressed', String(skin !== 'modern'));
     document.querySelectorAll('[data-action="skin-pick"]').forEach(x => x.classList.toggle('on', x.dataset.skin === skin));
     try { localStorage.setItem(STORAGE.skin, skin); } catch (e) { /* ignore */ }
-  }
-  function syncHdButton() {
-    const b = document.querySelector('[data-action="icon-style"]');
-    if (b) b.setAttribute('aria-pressed', String(iconStyle === 'modern'));
-  }
-  function setIconStyle(style) {
-    iconStyle = ICON_STYLES[style] ? style : DEFAULT_ICONS;
-    applyLook();
-    try { localStorage.setItem(STORAGE.icons, iconStyle); } catch (e) { /* ignore */ }
-    renderItem(); renderResults();
-    if (!ui.pickerSheet.hidden) { renderFilters(); if (picker.type !== 'CUSTOM') renderPickerList(); }
-    renderCharms(); renderProjects(); renderTabbar();
   }
   function iconHTML(item, cls) {
     if (item.key && item.key !== 'custom') return `<div class="icon-frame ${cls || ''}">${iconSVG(item.key)}</div>`;
@@ -3278,18 +3261,29 @@ __SOLVER_JS__
   function replaceEntry(extra, url) { try { history.replaceState(navEntry(extra), '', url || location.href); } catch (e) { /* ignore */ } }
   // Auto-hiding top bar: down hides it, up (or back near the top) shows it. Listens to every scroll on the page
   // (window and the screens' own lists), vertical only, so side-scrolling strips and carousels never trigger it.
+  // Hiding the bar makes a screen taller, which can nudge its scroll position (at the end of a list it snaps
+  // back): those layout moves must not count as scrolling, or the bar flips back and forth and shakes. So:
+  // right after a flip the scroll position is only re-read, a flip needs a real 24px scroll the other way,
+  // and the snap-back at the end of a list never shows the bar.
   const barY = new WeakMap();
-  function showBar() { document.body.classList.remove('bar-off'); }
+  let barCalm = 0;
+  function setBar(off) {
+    if (document.body.classList.contains('bar-off') === off) return;
+    document.body.classList.toggle('bar-off', off);
+    barCalm = performance.now() + 400;   // the length of the slide, plus a little
+  }
+  function showBar() { setBar(false); }
   document.addEventListener('scroll', e => {
     const el = e.target === document ? document.scrollingElement : e.target;
     if (!el || el.closest && el.closest('.inv-pop')) return;
-    const y = el.scrollTop, last = barY.has(el) ? barY.get(el) : 0;
-    if (y === last) { barY.set(el, y); return; }
-    const d = y - last;
-    if (y < 40 || d < -8) showBar();
-    else if (d > 8 && el.scrollHeight - el.clientHeight > 160) document.body.classList.add('bar-off');
-    else return;   // small moves: keep the last reference point
-    barY.set(el, y);
+    const y = el.scrollTop;
+    if (performance.now() < barCalm) { barY.set(el, y); return; }
+    if (y < 40) { setBar(false); barY.set(el, y); return; }
+    const last = barY.has(el) ? barY.get(el) : 0, d = y - last, off = document.body.classList.contains('bar-off');
+    if ((off && d > 0) || (!off && d < 0)) { barY.set(el, y); return; }   // moving the way the bar already is: follow
+    const atEnd = y + el.clientHeight >= el.scrollHeight - 4;
+    if (!off && d > 24 && el.scrollHeight - el.clientHeight > 160) { setBar(true); barY.set(el, y); }
+    else if (off && d < -24 && !atEnd) { setBar(false); barY.set(el, y); }
   }, { capture: true, passive: true });
   function tabGo(id) {
     haptic(8);
@@ -4691,7 +4685,6 @@ __SOLVER_JS__
       case 'bg-toggle': { const sw = el.closest('.bg-switch'); bgSwitchOpen(sw, !sw.classList.contains('open')); haptic(6); break; }
       case 'bg-pick': bgSwitchOpen(el.closest('.bg-switch'), false); setBg(el.dataset.bg); toast(`Background: ${BG_NAMES[bgPref]}${bgPref === 'auto' ? ' (a new one each time you open PORE)' : ''}`); break;
       case 'bg-motion': setBgMotion(el.dataset.motion === 'on'); toast(bgMotion ? 'Background moves' : 'Background still: saves battery'); break;
-      case 'icon-style': setIconStyle(iconStyle === 'modern' ? 'pixelhd' : 'modern'); toast(ICON_STYLES[iconStyle].label); break;
       case 'reload': location.reload(); break;
       case 'next-tip': {
         tipIndex = (tipIndex + 1) % TIPS.length;
@@ -5084,7 +5077,7 @@ __SOLVER_JS__
     try { theme = localStorage.getItem(STORAGE.theme); } catch (e) { /* ignore */ }
     if (!theme) theme = 'dark';   // night by default
     setTheme(theme);
-    try { const saved = localStorage.getItem(STORAGE.icons); iconStyle = ICON_STYLES[saved] ? saved : DEFAULT_ICONS; } catch (e) { /* ignore */ }
+    try { localStorage.removeItem(STORAGE.icons); } catch (e) { /* ignore */ }   // the HD switch is gone: everyone gets the pixel icons
     applyLook();
     // Pixel is PORE's own look and the default; a look someone picked themselves is kept
     try { setSkin(localStorage.getItem('pore.skin.chosen') ? localStorage.getItem(STORAGE.skin) : 'pixel'); } catch (e) { setSkin('pixel'); }
