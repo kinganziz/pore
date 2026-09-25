@@ -421,13 +421,14 @@ export function pixelKit(options = {}) {
     const runs = new Map();
     grid = grid.map(r => r.map(c => (c ? vivid(c) : c)));
     let frames = '';
-    if (anim === 'flame' || anim === 'glow') {   // lift the flame pixels out of the still picture into their own frames
+    if (anim === 'flame' || anim === 'glow' || anim === 'pulse') {   // lift the flame pixels out of the still picture into their own frames
       // 'flame': the warm patch at the top of the icon (a torch's fire, a lamp's flame, not its gold body);
-      // 'glow': only the yellow light (a pumpkin's carved face, not its orange skin)
+      // 'glow': only the yellow light (a pumpkin's carved face, not its orange skin);
+      // 'pulse': like 'flame', but the whole light brightens and dims together (a lantern's glow)
       const pick = anim === 'glow' ? (c => { const q = hueOf(c); return q.h >= 44 && q.h <= 64 && q.s > 0.4 && q.l > 0.5; }) : isFlame;
       const on = new Set(); grid.forEach((r, y) => r.forEach((c, x) => { if (c && pick(c)) on.add(x + ',' + y); }));
       let keep = on;
-      if (anim === 'flame') {   // 4-connected patches; keep the topmost one(s)
+      if (anim !== 'glow') {   // 4-connected patches; keep the topmost one(s)
         const seen = new Set(), comps = [];
         for (const id of on) { if (seen.has(id)) continue; const comp = [], st = [id]; seen.add(id);
           while (st.length) { const cur = st.pop(); comp.push(cur); const [cx, cy] = cur.split(',').map(Number);
@@ -445,11 +446,12 @@ export function pixelKit(options = {}) {
         for (let f = 0; f < FRAMES; f++) {
           const cells = new Map();
           for (const [x, y, c] of flame) {
-            const wave = [0, 1, 0, -1][((y - top) + f * 3 + (x % 2)) % 4];   // brighter and dimmer bands rising through the flame
+            const wave = anim === 'pulse' ? [1, 0, -1, 0][f]                  // all together: bright, mid, dim, mid
+              : [0, 1, 0, -1][(((y - top) + f + (x % 2)) % 4 + 4) % 4];   // brighter and dimmer bands moving through the flame
             cells.set(x + ',' + y, FIRE[Math.max(0, Math.min(FIRE.length - 1, step(c) + wave))]);
           }
           const vals = Array.from({ length: FRAMES }, (_, i) => (i === f ? 'visible' : 'hidden')).join(';');
-          groups.push(`<g visibility="${f ? 'hidden' : 'visible'}"><animate attributeName="visibility" values="${vals}" dur="${(FRAMES * FRAME_S).toFixed(2)}s" calcMode="discrete" repeatCount="indefinite"/>${runsOf(cells)}</g>`);
+          groups.push(`<g visibility="${f ? 'hidden' : 'visible'}"><animate attributeName="visibility" values="${vals}" dur="${(FRAMES * FRAME_S * (anim === 'pulse' ? 1.8 : 1)).toFixed(2)}s" calcMode="discrete" repeatCount="indefinite"/>${runsOf(cells)}</g>`);
         }
         frames = groups.join('');
       }
