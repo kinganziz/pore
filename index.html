@@ -4108,7 +4108,10 @@ function createSolver() {
   }
   function sceneHide() { if (scene.raf) cancelAnimationFrame(scene.raf); clearTimeout(scene.timer); scene.raf = 0; scene.timer = 0; }
   document.addEventListener('visibilitychange', () => { if (document.hidden) sceneHide(); else sceneShow(); });
-  addEventListener('resize', () => { if (!scene.el) return; scene.key = ''; sceneShow(); });
+  // A phone's address bar showing or hiding while you scroll fires resize without changing the scene's size
+  // (it is 100lvh): only a real size change rebuilds the canvas (which wipes it), and then it is redrawn at once
+  // instead of staying blank until the next frame (the plan page redraws only a few times a second)
+  addEventListener('resize', () => { if (!scene.el) return; const was = scene.key; if (!sceneSetup()) return; if (scene.key !== was) sceneDraw(0, true); sceneShow(); });
 
   /* ================= tab bar: Home, Items, Plan, Guide, Help (like the game's bottom bar) ================= */
   // Plan and Guide follow the last item you opened, from any screen; until there is one they are locked
@@ -5476,7 +5479,7 @@ function createSolver() {
     const goodArt = t => { const g = GOODS.find(x => x.name === (GOOD_TYPES.find(y => y[0] === t) || [])[3]) || GOODS.find(x => x.type === t); return g ? iconSVG(g.key) : ''; };
     const clover = CHARMS.find(c => c.name === 'Clover') || CHARMS[0];
     const allArt = () => `<span class="cat-quad">${['Iron Sword', 'Potion of Luck', 'Gold ore', 'Apple'].map(n => { const x = ITEMS.find(i => i.name === n) || GOODS.find(i => i.name === n); return x ? iconSVG(x.key) : ''; }).join('')}</span>`;
-    const catArt = k => ({ all: allArt(), maps: iconSVG('u-map'), npcs: goodArt('SKIN'), charms: clover ? iconSVG(clover.key) : '', coins: iconSVG('u-gold') })[k] || (k.startsWith('g:') ? goodArt(k.slice(2)) : filterIcon(k.slice(2)));   // item types use the item list's type icons
+    const catArt = k => ({ all: allArt(), maps: iconSVG('u-map'), npcs: iconSVG('n-merchant'), charms: clover ? iconSVG(clover.key) : '', coins: iconSVG('u-gold') })[k] || (k.startsWith('g:') ? goodArt(k.slice(2)) : filterIcon(k.slice(2)));   // item types use the item list's type icons
     const strip = document.getElementById('invCats'), sx = strip.scrollLeft;
     strip.innerHTML = cats.map(([k, l]) => `<button type="button" role="tab" class="inv-cat ${invTab === k ? 'on' : ''}" data-action="inv-tab" data-tab="${k}" aria-selected="${invTab === k}" aria-label="${l}" title="${l}">${catArt(k)}<i class="cat-n" data-cat="${k}" hidden></i></button>`).join('');
     strip.scrollLeft = sx;   // stays where the player left it
