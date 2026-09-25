@@ -1224,6 +1224,18 @@
   .hb-arrow:active { transform: translateY(-50%) scale(.85); }
   .hb-arrow.prev:hover svg { transform: translateX(-2px); } .hb-arrow.next:hover svg { transform: translateX(2px); }
   :root[data-sky="day"] .hb-arrow { color: #1b1f33; filter: drop-shadow(1px 1px 0 rgba(255, 255, 255, .7)); }
+  /* ---------- background pictures (title screen and help page) ---------- */
+  .bg-strip { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; }
+  .home-hero .bg-strip { margin: -14px 0 6px; }
+  .bg-thumb { width: 46px; height: 33px; padding: 0; border: 2px solid rgba(255, 255, 255, .28); border-radius: 9px; overflow: hidden; background: rgba(0, 0, 0, .35);
+    cursor: pointer; display: grid; place-items: center; color: #fff; box-shadow: 2px 2px 0 rgba(0, 0, 0, .35); transition: transform .12s, border-color .15s; }
+  .bg-thumb img { width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; display: block; }
+  .bg-thumb svg { width: 18px; height: 18px; }
+  .bg-thumb.on { border-color: #fff; transform: translateY(-2px); box-shadow: 2px 4px 0 rgba(0, 0, 0, .4), 0 0 0 2px var(--accent); }
+  .bg-thumb:active { transform: scale(.92); }
+  .in-help { flex-wrap: nowrap; }
+  .in-help .bg-thumb { flex: 1 1 0; width: auto; min-width: 0; max-width: 60px; height: 40px; }   /* one row: the pictures share the width */
+  .in-help .bg-thumb.icon { color: var(--text); background: var(--surface-2); }
 </style>
 </head>
 <body>
@@ -1327,9 +1339,7 @@
       <div class="font-pick theme-pick"><span>Look</span><div class="seg" role="group" aria-label="Look">
         <button type="button" data-action="skin-pick" data-skin="modern">Modern</button><button type="button" data-action="skin-pick" data-skin="retro">Retro</button><button type="button" data-action="skin-pick" data-skin="pixel">Pixel</button><button type="button" data-action="skin-pick" data-skin="game">Game</button>
       </div></div>
-      <div class="font-pick theme-pick bg-pick"><span>Background</span><div class="seg" role="group" aria-label="Background">
-        <button type="button" data-action="bg-pick" data-bg="auto">Auto</button><button type="button" data-action="bg-pick" data-bg="hills">Hills</button><button type="button" data-action="bg-pick" data-bg="sea">Sea</button><button type="button" data-action="bg-pick" data-bg="desert">Desert</button><button type="button" data-action="bg-pick" data-bg="snow">Snow</button><button type="button" data-action="bg-pick" data-bg="town">Town</button><button type="button" data-action="bg-pick" data-bg="none">None</button>
-      </div></div>
+      <div class="font-pick theme-pick bg-pick"><span>Background</span><div class="bg-strip in-help" data-none="1" role="group" aria-label="Background"></div></div>
       <div class="font-pick theme-pick"><span>Motion <small>(saves battery when off)</small></span><div class="seg" role="group" aria-label="Background motion">
         <button type="button" data-action="bg-motion" data-motion="on">On</button><button type="button" data-action="bg-motion" data-motion="off">Off</button>
       </div></div>
@@ -1857,7 +1867,7 @@ __SOLVER_JS__
     if (skin === 'modern') { d.removeAttribute('data-flavor'); d.removeAttribute('data-finish'); }
     else { d.setAttribute('data-flavor', skin); d.setAttribute('data-finish', 'retro'); }
     syncTopbar();
-    if (scene.ctx) { scene.skyKey = ''; scene.measured = false; sceneShow(); }
+    if (scene.ctx) { scene.skyKey = ''; scene.measured = false; sceneShow(); refreshBgStrips(); }
     const b = document.querySelector('[data-action="skin"]');
     if (b) b.setAttribute('aria-pressed', String(skin !== 'modern'));
     document.querySelectorAll('[data-action="skin-pick"]').forEach(x => x.classList.toggle('on', x.dataset.skin === skin));
@@ -2380,34 +2390,40 @@ __SOLVER_JS__
     if (scene.key !== key) {
       scene.key = key; scene.W = W; scene.H = H; c.width = W; c.height = H;
       scene.ctx = c.getContext('2d', { willReadFrequently: false }); scene.skyKey = ''; scene.measured = false;
-      const r = sceneRand(11 + BG_SCENES.indexOf(bgNow));
-      const st = scene.st = {
-        stars: Array.from({ length: 110 }, () => ({ x: r() * W, y: r() * H * 0.5, p: r() * 6.28, b: r() < 0.18 })),
-        clouds: Array.from({ length: 5 }, (_, i) => ({ x: r() * (W + 80), y: 0.07 + i * 0.06 + r() * 0.03, w: 18 + Math.floor(r() * 18) })),
-        shoot: { t: 3 + r() * 6, x: 0, y: 0, life: 0 },
-      };
-      if (bgNow === 'hills') {
-        st.trees = Array.from({ length: 30 }, (_, i) => ({ x: i * 12 + r() * 7, h: 8 + Math.floor(r() * 9), bush: r() < 0.25 }));
-        st.rocks = Array.from({ length: 10 }, (_, i) => ({ x: i * 36 + r() * 18, w: 3 + Math.floor(r() * 4), h: 3 + Math.floor(r() * 9) }));
-        st.tufts = Array.from({ length: 60 }, () => ({ x: Math.floor(r() * P), h: 1 + Math.floor(r() * 3) }));
-        st.flies = Array.from({ length: 26 }, () => ({ x: r() * W, y: H * (0.55 + r() * 0.45), s: 0.08 + r() * 0.16, p: r() * 6.28 }));
-      } else if (bgNow === 'sea') {
-        st.rows = Array.from({ length: 26 }, (_, i) => ({ k: i, dash: Array.from({ length: 8 }, () => ({ x: r() * P, w: 2 + Math.floor(r() * 6) })) }));
-        st.birds = Array.from({ length: 5 }, () => ({ x: r() * W, y: 0.16 + r() * 0.18, s: 0.4 + r() * 0.5, p: r() * 6.28 }));
-      } else if (bgNow === 'desert') {
-        st.cacti = Array.from({ length: 7 }, (_, i) => ({ x: i * 52 + r() * 30, h: 9 + Math.floor(r() * 9), arm: r() < 0.7 }));
-        st.pyrs = [{ x: 60, s: 22 }, { x: 94, s: 14 }, { x: 250, s: 18 }];
-      } else if (bgNow === 'snow') {
-        st.pines = Array.from({ length: 26 }, (_, i) => ({ x: i * 14 + r() * 8, h: 10 + Math.floor(r() * 10) }));
-        st.flakes = Array.from({ length: 90 }, () => ({ x: r() * W, y: r() * H, s: 0.2 + r() * 0.5, p: r() * 6.28, big: r() < 0.2 }));
-        st.smoke = [];
-      } else if (bgNow === 'town') {
-        st.far = []; for (let x = 0; x < P;) { const w = 8 + Math.floor(r() * 12); st.far.push({ x, w, h: 20 + Math.floor(r() * 34), wins: r() }); x += w + 1; }
-        st.houses = []; for (let x = 0; x < P;) { const w = 16 + Math.floor(r() * 14); st.houses.push({ x, w, h: 14 + Math.floor(r() * 14), roof: r() < 0.7, chim: r() < 0.5, seed: Math.floor(r() * 9999) }); x += w + 2 + Math.floor(r() * 6); }
-        st.bats = Array.from({ length: 4 }, () => ({ x: r() * W, y: 0.18 + r() * 0.2, s: 0.5 + r() * 0.6, p: r() * 6.28 }));
-      }
+      scene.st = sceneState(bgNow, W, H);
     }
     return true;
+  }
+
+  // the moving parts of a scene (stars, clouds, trees, waves, ...) for a canvas of W x H world pixels
+  function sceneState(key, W, H) {
+    const r = sceneRand(11 + BG_SCENES.indexOf(key));
+    const st = {
+      stars: Array.from({ length: 110 }, () => ({ x: r() * W, y: r() * H * 0.5, p: r() * 6.28, b: r() < 0.18 })),
+      clouds: Array.from({ length: 5 }, (_, i) => ({ x: r() * (W + 80), y: 0.07 + i * 0.06 + r() * 0.03, w: 18 + Math.floor(r() * 18) })),
+      shoot: { t: 3 + r() * 6, x: 0, y: 0, life: 0 },
+    };
+    if (key === 'hills') {
+      st.trees = Array.from({ length: 30 }, (_, i) => ({ x: i * 12 + r() * 7, h: 8 + Math.floor(r() * 9), bush: r() < 0.25 }));
+      st.rocks = Array.from({ length: 10 }, (_, i) => ({ x: i * 36 + r() * 18, w: 3 + Math.floor(r() * 4), h: 3 + Math.floor(r() * 9) }));
+      st.tufts = Array.from({ length: 60 }, () => ({ x: Math.floor(r() * P), h: 1 + Math.floor(r() * 3) }));
+      st.flies = Array.from({ length: 26 }, () => ({ x: r() * W, y: H * (0.55 + r() * 0.45), s: 0.08 + r() * 0.16, p: r() * 6.28 }));
+    } else if (key === 'sea') {
+      st.rows = Array.from({ length: 26 }, (_, i) => ({ k: i, dash: Array.from({ length: 8 }, () => ({ x: r() * P, w: 2 + Math.floor(r() * 6) })) }));
+      st.birds = Array.from({ length: 5 }, () => ({ x: r() * W, y: 0.16 + r() * 0.18, s: 0.4 + r() * 0.5, p: r() * 6.28 }));
+    } else if (key === 'desert') {
+      st.cacti = Array.from({ length: 7 }, (_, i) => ({ x: i * 52 + r() * 30, h: 9 + Math.floor(r() * 9), arm: r() < 0.7 }));
+      st.pyrs = [{ x: 60, s: 22 }, { x: 94, s: 14 }, { x: 250, s: 18 }];
+    } else if (key === 'snow') {
+      st.pines = Array.from({ length: 26 }, (_, i) => ({ x: i * 14 + r() * 8, h: 10 + Math.floor(r() * 10) }));
+      st.flakes = Array.from({ length: 90 }, () => ({ x: r() * W, y: r() * H, s: 0.2 + r() * 0.5, p: r() * 6.28, big: r() < 0.2 }));
+      st.smoke = [];
+    } else if (key === 'town') {
+      st.far = []; for (let x = 0; x < P;) { const w = 8 + Math.floor(r() * 12); st.far.push({ x, w, h: 20 + Math.floor(r() * 34), wins: r() }); x += w + 1; }
+      st.houses = []; for (let x = 0; x < P;) { const w = 16 + Math.floor(r() * 14); st.houses.push({ x, w, h: 14 + Math.floor(r() * 14), roof: r() < 0.7, chim: r() < 0.5, seed: Math.floor(r() * 9999) }); x += w + 2 + Math.floor(r() * 6); }
+      st.bats = Array.from({ length: 4 }, () => ({ x: r() * W, y: 0.18 + r() * 0.2, s: 0.5 + r() * 0.6, p: r() * 6.28 }));
+    }
+    return st;
   }
 
   // ---- shared pieces
@@ -2442,6 +2458,7 @@ __SOLVER_JS__
     g.globalAlpha = 1;
   }
   function moonSpot(W, H) {   // wholly below the top bar, whatever its height
+    if (scene.thumb) return { x: Math.round(W * 0.74), y: Math.round(H * 0.22) };
     const bar = document.querySelector('.topbar'), barH = bar ? bar.getBoundingClientRect().bottom / (scene.px || 2) : 0;
     return { x: Math.round(W * 0.74), y: Math.max(Math.round(H * 0.12), Math.ceil(barH) + 17) };
   }
@@ -2682,6 +2699,32 @@ __SOLVER_JS__
     },
   };
 
+  const bgThumbs = {};
+  function bgThumb(key) {
+    const d = document.documentElement, ck = key + (d.dataset.sky || '') + (key === 'hills' ? d.dataset.flavor || '' : '');
+    if (bgThumbs[ck]) return bgThumbs[ck];
+    const W = 112, H = 80, c = document.createElement('canvas'); c.width = W; c.height = H;
+    const keep = { st: scene.st, x: scene.x, sky: scene.sky, skyKey: scene.skyKey, seaGrad: scene.seaGrad, seaKey: scene.seaKey, thumb: scene.thumb }, keepNow = bgNow;
+    try {
+      bgNow = key; Object.assign(scene, { st: sceneState(key, W, H), x: 40, sky: null, skyKey: '', seaGrad: null, seaKey: '', thumb: true });
+      SCENE_DRAW[key](c.getContext('2d'), W, H, bgPalette(), 3.3, 0);
+      bgThumbs[ck] = c.toDataURL();
+    } catch (e) { bgThumbs[ck] = ''; }
+    finally { Object.assign(scene, keep); bgNow = keepNow; }
+    return bgThumbs[ck];
+  }
+  const BG_ICON = {
+    auto: '<svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M1 4h3v1h1v1h1v1H5V6H4V5H1zM10 3h2V2h1v1h1v1h-1v1h-1V4h-2v1H9v1H8V5h1V4h1zM1 11h3v-1h1v-1h1v1h1v1h1v1h1v1h2v-1h1v1h1v1h-1v1h-1v-1h-2v-1H9v-1H8v-1H7v1H6v1H5v1H1z"/></svg>',
+    none: '<svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M6 2h4v1h2v1h1v2h1v4h-1v2h-1v1h-2v1H6v-1H4v-1H3v-2H2V6h1V4h1V3h2zM6 4v1H5v1H4v4h1v1h1v1h4v-1h1v-1h1V6h-1V5h-1V4zM5 5h1v1h1v1h1v1h1v1h1v1h1v1h-1v-1H9V9H8V8H7V7H6V6H5z"/></svg>',
+  };
+  // a row of scene pictures (no words): Auto, the five scenes, and None on the help page
+  function bgStripHTML(withNone) {
+    const keys = ['auto', ...BG_SCENES].concat(withNone ? ['none'] : []);
+    return keys.map(k => `<button class="bg-thumb ${k === bgPref ? 'on' : ''} ${BG_ICON[k] ? 'icon' : ''}" type="button" data-action="bg-pick" data-bg="${k}" aria-label="${BG_NAMES[k]} background" title="${BG_NAMES[k]}">${BG_ICON[k] || `<img src="${bgThumb(k)}" alt="" draggable="false">`}</button>`).join('');
+  }
+  function refreshBgStrips() {
+    document.querySelectorAll('.bg-strip').forEach(el => { el.innerHTML = bgStripHTML(el.dataset.none === '1'); });
+  }
   function sceneDraw(dt, calm) {
     if (!scene.ctx || !scene.key.startsWith(bgNow)) { if (!sceneSetup()) return; }   // the scene was switched: set it up first
     const { ctx: g, W, H } = scene, pal = bgPalette();
@@ -2821,6 +2864,7 @@ __SOLVER_JS__
     const pct = it => Math.round((1 - badges[it.key] / std(it)) * 100);
     const hero = `<section class="home-hero">
         <div class="home-copy">
+          <div class="bg-strip" role="group" aria-label="Background">${bgStripHTML(false)}</div>
           <span class="home-kicker">~ Pixel Odyssey ~</span>
           <h1 class="home-title ${titleDrop ? 'drop' : ''}"><i class="tw" style="--i:0">Max</i> <i class="tw" style="--i:1">your</i> <i class="tw" style="--i:2">gear</i><br><span>for a fraction.</span></h1>
           <p class="home-sub">A perfect P10 normally eats <b>512</b> base items. PORE finds the cheapest path, step by step.</p>
@@ -3894,6 +3938,7 @@ __SOLVER_JS__
     d.setAttribute('data-theme', 'dark');
     d.setAttribute('data-sky', t === 'light' ? 'day' : 'night');
     if (scene.ctx) { scene.skyKey = ''; scene.measured = false; sceneShow(); }
+    if (typeof refreshBgStrips === 'function' && scene.el) refreshBgStrips();
     document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0a0c12');
     try { localStorage.setItem(STORAGE.theme, t === 'light' ? 'light' : 'dark'); } catch (e) { /* ignore */ }
   }
@@ -4281,7 +4326,7 @@ __SOLVER_JS__
     applyLook();
     // Pixel is PORE's own look and the default; a look someone picked themselves is kept
     try { setSkin(localStorage.getItem('pore.skin.chosen') ? localStorage.getItem(STORAGE.skin) : 'pixel'); } catch (e) { setSkin('pixel'); }
-    bgLoad(); syncBgPicker();
+    bgLoad(); refreshBgStrips(); syncBgPicker();
     try { setFont(localStorage.getItem(STORAGE.font)); } catch (e) { setFont('vt323'); }
     ui.catGrid.innerHTML = Object.values(CATS).map(c => `<div><span>${c.label} <b>${c.pct}</b></span><small>${c.who}</small></div>`).join('');
     const date = (ITEM_DB.fetched || '').slice(0, 10);
