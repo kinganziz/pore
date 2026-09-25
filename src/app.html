@@ -1115,6 +1115,36 @@
   /* game look: deep forest green for filled highlights (the full bright green was too loud) */
   :root[data-flavor="game"][data-skin="pixel"] :is(.logo, .step-num, .skin-btn[aria-pressed="true"], .hd-btn[aria-pressed="true"], .toast.tappable, .filter.on, .chip-btn.on:not(.gold)) {
     background: #1f5a3c !important; color: #d8ffe2 !important; border-color: #3f9a62 !important; }
+  /* ---------- the landscape behind planning screens: still and dim ---------- */
+  body.has-item #scene { display: block; opacity: .32; }
+  /* ---------- game-style tab bar ---------- */
+  .tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px;
+    padding: 6px 8px calc(6px + var(--safe-b)); background: color-mix(in srgb, var(--bg-2) 94%, transparent); border-top: 1px solid var(--line-2);
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, .35); }
+  @media (min-width: 720px) { .tabbar { left: 50%; right: auto; width: 520px; transform: translateX(-50%); bottom: 12px; border: 1px solid var(--line-2); border-radius: 22px; padding: 6px; } }
+  .tab { display: grid; justify-items: center; align-content: center; gap: 2px; min-width: 0; height: 58px; border: 0; border-radius: 16px; background: transparent;
+    color: var(--muted); cursor: pointer; font: inherit; transition: background .2s, color .2s, transform .12s; }
+  .tab:active { transform: scale(.94); }
+  .tab-icon { display: grid; place-items: center; width: 34px; height: 34px; }
+  .tab-icon .pixel, .tab-icon img { width: 32px; height: 32px; image-rendering: pixelated; }
+  .tab-icon img { object-fit: contain; }
+  .tab-glyph { width: 26px; height: 26px; }
+  .tab-label { font-size: 11px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .tab.on { background: linear-gradient(160deg, var(--accent), var(--accent-2)); color: var(--on-accent, #fff); box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 40%, transparent); }
+  .tab.on .tab-glyph { color: var(--on-accent, #fff); }
+  :root { --tabbar-h: calc(71px + var(--safe-b)); }
+  @media (min-width: 720px) { :root { --tabbar-h: 88px; } }
+  body { padding-bottom: var(--tabbar-h); }
+  /* the bar stays on top like the game's; sheets end just above it */
+  .tabbar { z-index: 55; }
+  .sheet-backdrop { bottom: var(--tabbar-h); }
+  :root[data-skin="pixel"] .tabbar { background: var(--bg-2); border-top: var(--px-w) solid var(--line); box-shadow: none; }
+  @media (min-width: 720px) { :root[data-skin="pixel"] .tabbar { border-image: var(--pf-line) 1 stretch; border-radius: 0; box-shadow: var(--px-raised); } }
+  :root[data-skin="pixel"] .tab { border-radius: 0; font-family: var(--font); }
+  :root[data-skin="pixel"] .tab.on { background: var(--accent); box-shadow: var(--px-btn); }
+  :root[data-flavor="game"][data-skin="pixel"] .tab.on { background: #1f5a3c; color: #e0ffe8; border-radius: 14px; box-shadow: none; }
+  :root[data-flavor="game"][data-skin="pixel"] .tab.on .tab-glyph { color: #e0ffe8; }
+  :root[data-flavor="game"][data-skin="pixel"] .tab-label { color: #eaf6ee; }
 </style>
 </head>
 <body>
@@ -1264,6 +1294,7 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <canvas id="scene" aria-hidden="true"></canvas>
+<nav class="tabbar" id="tabbar" aria-label="Main"></nav>
 <canvas id="fx" class="fx" hidden></canvas>
 
 <script>const ITEM_DB = __ITEMS_JSON__;</script>
@@ -1329,7 +1360,7 @@ __SOLVER_JS__
   /* ================= state ================= */
   const state = { item: null, custom: null, L: 10, w: 0, wl: 0, t: {}, o: [], k: {}, stock: 0, view: 'up', m: 'exact', cf: 0, ch: {} };
   const ui = {};
-  ['itemBody', 'itemHint', 'targetCard', 'targetBody', 'targetHint', 'ownedCard', 'ownedBody', 'resultsBody', 'pickerSheet', 'pickerBody', 'filters', 'searchInput', 'infoSheet', 'guideSheet', 'guideBody', 'toast', 'fx', 'themeBtn', 'infoBtn', 'catGrid', 'dataDate']
+  ['tabbar', 'itemBody', 'itemHint', 'targetCard', 'targetBody', 'targetHint', 'ownedCard', 'ownedBody', 'resultsBody', 'pickerSheet', 'pickerBody', 'filters', 'searchInput', 'infoSheet', 'guideSheet', 'guideBody', 'toast', 'fx', 'themeBtn', 'infoBtn', 'catGrid', 'dataDate']
     .forEach(id => ui[id] = document.getElementById(id));
   const picker = { q: '', type: 'ALL', sort: 'name', view: 'grid' };   // views: list, grid (icon + name + cost), icons
   try { const v = localStorage.getItem('pore.pickerview'); if (['list', 'grid', 'icons'].includes(v)) picker.view = v; } catch (e) { /* ignore */ }
@@ -2287,8 +2318,54 @@ __SOLVER_JS__
     if (!scene.raf) { scene.last = 0; scene.raf = requestAnimationFrame(sceneLoop); }
   }
   function sceneHide() { if (scene.raf) cancelAnimationFrame(scene.raf); scene.raf = 0; }
+  function sceneStill() { sceneHide(); if (sceneSetup()) sceneDraw(0); }   // plan screens: the same world, not moving
   document.addEventListener('visibilitychange', () => { if (document.hidden) sceneHide(); else if (!state.item) sceneShow(); });
-  addEventListener('resize', () => { if (!state.item && scene.el) { scene.W = 0; sceneShow(); } });
+  addEventListener('resize', () => { if (!scene.el) return; scene.W = 0; if (state.item) sceneStill(); else sceneShow(); });
+
+  /* ================= tab bar: Home, Items, Plan, Ask anz, Help (like the game's bottom bar) ================= */
+  const TAB_HOME = '<svg class="tab-glyph" viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M7 1h2v1h1v1h1v1h1v1h1v1h1v1h1v2h-1v6H9v-4H7v4H2V9H1V7h1V6h1V5h1V4h1V3h1V2h1z"/></svg>';
+  const TAB_HELP = '<svg class="tab-glyph" viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M5 2h6v1h1v1h1v4h-1v1h-1v1H9v2H7V9h1V8h1V7h1V4H6v2H4V4h1V3h0z M7 13h2v2H7z"/></svg>';
+  function planTarget() { return state.item ? { key: state.item } : projects[0] ? { key: projects[0].key, id: projects[0].id } : null; }
+  function renderTabbar() {
+    const t = planTarget();
+    const planIcon = t && t.key ? iconSVG(t.key) : iconSVG((ITEMS.find(it => it.name === 'Telescope') || ITEMS[0]).key);
+    const tab = (id, icon, label) => `<button class="tab" type="button" data-action="tab" data-tab="${id}"><span class="tab-icon">${icon}</span><span class="tab-label">${label}</span></button>`;
+    ui.tabbar.innerHTML = tab('home', TAB_HOME, 'Home') +
+      tab('items', iconSVG((ITEMS.find(it => it.name === 'Iron Sword') || ITEMS[0]).key), 'Items') +
+      tab('plan', planIcon, 'Plan') +
+      tab('guide', '<img src="icons/app/anz.png?v=3" alt="" width="124" height="128" draggable="false">', 'Ask anz') +
+      tab('help', TAB_HELP, 'Help');
+    syncTabbar();
+  }
+  function syncTabbar() {
+    if (!ui.tabbar) return;
+    const on = !ui.guideSheet.hidden ? 'guide' : !ui.pickerSheet.hidden ? 'items' : !ui.infoSheet.hidden ? 'help' : state.item ? 'plan' : 'home';
+    ui.tabbar.querySelectorAll('.tab').forEach(b => { b.classList.toggle('on', b.dataset.tab === on); b.setAttribute('aria-current', b.dataset.tab === on ? 'page' : 'false'); });
+  }
+  function tabGo(id) {
+    haptic(8);
+    // closing a sheet steps back in history (asynchronous): open the next screen once that has happened
+    const open = { items: !ui.pickerSheet.hidden, help: !ui.infoSheet.hidden, guide: !ui.guideSheet.hidden };
+    if (open[id]) return;
+    const closing = Object.keys(open).filter(k => open[k]);
+    if (closing.length) {
+      closePicker(); closeInfo(); closeGuide();
+      setTimeout(() => tabGo(id), 320);
+      return;
+    }
+    if (id === 'home') { if (state.item) goHome(); else window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' }); }
+    else if (id === 'items') openPicker();
+    else if (id === 'help') openInfo();
+    else if (id === 'plan') {
+      const t = planTarget();
+      if (!t) { toast('Pick an item to start a plan'); openPicker(); }
+      else if (!state.item && t.id) openProject(t.id);
+    } else if (id === 'guide') {
+      if (state.item && last && last.analysis) { upsertProject({}); openGuide(); }
+      else if (!state.item && planTarget() && planTarget().id) { openProject(planTarget().id); toast('Your plan is open: tap Ask anz again for the guide'); }
+      else { toast('Pick an item first, then anz walks you through it'); openPicker(); }
+    }
+  }
 
   /* ================= home screen ================= */
   // A hero with the best real saving and one big button, your projects, the best deals and the item groups.
@@ -2345,7 +2422,8 @@ __SOLVER_JS__
 
   function renderResults() {
     const item = last ? last.item : resolveItem();
-    if (item) sceneHide();
+    if (item) sceneStill();
+    if (ui.tabbar && !ui.tabbar.childElementCount) renderTabbar(); else syncTabbar();
     if (!item) {
       ui.resultsBody.innerHTML = homeHTML();
       countUpHome();
@@ -3326,7 +3404,7 @@ __SOLVER_JS__
     document.querySelector('meta[name="theme-color"]').setAttribute('content', t === 'light' ? '#dcdfeb' : '#0a0c12');
     try { localStorage.setItem(STORAGE.theme, t); } catch (e) { /* ignore */ }
   }
-  function renderAll() { renderItem(); renderTarget(); renderOwned(); renderResults(); persist(); }
+  function renderAll() { renderItem(); renderTarget(); renderOwned(); renderResults(); persist(); renderTabbar(); }
   function afterChange() { renderTarget(); renderOwned(); persist(); scheduleSolve(); }
   function closeSheets() { closePicker(); closeInfo(); closeGuide(); }
   function openInfo(opts) {
@@ -3341,6 +3419,8 @@ __SOLVER_JS__
     ui.infoSheet.hidden = true; document.body.classList.remove('locked');
     if (!(opts && opts.fromHistory)) ui.infoBtn.focus();
   }
+
+  new MutationObserver(() => syncTabbar()).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['hidden'] });
 
   /* ================= events ================= */
   document.addEventListener('click', e => {
@@ -3368,6 +3448,7 @@ __SOLVER_JS__
         break;
       }
       case 'open-picker': openPicker(); break;
+      case 'tab': tabGo(el.dataset.tab); break;
       case 'browse': picker.type = el.dataset.type; picker.q = ''; openPicker(); break;
       case 'close-picker': closePicker(); break;
       case 'close-info': closeInfo(); break;
