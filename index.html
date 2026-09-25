@@ -1166,6 +1166,9 @@
   body.locked #scene { display: block; opacity: .75; }   /* behind an open sheet the world shows a little brighter */
   body.locked :is(main.app, body > footer) { visibility: hidden; }   /* only the world shows through a sheet, not the page under it */
   .sheet-backdrop { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(4, 6, 12, .35); }
+  /* top bar and tab bar: a little see-through, so the world shows behind them too */
+  .topbar, :root[data-skin="pixel"] .topbar, .tabbar, :root[data-skin="pixel"] .tabbar {
+    background: color-mix(in srgb, var(--bg-2) 72%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }   /* blur: page text sliding under stays unreadable */
 </style>
 </head>
 <body>
@@ -2694,9 +2697,9 @@ function createSolver() {
     return true;
   }
   const ridge = (x, P, base, amps, H) => base * H + amps.reduce((t, [a, k, ph]) => t + a * H * Math.sin(2 * Math.PI * k * x / P + ph), 0);
-  function sceneDraw(dt) {
+  function sceneDraw(dt, calm) {
     const { ctx: g, W, H } = scene, pal = scenePalette(), P = 360;
-    scene.x += dt * 0.012;                                   // walking speed
+    if (!calm) scene.x += dt * 0.012;                        // walking speed (the land holds still on working screens)
     const now = performance.now() / 1000;
     // sky: one smooth gradient through the palette's sky colours (flat bands showed as big rectangles)
     const top = H * 0.62;
@@ -2770,17 +2773,21 @@ function createSolver() {
     }
     g.globalAlpha = 1;
   }
+  // Home: full motion. Plan and the sheets: the land holds still and only stars and fireflies move, about six
+  // frames a second, so a plan left open while playing costs next to no battery and nothing tugs at the eye.
   function sceneLoop(t) {
-    const dt = Math.min(100, t - (scene.last || t)); scene.last = t;
-    sceneDraw(dt);
-    scene.raf = requestAnimationFrame(sceneLoop);
+    const calm = !!state.item || document.body.classList.contains('locked');
+    const dt = Math.min(calm ? 250 : 100, t - (scene.last || t)); scene.last = t;
+    sceneDraw(dt, calm);
+    if (calm) scene.timer = setTimeout(() => { scene.timer = 0; scene.raf = requestAnimationFrame(sceneLoop); }, 160);
+    else scene.raf = requestAnimationFrame(sceneLoop);
   }
   function sceneShow() {
     if (!sceneSetup()) return;
     if (reduced || document.hidden) { sceneDraw(0); return; }
-    if (!scene.raf) { scene.last = 0; scene.raf = requestAnimationFrame(sceneLoop); }
+    if (!scene.raf && !scene.timer) { scene.last = 0; scene.raf = requestAnimationFrame(sceneLoop); }
   }
-  function sceneHide() { if (scene.raf) cancelAnimationFrame(scene.raf); scene.raf = 0; }
+  function sceneHide() { if (scene.raf) cancelAnimationFrame(scene.raf); clearTimeout(scene.timer); scene.raf = 0; scene.timer = 0; }
   document.addEventListener('visibilitychange', () => { if (document.hidden) sceneHide(); else sceneShow(); });
   addEventListener('resize', () => { if (!scene.el) return; scene.W = 0; sceneShow(); });
 
