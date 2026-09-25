@@ -1547,6 +1547,9 @@
   body.has-item main.app { padding-top: calc(env(safe-area-inset-top, 0px) + 58px); }
   /* Home's background button mirrors the PORE gem: same size, same corner distance, top-right; its scenes drop down */
   main .bg-switch { position: fixed; z-index: 45; top: calc(env(safe-area-inset-top, 0px) + 8px); right: 10px; left: auto; flex-direction: column; align-items: center; gap: 6px; }
+  main .bg-switch { pointer-events: none; }   /* the closed picker still takes room: let taps through to the page below */
+  main .bg-switch .bg-cur { pointer-events: auto; }
+  main .bg-switch.open .bg-strip { pointer-events: auto; }
   main .bg-switch .bg-cur { width: 38px; height: 38px; border-radius: 10px; }
   main .bg-switch .bg-strip { flex-direction: column; align-items: center; transform: translateY(-10px); }
   main .bg-switch.open .bg-strip { transform: none; }
