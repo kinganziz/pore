@@ -1694,6 +1694,10 @@
   .hero .tile { background: rgba(0, 0, 0, .26); border: 2px solid rgba(255, 255, 255, .06); border-radius: 10px; box-shadow: inset 2px 2px 0 rgba(0, 0, 0, .35); }
   .hero .tile small { color: var(--gold); opacity: .85; }
   :root[data-theme="light"] .hero .tile { background: rgba(0, 0, 0, .05); border-color: rgba(0, 0, 0, .08); box-shadow: inset 2px 2px 0 rgba(0, 0, 0, .08); }
+  .npc-name { display: flex; align-items: center; gap: 6px; }
+  .npc-name .npc-face { width: 26px; height: 26px; flex: 0 0 auto; }
+  .npc-head { display: flex; align-items: center; gap: 10px; }
+  .npc-head .npc-face { width: 48px; height: 48px; flex: 0 0 auto; }
 </style>
 </head>
 <body>
@@ -1959,6 +1963,7 @@ __SOLVER_JS__
     if (!n.items.has(k) || +e[2] < n.items.get(k)) n.items.set(k, +e[2] || 0);
     for (const l of e[3] || []) n.locs.add(l);
   }
+  const npcIcon = name => iconSVG('n-' + name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''), 'npc-face');   // our own portrait of each NPC
   const mapAt = name => { const i = MAPS.findIndex(m => m.name === name); return i < 0 ? 99 : i; };
   const NPC_LIST = [...NPCS.values()].sort((a, b) => Math.min(...[...a.locs].map(mapAt), 99) - Math.min(...[...b.locs].map(mapAt), 99) || a.name.localeCompare(b.name));
   const npcDeal = (key, npc) => { const n = NPCS.get(npc), pr = n && n.items.get(key); return pr == null ? [0, ''] : [1e9 - pr, '$' + pr]; };   // cheapest first
@@ -5054,7 +5059,7 @@ __SOLVER_JS__
       box.innerHTML = (list.length ? `<div class="map-list">${list.map(n => { const wares = [...n.items.entries()].sort((a, b) => b[1] - a[1]), low = Math.min(...n.items.values());
         return `<button type="button" class="map-row" data-action="inv-npc" data-npc="${esc(n.name)}">` +
           `<span class="npc-pic">${wares.slice(0, 4).map(([k]) => iconSVG(k)).join('')}</span>` +
-          `<span class="ir-main"><b>${esc(n.name)}</b><small>${[...n.locs].map(esc).join(', ') || 'somewhere'} · ${n.items.size} item${n.items.size === 1 ? '' : 's'}</small><small class="map-desc">from ${fmt(low)} gold</small></span>` +
+          `<span class="ir-main"><b class="npc-name">${esc(n.name)}${npcIcon(n.name)}</b><small>${[...n.locs].map(esc).join(', ') || 'somewhere'} · ${n.items.size} item${n.items.size === 1 ? '' : 's'}</small><small class="map-desc">from ${fmt(low)} gold</small></span>` +
           `<span class="map-go">›</span></button>`; }).join('')}</div>` : '<p class="inv-hint">Nothing matches.</p>') +
         '<p class="inv-hint">Every NPC who sells something, in the order you meet them. Tap one to see what they sell and for how much.</p>';
       invRenderPop();
@@ -5104,7 +5109,7 @@ __SOLVER_JS__
     const mp = onMap && MAPS.find(m => m.name === invMap);
     const np = onNpc && NPCS.get(invNpc);
     box.innerHTML = (onNpc ? `<button type="button" class="inv-back" data-action="inv-npc-back">‹ All NPCs</button>` +
-      `<div class="npc-head"><small>${[...np.locs].map(l => MAP_KEYS.has(l) ? `<button type="button" class="ip-map" data-action="inv-place" data-q="${esc(l)}">${esc(l)}</button>` : esc(l)).join(', ')} · sells ${np.items.size} item${np.items.size === 1 ? '' : 's'} for gold</small></div>` : '') +
+      `<div class="npc-head">${npcIcon(invNpc)}<small>${[...np.locs].map(l => MAP_KEYS.has(l) ? `<button type="button" class="ip-map" data-action="inv-place" data-q="${esc(l)}">${esc(l)}</button>` : esc(l)).join(', ')} · sells ${np.items.size} item${np.items.size === 1 ? '' : 's'} for gold</small></div>` : '') +
       (onMap ? `<button type="button" class="inv-back" data-action="inv-map-back">‹ All maps</button>` +
       (mp ? `<div class="map-head"><img class="map-pic" src="${bgThumb(MAP_BG[mp.kind] || 'hills', MAP_NIGHT.has(mp.kind) ? 'night' : 'day')}" alt="" draggable="false">` +   // the landscape alone: its items are listed below
         `<div><small>${mp.steps ? fmt(mp.steps) + ' steps to unlock' : 'where it starts'} · ${onMap.size} items</small>${mp.desc ? `<p>${esc(mp.desc)}</p>` : ''}` +
