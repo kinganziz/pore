@@ -1220,6 +1220,18 @@
   .tab.hop .tab-icon { animation: tab-hop .46s cubic-bezier(.3, 1.6, .5, 1); }
   @keyframes tab-hop { 0% { transform: none; } 40% { transform: translateY(-7px) scale(1.14); } 100% { transform: none; } }
   @media (prefers-reduced-motion: reduce) { .home-title.drop .tw, .home-title.drop span, .home-best .hb-icon .pixel, .tab.hop .tab-icon { animation: none; } }
+  /* ---------- title card: one item at a time, swiped or stepped with the arrows (no peek at the next one) ---------- */
+  .hb-carousel { position: relative; }
+  .hb-track { --hb-w: 100%; gap: 0; }
+  .hb-track::before, .hb-track::after { display: none; }
+  .hb-track .home-best { padding-left: 40px; padding-right: 40px; }
+  .hb-arrow { position: absolute; top: calc(50% - 14px); transform: translateY(-50%); width: 36px; height: 44px; display: grid; place-items: center; border: 0; background: none;
+    color: #fff; cursor: pointer; filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, .55)); opacity: .85; }
+  .hb-arrow svg { width: 12px; height: 18px; }
+  .hb-arrow.prev { left: 0; } .hb-arrow.next { right: 0; }
+  .hb-arrow:active { transform: translateY(-50%) scale(.85); }
+  .hb-arrow.prev:hover svg { transform: translateX(-2px); } .hb-arrow.next:hover svg { transform: translateX(2px); }
+  :root[data-theme="light"] .hb-arrow { color: #1b1f33; filter: drop-shadow(1px 1px 0 rgba(255, 255, 255, .7)); }
 </style>
 </head>
 <body>
@@ -2793,7 +2805,9 @@ __SOLVER_JS__
               <span class="hb-icon">${iconSVG(it.key)}</span>
               <span class="hb-text"><b><span class="hb-num" data-count="${badges[it.key]}">${fmt(i ? badges[it.key] : std(it))}</span> items</b></span>
             </button>`).join('')}</div>
-            ${spots.length > 1 ? `<div class="hb-dots" aria-hidden="true">${spots.map((_, i) => `<i class="${i ? '' : 'on'}"></i>`).join('')}</div>` : ''}
+            ${spots.length > 1 ? `<button class="hb-arrow prev" type="button" data-action="hb-step" data-dir="-1" aria-label="Previous item"><svg viewBox="0 0 8 12" shape-rendering="crispEdges"><path fill="currentColor" d="M5 0h2v2H5zM3 2h2v2H3zM1 4h2v4H1zM3 8h2v2H3zM5 10h2v2H5z"/></svg></button>
+            <button class="hb-arrow next" type="button" data-action="hb-step" data-dir="1" aria-label="Next item"><svg viewBox="0 0 8 12" shape-rendering="crispEdges"><path fill="currentColor" d="M1 0h2v2H1zM3 2h2v2H3zM5 4h2v4H5zM3 8h2v2H3zM1 10h2v2H1z"/></svg></button>
+            <div class="hb-dots" aria-hidden="true">${spots.map((_, i) => `<i class="${i ? '' : 'on'}"></i>`).join('')}</div>` : ''}
           </div>` : ''}
           <button class="btn primary home-cta" type="button" data-action="open-picker">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></svg>
@@ -3899,6 +3913,14 @@ __SOLVER_JS__
         if (!swReg) { toast('Reloading'); location.reload(); break; }
         toast('Checking for updates…');
         swReg.update().then(() => { setTimeout(() => { if (!updateFound && !swReg.installing && !swReg.waiting) toast('You have the latest version'); }, 1500); }).catch(() => toast('Could not check (offline?)'));
+        break;
+      }
+      case 'hb-step': {   // the arrows beside the title card: one item back or forward (wraps), and stop turning by itself
+        clearInterval(homeAuto);
+        const t = document.querySelector('.hb-track'); if (!t || t.children.length < 2) break;
+        const w = t.children[1].offsetLeft - t.children[0].offsetLeft, n = t.children.length;
+        const i = (Math.round(t.scrollLeft / w) + Number(el.dataset.dir) + n) % n;
+        t.scrollTo({ left: i * w, behavior: reduced ? 'auto' : 'smooth' }); haptic(6);
         break;
       }
       case 'open-picker': if (el.classList.contains('home-cta')) burst('pop', el); openPicker(); break;
