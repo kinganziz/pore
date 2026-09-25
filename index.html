@@ -2319,6 +2319,7 @@ function createSolver() {
     const locs = e[0] === 'find' ? [e[1]] : ['mob', 'mine', 'shop'].includes(e[0]) ? e[3] : e[0] === 'enc' ? e[4] : [];
     for (const loc of locs || []) if (MAP_KEYS.has(loc)) MAP_KEYS.get(loc).add(k);
   }
+  const MAP_NIGHT = new Set(['cave', 'crystal cave', 'cursed', 'apocalypse']);   // map pictures keep the place's own time of day
   const MAP_BG = { sunny: 'hills', cave: 'cave', forest: 'forest', cursed: 'forest', 'crystal cave': 'cave', sand: 'desert', snow: 'snow', sea: 'sea', mountains: 'snow', island: 'sea', sharp: 'snow', red: 'forest', mushroom: 'shrooms', swamp: 'shrooms', apocalypse: 'town' };
   // the places each item comes from, for searching the bag by place ("whisper cave", "undead")
   const PLACES = Object.fromEntries(Object.entries(WHERE).map(([k, list]) => [k, list.map(e => [typeof e[1] === 'string' ? e[1] : '', ...(Array.isArray(e[3]) ? e[3] : []), ...(Array.isArray(e[4]) ? e[4] : [])].join(' ')).join(' ').toLowerCase()]));
@@ -3419,8 +3420,9 @@ function createSolver() {
         stem: '#f4ecdc', stemSh: '#c8bca4', cap: ['#e04a3a', '#e08a2a', '#b85ad8'], capHi: ['#ff7a6a', '#ffb05a', '#d88af0'], spot: '#ffffff', spore: '#fff4c0' },
     ],
   });
+  let bgSkyForce = null;   // 'day' or 'night' while drawing a picture that keeps its own time of day (map pictures)
   function bgPalette() {
-    const d = document.documentElement, light = d.dataset.sky === 'day';   // day or night world
+    const d = document.documentElement, light = (bgSkyForce || d.dataset.sky) === 'day';   // day or night world
     if (bgNow === 'hills') return HILLS[(d.dataset.flavor === 'game' ? 'game' : d.dataset.flavor === 'pixel' ? 'pixel' : 'modern') + (light ? 'Light' : '')];
     return (BG_PAL[bgNow] || BG_PAL.sea)[light ? 1 : 0];
   }
@@ -3885,17 +3887,17 @@ function createSolver() {
   };
 
   const bgThumbs = {};
-  function bgThumb(key) {
-    const d = document.documentElement, ck = key + (d.dataset.sky || '') + (key === 'hills' ? d.dataset.flavor || '' : '');
+  function bgThumb(key, sky) {
+    const d = document.documentElement, ck = key + (sky || d.dataset.sky || '') + (key === 'hills' ? d.dataset.flavor || '' : '');
     if (bgThumbs[ck]) return bgThumbs[ck];
     const W = 112, H = 80, c = document.createElement('canvas'); c.width = W; c.height = H;
     const keep = { st: scene.st, x: scene.x, sky: scene.sky, skyKey: scene.skyKey, seaGrad: scene.seaGrad, seaKey: scene.seaKey, thumb: scene.thumb }, keepNow = bgNow;
     try {
-      bgNow = key; Object.assign(scene, { st: sceneState(key, W, H), x: 40, sky: null, skyKey: '', seaGrad: null, seaKey: '', thumb: true });
+      bgNow = key; bgSkyForce = sky || null; Object.assign(scene, { st: sceneState(key, W, H), x: 40, sky: null, skyKey: '', seaGrad: null, seaKey: '', thumb: true });
       SCENE_DRAW[key](c.getContext('2d'), W, H, bgPalette(), 3.3, 0);
       bgThumbs[ck] = c.toDataURL();
     } catch (e) { bgThumbs[ck] = ''; }
-    finally { Object.assign(scene, keep); bgNow = keepNow; }
+    finally { Object.assign(scene, keep); bgNow = keepNow; bgSkyForce = null; }
     return bgThumbs[ck];
   }
   const BG_ICON = {
@@ -5319,7 +5321,7 @@ function createSolver() {
     if (invTab === 'maps' && !onMap) {   // the maps, in game order, with a picture of their world
       const list = MAPS.filter(m => !q || m.name.toLowerCase().includes(q));
       box.innerHTML = (list.length ? `<div class="map-list">${list.map(m => `<button type="button" class="map-row" data-action="inv-map" data-place="${esc(m.name)}">` +
-        `<img class="map-pic" src="${bgThumb(MAP_BG[m.kind] || 'hills')}" alt="" draggable="false">` +
+        `<img class="map-pic" src="${bgThumb(MAP_BG[m.kind] || 'hills', MAP_NIGHT.has(m.kind) ? 'night' : 'day')}" alt="" draggable="false">` +
         `<span class="ir-main"><b>${esc(m.name)}</b><small>${m.steps ? fmt(m.steps) + ' steps to unlock' : 'where it starts'} · ${MAP_KEYS.get(m.name).size} items</small>${m.desc ? `<small class="map-desc">${esc(m.desc)}</small>` : ''}</span>` +
         `<span class="map-go">›</span></button>`).join('')}</div>` : '<p class="inv-hint">Nothing matches.</p>') +
         '<p class="inv-hint">Every place in the game, in the order you reach them. Tap one to see what you can get there.</p>';
