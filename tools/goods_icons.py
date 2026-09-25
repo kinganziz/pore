@@ -16,7 +16,7 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from modern_icons import HL, Icon, C, P, circle, dot, f, facet_gem, line, shape, sparkle, tube  # noqa: E402
-from skin_icons import skin_spec  # noqa: E402
+from skin_game import skin_spec  # noqa: E402   (game-style portraits; tools/skin_icons.py is the first kit)
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 OUT = ROOT / "icons" / "modern"
