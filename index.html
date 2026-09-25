@@ -975,6 +975,9 @@
   .plain-facts { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 16px; margin: 12px 0 4px; color: var(--muted); }
   .plain-facts b { color: var(--text); }
   :root[data-skin="pixel"] .plain-badge { border-radius: 6px; }
+  /* the target is below the item's max: say so where the plan is shown */
+  .lvl-note { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin-top: 10px; padding: 8px 8px 8px 12px; border-radius: 12px; border: 1px solid rgba(246, 196, 83, .45); background: rgba(246, 196, 83, .1); }
+  .lvl-note b { color: var(--gold); }
 </style>
 </head>
 <body>
@@ -2603,6 +2606,7 @@ function createSolver() {
           <span class="hero-label">${plain ? `<span class="plain-badge">No shortcut</span>${esc(item.name)} → P${state.L}` : `Cheapest path · ${esc(item.name)} → P${state.L}`}</span>
           ${solving ? '<span class="solving"><span class="dot"></span>updating</span>' : ''}
         </div>
+        ${state.L < item.maxL ? `<div class="lvl-note"><span>Planning for <b>P${state.L}</b> · this item goes up to P${item.maxL}</span><button class="btn small" type="button" data-action="set-level" data-level="${item.maxL}">Plan P${item.maxL}</button></div>` : ''}
         ${plain ? `<div class="plain-title">Just refine in pairs</div>
         <p class="plain-sub">No cheaper path exists for this item${item.maxL < 10 && state.L === item.maxL ? ` (boss weapons stop at P${item.maxL})` : ''}: every refine combines two identical copies.</p>
         <div class="pair-flow ${state.L <= 6 ? 'one-row' : ''}" aria-label="Pairing chain">${Array.from({ length: state.L }, (_, i) => `<div class="pf ${i === state.L - 1 ? 'end' : ''}"><b>${fmt(Math.pow(2, state.L - 1 - i))}×</b><span>P${i + 1}</span></div>`).join('<i class="pf-arrow">→</i>')}</div>
@@ -3258,7 +3262,7 @@ function createSolver() {
     revealResults = true;
     scheduleSolve(0);
     const item = resolveItem();
-    if (item) toast(`Planning ${item.name}`);
+    if (item) toast(`Planning ${item.name} to P${state.L}`);
   }
 
   /* ================= badges (cheapest perfect max level for every item: P10, P5 for boss weapons) ================= */
