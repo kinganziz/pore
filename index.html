@@ -1207,6 +1207,17 @@
   :root[data-theme="light"] .home-hero .hb-num { color: #0f8a55 !important; }
   :root[data-theme="light"] .home-hero .btn.home-cta.home-cta.home-cta svg { filter: drop-shadow(1px 1px 0 rgba(255, 255, 255, .7)); }
   @media (prefers-reduced-motion: reduce) { :root .home-hero .btn.home-cta.home-cta.home-cta { animation: none; } }
+  /* ---------- juice: title drop, bobbing item, hopping tab ---------- */
+  .home-title .tw { font-style: normal; }
+  .home-title.drop .tw { display: inline-block; animation: tw-drop .6s cubic-bezier(.3, 1.6, .5, 1) both; animation-delay: calc(var(--i) * 110ms + 80ms); }
+  .home-title.drop span { display: inline-block; animation: tl-pop .55s cubic-bezier(.3, 1.7, .5, 1) .5s both; }
+  @keyframes tw-drop { from { transform: translateY(-46px); opacity: 0; } 50% { opacity: 1; } to { transform: none; opacity: 1; } }
+  @keyframes tl-pop { from { transform: scale(.2) rotate(-4deg); opacity: 0; } to { transform: none; opacity: 1; } }
+  .home-best .hb-icon .pixel { animation: hb-bob 1.6s steps(4, jump-none) infinite alternate; }
+  @keyframes hb-bob { from { transform: translateY(1px); } to { transform: translateY(-3px); } }
+  .tab.hop .tab-icon { animation: tab-hop .46s cubic-bezier(.3, 1.6, .5, 1); }
+  @keyframes tab-hop { 0% { transform: none; } 40% { transform: translateY(-7px) scale(1.14); } 100% { transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .home-title.drop .tw, .home-title.drop span, .home-best .hb-icon .pixel, .tab.hop .tab-icon { animation: none; } }
 </style>
 </head>
 <body>
@@ -3156,7 +3167,12 @@ function createSolver() {
   function syncTabbar() {
     if (!ui.tabbar) return;
     const on = !ui.guideSheet.hidden ? 'guide' : !ui.pickerSheet.hidden ? 'items' : !ui.infoSheet.hidden ? 'help' : state.item ? 'plan' : 'home';
-    ui.tabbar.querySelectorAll('.tab').forEach(b => { b.classList.toggle('on', b.dataset.tab === on); b.setAttribute('aria-current', b.dataset.tab === on ? 'page' : 'false'); });
+    ui.tabbar.querySelectorAll('.tab').forEach(b => {
+      const was = b.classList.contains('on'), now = b.dataset.tab === on;
+      b.classList.toggle('on', now); b.setAttribute('aria-current', now ? 'page' : 'false');
+      if (now && !was && !reduced && syncTabbar.ready) { b.classList.remove('hop'); void b.offsetWidth; b.classList.add('hop'); setTimeout(() => b.classList.remove('hop'), 480); }
+    });
+    syncTabbar.ready = true;
   }
   function replaceEntry(extra, url) { try { history.replaceState(navEntry(extra), '', url || location.href); } catch (e) { /* ignore */ } }
   function tabGo(id) {
@@ -3211,7 +3227,7 @@ function createSolver() {
     const hero = `<section class="home-hero">
         <div class="home-copy">
           <span class="home-kicker">~ Pixel Odyssey ~</span>
-          <h1 class="home-title">Max your gear<br><span>for a fraction.</span></h1>
+          <h1 class="home-title ${titleDrop ? 'drop' : ''}"><i class="tw" style="--i:0">Max</i> <i class="tw" style="--i:1">your</i> <i class="tw" style="--i:2">gear</i><br><span>for a fraction.</span></h1>
           <p class="home-sub">A perfect P10 normally eats <b>512</b> base items. PORE finds the cheapest path, step by step.</p>
           ${spots.length ? `<div class="hb-carousel">
             <div class="hb-track">${spots.map((it, i) => `<button class="home-best" type="button" data-action="pick" data-key="${it.key}">
@@ -3243,7 +3259,10 @@ function createSolver() {
       </section>`;
     return hero + projectsHTML() + dealRow + browse + tipHTML();
   }
+  let titleDrop = true, homeAuto = 0;   // the title drops in once per visit; the item cards turn by themselves until touched
   function countUpHome() {
+    titleDrop = false;
+    clearInterval(homeAuto);
     const track = document.querySelector('.hb-track');
     if (!track) return;
     const cards = [...track.children], counted = new Set();
@@ -3267,6 +3286,17 @@ function createSolver() {
       if (i === at) return;
       at = i; dots.forEach((d, j) => d.classList.toggle('on', j === i)); count(i);
     }, { passive: true });
+    if (!reduced && cards.length > 1) {
+      const stop = () => clearInterval(homeAuto);
+      track.addEventListener('pointerdown', stop, { passive: true, once: true });
+      track.addEventListener('touchstart', stop, { passive: true, once: true });
+      homeAuto = setInterval(() => {
+        if (!document.contains(track) || state.item) { clearInterval(homeAuto); return; }
+        if (document.hidden || document.body.classList.contains('locked')) return;
+        const w = cards[1].offsetLeft - cards[0].offsetLeft;
+        track.scrollTo({ left: ((at + 1) % cards.length) * w, behavior: 'smooth' });
+      }, 4500);
+    }
   }
 
   function renderResults() {
@@ -3713,7 +3743,7 @@ function createSolver() {
   }
   function showHome() {
     if (state.item) lastPlanY = window.scrollY;
-    homePick = null;   // a new item on the title screen
+    homePick = null; titleDrop = true;   // a new item on the title screen, and the title drops in again
     state.item = null; state.t = {}; state.o = []; state.stock = 0; state.k = {};
     resetPlan(); pendingScroll = null;
     closePicker({ fromHistory: true }); closeInfo({ fromHistory: true }); closeGuide({ fromHistory: true });
@@ -4312,7 +4342,7 @@ function createSolver() {
         swReg.update().then(() => { setTimeout(() => { if (!updateFound && !swReg.installing && !swReg.waiting) toast('You have the latest version'); }, 1500); }).catch(() => toast('Could not check (offline?)'));
         break;
       }
-      case 'open-picker': openPicker(); break;
+      case 'open-picker': if (el.classList.contains('home-cta')) burst('pop', el); openPicker(); break;
       case 'tab': tabGo(el.dataset.tab); break;
       case 'browse': picker.type = el.dataset.type; picker.q = ''; openPicker(); break;
       case 'close-picker': closePicker(); break;
@@ -4322,6 +4352,7 @@ function createSolver() {
       case 'sort': picker.sort = el.dataset.sort; renderPickerList(); break;
       case 'picker-view': picker.view = ['grid', 'icons'].includes(el.dataset.view) ? el.dataset.view : 'list'; try { localStorage.setItem('pore.pickerview', picker.view); } catch (e2) { /* ignore */ } renderPickerList(); break;
       case 'pick':
+        if (el.classList.contains('home-best')) burst('star', el.querySelector('.hb-icon') || el);
         haptic();
         if (compareMode) {
           compareMode = false;
