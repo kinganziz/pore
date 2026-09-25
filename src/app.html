@@ -228,9 +228,12 @@
   .pixel { display: block; flex: 0 0 auto; }
   img.pixel { pointer-events: none; -webkit-user-drag: none; -webkit-touch-callout: none; }
   :root[data-icons="pixelhd"] svg.pixel { shape-rendering: crispEdges; }
-  :root[data-icons="pixelhd"] .charm-chip .pixel { width: 36px; height: 36px; margin: -3px 0; }
-  :root[data-icons="pixelhd"] .filter .pixel { width: 24px; height: 24px; }
-  :root[data-icons="pixelhd"] .example .pixel { width: 32px; height: 32px; margin: -4px 0; }
+  /* HD and pixel icons take the same box everywhere (the sizes below are for both); an HD drawing is scaled up a
+     touch because the pixel version adds a 1-pixel outline around the same silhouette, so both fill the box alike */
+  img.pixel { scale: 1.08; }   /* 'scale' adds to any transform an icon already has (home carousel, category strip) */
+  .charm-chip .pixel { width: 36px; height: 36px; margin: -3px 0; }
+  .filter .pixel { width: 24px; height: 24px; }
+  .example .pixel { width: 32px; height: 32px; margin: -4px 0; }
   .icon-frame .pixel { width: 48px; height: 48px; object-fit: contain; }
   .icon-frame.sm .pixel { width: 32px; height: 32px; }
 
@@ -574,7 +577,7 @@
   .tile-item:active { transform: scale(.96); }
   .tile-item.on { border-color: var(--accent); background: rgba(139, 124, 255, .1); }
   .tile-item .pixel { width: 44px; height: 44px; }
-  :root[data-icons="pixelhd"] .tile-item .pixel { width: 48px; height: 48px; margin: -2px 0; }
+  .tile-item .pixel { width: 48px; height: 48px; margin: -2px 0; }
   .tile-item .tn { font-size: 10.5px; font-weight: 600; line-height: 1.15; text-align: center; max-width: 100%; overflow-wrap: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .tile-item .tc { font-family: var(--display); font-size: 10px; font-weight: 700; color: var(--muted); line-height: 1; margin-top: auto; }
   .tile-item .tc.hot { color: var(--good); }
@@ -584,7 +587,7 @@
   .icon-only:active { transform: scale(.92); }
   .icon-only.on { border-color: var(--accent); background: rgba(139, 124, 255, .1); }
   .icon-only .pixel { width: 40px; height: 40px; }
-  :root[data-icons="pixelhd"] .icon-only .pixel { width: 48px; height: 48px; }
+  .icon-only .pixel { width: 48px; height: 48px; }
   /* Item picker tiles use opaque colours: on some Android GPUs, hundreds of semi-transparent tiles in the
      scrolling sheet were painted grey or half grey. Phones show the sheet full screen, so the blur behind it
      is invisible there and is dropped too. */
@@ -1501,7 +1504,7 @@
   .ip-x { position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; border: 0; background: none; color: var(--soft); cursor: pointer; }
   .ip-x svg { width: 11px; height: 11px; }
   .ip-head { display: flex; align-items: center; gap: 12px; padding-right: 30px; }
-  .ip-head .pixel, .ip-head > svg { width: 56px; height: 56px; flex: 0 0 auto; }
+  .ip-head .pixel, .ip-head > svg { width: 56px; height: 56px; min-width: 56px; flex: 0 0 auto; }
   .ip-head b { display: block; font-size: 19px; color: var(--gold); }
   .ip-head small { color: var(--muted); font-size: 13px; }
   .ip-details { display: grid; gap: 4px; }
