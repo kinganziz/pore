@@ -39,6 +39,9 @@ EQUIP_TYPES = [
     "SHIELD", "RING", "AMULET", "NECKLACE", "TOOL",
 ]
 
+# World boss weapons can only be refined up to this level.
+BOSS_MAX_LEVEL = 5
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CACHE_DIR = ROOT / ".cache"
 OUT_FILE = ROOT / "data" / "items.json"
@@ -167,6 +170,23 @@ def main() -> None:
             "desc": (fm.get("description") or "").strip(),
             "page": path[len("Items/"):-len(".md")],
         })
+
+    # World boss weapons: each boss page names its weapon ("weapon: [[Page]]"). They refine only up to P5.
+    boss_of = {}
+    for path, meta in index.items():
+        fm = (meta or {}).get("frontmatter") or {}
+        if fm.get("fileClass") != "world-boss":
+            continue
+        m = re.match(r"\[\[([^\]|]+)", str(fm.get("weapon") or ""))
+        if m:
+            boss_of[m.group(1).strip()] = fm.get("name")
+    for it in items:
+        if it["page"] in boss_of:
+            it["boss"] = boss_of[it["page"]]
+            it["maxLevel"] = BOSS_MAX_LEVEL
+    missing = set(boss_of) - {it["page"] for it in items}
+    if missing:
+        print("boss weapons without an item page:", ", ".join(sorted(missing)))
 
     type_order = {t: i for i, t in enumerate(EQUIP_TYPES)}
     items.sort(key=lambda it: (type_order[it["type"]], it["name"].lower()))

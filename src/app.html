@@ -1063,6 +1063,7 @@
         <button class="btn small ghost" type="button" data-action="intro-replay" style="grid-column: 1 / -1">Replay the intro</button>
       </div><input type="file" id="backupFile" accept=".json,application/json" hidden></div>
       <p>Refining combines two copies of the same item. The <b>base</b> item goes up one level and gains stats from the <b>material</b> item. A "perfect" refine uses two identical items, so a perfect P10 normally eats 512 base items (1 → 2 → 4 → … → 512).</p>
+      <p><b>World boss weapons</b> can only be refined up to <b>P5</b> (16 base items the standard way), so PORE lists them in their own group and caps their plans at P5.</p>
       <p>PORE searches every other way to combine items. Because stat gains are rounded down and every refine adds at least +2, weaker materials often reach the very same stats. The planner keeps only the cheapest way to reach each stat combination at each level and builds up to your target, so the answer is the cheapest plan under the chosen formula.</p>
       <h3>Stat formula (per stat)</h3>
       <div class="formula"><span class="nw">new = floor( base +</span> <span class="nw">max(2, material × rate) )</span></div>
@@ -1108,17 +1109,22 @@ __SOLVER_JS__
 
   /* ================= data & constants ================= */
   const S = createSolver();
-  const ITEMS = ITEM_DB.items.map(it => Object.assign({ key: 'i' + it.id }, it));
+  // World boss weapons are their own category and can only be refined up to P5 (maxLevel in the data).
+  const ITEMS = ITEM_DB.items.map(it => Object.assign({ key: 'i' + it.id, maxL: it.maxLevel || 10 }, it, it.boss ? { type: 'BOSS' } : {}));
+  const maxOf = it => (it && it.maxL) || 10;
+  // cost as a share of the standard 2^(max-1) base items, so P5 and P10 items sort and colour fairly
+  const costShare = it => badges[it.key] == null ? 1e9 : badges[it.key] / Math.pow(2, maxOf(it) - 1);
+  const isHot = it => costShare(it) <= 160 / 512;
   const ITEM_BY_KEY = new Map(ITEMS.map(it => [it.key, it]));
   const CHARMS = (ITEM_DB.charms || []).map(c => Object.assign({ key: 'c' + c.id }, c));
-  const TYPES = [['WEAPON', 'Weapons', 'Weapon'], ['HELMET', 'Helmets', 'Helmet'], ['CHEST', 'Chest', 'Chest'], ['LEGGEAR', 'Leg gear', 'Leg gear'],
+  const TYPES = [['WEAPON', 'Weapons', 'Weapon'], ['BOSS', 'Boss weapons', 'Boss weapon'], ['HELMET', 'Helmets', 'Helmet'], ['CHEST', 'Chest', 'Chest'], ['LEGGEAR', 'Leg gear', 'Leg gear'],
     ['SHOES', 'Shoes', 'Shoes'], ['SHIELD', 'Shields', 'Shield'], ['RING', 'Rings', 'Ring'], ['AMULET', 'Amulets', 'Amulet'],
     ['NECKLACE', 'Necklaces', 'Necklace'], ['TOOL', 'Tools', 'Tool']];
   const TYPE_SINGULAR = Object.fromEntries(TYPES.map(t => [t[0], t[2]]));
   // everyday words players type that the wiki's type names do not contain
   const TYPE_WORDS = { WEAPON: ['weapon', 'sword', 'blade', 'axe', 'staff', 'wand', 'dagger', 'mace', 'bow'], HELMET: ['helmet', 'helm', 'hat', 'head', 'cap', 'hood'],
     CHEST: ['chest', 'chestplate', 'armor', 'armour', 'body', 'shirt', 'robe'], LEGGEAR: ['leg', 'legs', 'leggear', 'pants', 'greaves', 'trousers'],
-    SHOES: ['shoes', 'boots', 'feet', 'footwear'], SHIELD: ['shield'], RING: ['ring'], AMULET: ['amulet'], NECKLACE: ['necklace', 'neck', 'chain'], TOOL: ['tool', 'pickaxe', 'gloves', 'broom', 'rod'] };
+    SHOES: ['shoes', 'boots', 'feet', 'footwear'], SHIELD: ['shield'], RING: ['ring'], BOSS: ['boss', 'world boss', 'weapon', 'sword', 'blade', 'axe', 'staff', 'scythe'], AMULET: ['amulet'], NECKLACE: ['necklace', 'neck', 'chain'], TOOL: ['tool', 'pickaxe', 'gloves', 'broom', 'rod'] };
 
   const CATS = {
     combat: { key: 'combat', label: 'Combat', pct: '25%', num: 1, den: 4, f64: 0.25, dec: 0.25, who: 'Attack, Defense, HP, Speed, Luck, Mana, elemental resistance' },
@@ -1142,7 +1148,7 @@ __SOLVER_JS__
   const STAT_NAMES = Array.from(new Set(ITEM_DB.statNames.concat(Object.keys(STAT_META)))).sort();
   const AFF_LABEL = a => a ? a.split('_').map(w => w[0] + w.slice(1).toLowerCase()).join(' + ') : '';
   const EXAMPLES = ['Wooden Sword', 'Soldier Sword', 'Platinum Dagger', 'Purpurite Sword'];
-  const STORAGE = { state: 'pore.state.v3', badges: 'pore.badges.v3', recent: 'pore.recent.v1', theme: 'pore.theme', done: 'pore.done.', obs: 'pore.observations.v1', icons: 'pore.iconstyle.v2', skin: 'pore.skin', font: 'pore.font', projects: 'pore.projects.v1', cstock: 'pore.charmstock.v1', community: 'pore.community.v1', intro: 'pore.intro.v1' };
+  const STORAGE = { state: 'pore.state.v3', badges: 'pore.badges.v4', recent: 'pore.recent.v1', theme: 'pore.theme', done: 'pore.done.', obs: 'pore.observations.v1', icons: 'pore.iconstyle.v2', skin: 'pore.skin', font: 'pore.font', projects: 'pore.projects.v1', cstock: 'pore.charmstock.v1', community: 'pore.community.v1', intro: 'pore.intro.v1' };
   const CHARM_ITEMS = 'Rabbits Foot ×2 · Lucky Egg ×3 · Wishbone ×3 · Clover ×4 · Starfish ×4 · Horseshoe ×5 · Lucky Rose ×6';
   const REPO_URL = 'https://github.com/kinganziz/pore';
   const MODEL_KEYS = new Set(S.models.map(m => m.key));
@@ -1344,11 +1350,11 @@ __SOLVER_JS__
     let raw;
     if (state.item === 'custom') {
       if (!state.custom) return null;
-      raw = { key: 'custom', name: state.custom.name || 'Custom item', type: 'CUSTOM', icon: null, affinity: null, page: null, statsList: state.custom.stats };
+      raw = { key: 'custom', name: state.custom.name || 'Custom item', type: 'CUSTOM', icon: null, affinity: null, page: null, maxL: 10, statsList: state.custom.stats };
     } else {
       const it = ITEM_BY_KEY.get(state.item);
       if (!it) return null;
-      raw = { key: it.key, name: it.name, type: it.type, affinity: it.affinity, page: it.page, statsList: Object.entries(it.stats).map(([name, value]) => ({ name, value })) };
+      raw = { key: it.key, name: it.name, type: it.type, affinity: it.affinity, page: it.page, maxL: maxOf(it), boss: it.boss || null, statsList: Object.entries(it.stats).map(([name, value]) => ({ name, value })) };
     }
     const stats = raw.statsList.map(st => {
       const meta = metaFor(st.name);
@@ -1361,6 +1367,8 @@ __SOLVER_JS__
     item.overrides = overridesFor(item);
     item.ctx = S.makeCtx(state.m, item.overrides, stats.length);
     item.chain = S.perfectChain(stats.map(st => st.value), rates, 10, item.ctx);
+    if (state.L > item.maxL) state.L = item.maxL;
+    if (state.o.some(o => o.L > item.maxL)) state.o = state.o.filter(o => o.L <= item.maxL);
     return item;
   }
   function itemRates(it) { return Object.keys(it.stats).map(name => rateOf(metaFor(name).cat)); }
@@ -1405,7 +1413,7 @@ __SOLVER_JS__
       h(msg);
     }
     try {
-      const src = createSolver.toString() + ';const S=createSolver();self.onmessage=function(e){var d=e.data;try{if(d.type==="solve"){self.postMessage({id:d.id,ok:true,result:S.solve(d.req)});}else if(d.type==="batch"){for(var i=0;i<d.items.length;i++){var it=d.items[i];var c=null;try{c=S.cheapest(it.base,it.rates,10);}catch(err){}self.postMessage({id:d.id,ok:true,partial:true,key:it.key,cost:c});}self.postMessage({id:d.id,ok:true,done:true});}}catch(err){self.postMessage({id:d.id,ok:false,error:String(err&&err.message||err)});}};';
+      const src = createSolver.toString() + ';const S=createSolver();self.onmessage=function(e){var d=e.data;try{if(d.type==="solve"){self.postMessage({id:d.id,ok:true,result:S.solve(d.req)});}else if(d.type==="batch"){for(var i=0;i<d.items.length;i++){var it=d.items[i];var c=null;try{c=S.cheapest(it.base,it.rates,it.level||10);}catch(err){}self.postMessage({id:d.id,ok:true,partial:true,key:it.key,cost:c});}self.postMessage({id:d.id,ok:true,done:true});}}catch(err){self.postMessage({id:d.id,ok:false,error:String(err&&err.message||err)});}};';
       worker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
       worker.onmessage = e => dispatch(e.data);
       worker.onerror = () => { worker = null; };
@@ -1420,7 +1428,7 @@ __SOLVER_JS__
             let i = 0;
             const tick = () => {
               const end = Math.min(i + 4, msg.items.length);
-              for (; i < end; i++) { let c = null; try { c = S.cheapest(msg.items[i].base, msg.items[i].rates, 10); } catch (e) { /* ignore */ } dispatch({ id: msg.id, ok: true, partial: true, key: msg.items[i].key, cost: c }); }
+              for (; i < end; i++) { let c = null; try { c = S.cheapest(msg.items[i].base, msg.items[i].rates, msg.items[i].level || 10); } catch (e) { /* ignore */ } dispatch({ id: msg.id, ok: true, partial: true, key: msg.items[i].key, cost: c }); }
               if (i < msg.items.length) setTimeout(tick, 30); else dispatch({ id: msg.id, ok: true, done: true });
             };
             tick();
@@ -1584,6 +1592,7 @@ __SOLVER_JS__
     }
     const meta = [`<span class="tag">${esc(item.type === 'CUSTOM' ? 'Custom' : TYPE_SINGULAR[item.type] || item.type)}</span>`];
     if (item.affinity) meta.push(`<span class="tag aff">${esc(AFF_LABEL(item.affinity))}</span>`);
+    if (item.maxL < 10) meta.push(`<span class="tag" title="${item.boss ? `Dropped by the world boss ${esc(item.boss)}. ` : ''}Boss weapons refine only up to P${item.maxL}">max P${item.maxL}${item.boss ? ` · ${esc(item.boss)}` : ''}</span>`);
     meta.push(`<span class="tag">${item.stats.length} stat${item.stats.length > 1 ? 's' : ''}</span>`);
     const rows = item.stats.map(st => `
       <div class="stat-row">
@@ -1622,7 +1631,7 @@ __SOLVER_JS__
     const item = resolveItem();
     if (!item) return;
     const chips = [];
-    for (let L = 2; L <= 10; L++) chips.push(`<button class="chip-btn ${L === state.L ? 'on' + (L === 10 ? ' gold' : '') : ''}" type="button" data-action="set-level" data-level="${L}">P${L}</button>`);
+    for (let L = 2; L <= item.maxL; L++) chips.push(`<button class="chip-btn ${L === state.L ? 'on' + (L === item.maxL ? ' gold' : '') : ''}" type="button" data-action="set-level" data-level="${L}">P${L}</button>`);
     const perfect = item.chain[state.L];
     const target = targetVector(item);
     const isPerfect = target.every((t, i) => t === perfect[i]);
@@ -1691,7 +1700,7 @@ __SOLVER_JS__
         return `<label class="owned-stat">${st.short}<input class="num small" type="number" inputmode="numeric" min="1" step="1" placeholder="${perfect[i]}" value="${custom ? v : ''}" data-field="owned-stat" data-idx="${idx}" data-stat="${esc(st.name)}" aria-label="${esc(st.name)} of owned item ${idx + 1}"></label>`;
       }).join('');
       let levels = '';
-      for (let L = 2; L <= 10; L++) levels += `<option value="${L}" ${L === o.L ? 'selected' : ''}>Level ${L}</option>`;
+      for (let L = 2; L <= item.maxL; L++) levels += `<option value="${L}" ${L === o.L ? 'selected' : ''}>Level ${L}</option>`;
       return `
         <div class="owned-row">
           <div class="owned-top">
@@ -2023,7 +2032,7 @@ __SOLVER_JS__
     ui.resultsBody.classList.toggle('fresh', newPlan);
 
     // ladder
-    const ladder = res.ladder.map(r => {
+    const ladder = res.ladder.filter(r => r.level <= item.maxL).map(r => {
       const on = r.level === state.L;
       const w = r.cost == null ? 0 : (r.cost / r.standard) * 100;
       return `<button class="ladder-row ${on ? 'on' : ''}" type="button" data-action="set-level" data-level="${r.level}" title="Plan for P${r.level}">
@@ -2105,7 +2114,7 @@ __SOLVER_JS__
     }).join('');
 
     const refRows = [];
-    for (let L = 1; L <= 10; L++) {
+    for (let L = 1; L <= item.maxL; L++) {
       const lad = res.ladder.find(r => r.level === L);
       refRows.push(`<tr class="${L === state.L ? 'on' : ''}"><td class="lv">P${L}</td><td>${item.chain[L].map((v, i) => `<span class="nb">${v}&nbsp;${item.stats[i].short}</span>`).join(' · ')}</td><td class="r">${fmt(Math.pow(2, L - 1))}</td><td class="r"><b>${lad ? (lad.cost == null ? '–' : fmt(lad.cost)) : 1}</b></td></tr>`);
     }
@@ -2345,7 +2354,7 @@ __SOLVER_JS__
   }
   // one representative item per category, drawn from PORE's icon sprite (follows the icon style switch)
   const TYPE_ICON = { WEAPON: 'Iron Sword', HELMET: 'Soldier Helmet', CHEST: 'Silver Chestplate', LEGGEAR: 'Gold Greaves', SHOES: 'Gold Boots',
-    SHIELD: 'Soldier Shield', RING: 'Fire Gold Ring', AMULET: 'Sun Demon Amulet', NECKLACE: "Liora's Necklace", TOOL: 'Lantern' };
+    SHIELD: 'Soldier Shield', RING: 'Fire Gold Ring', AMULET: 'Sun Demon Amulet', NECKLACE: "Liora's Necklace", TOOL: 'Lantern', BOSS: 'Soulharvest Scythe' };
   const FILTER_GLYPH = {
     ALL: '<svg class="fglyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg>',
     CUSTOM: '<svg class="fglyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17z"/><path d="M13.5 6.5l3 3"/></svg>',
@@ -2366,25 +2375,25 @@ __SOLVER_JS__
     let list = ITEMS.filter(it => picker.type === 'ALL' || it.type === picker.type);
     const sq = statQuery(q);
     if (sq) list = list.filter(it => Object.entries(it.stats).some(([n, v]) => sq.match(n) && sq.test(v)));
-    else if (q) list = list.filter(it => it.name.toLowerCase().includes(q) || Object.keys(it.stats).some(n => n.toLowerCase().includes(q) || metaFor(n).short.toLowerCase().includes(q)) || (it.affinity || '').toLowerCase().includes(q) || TYPE_SINGULAR[it.type].toLowerCase().includes(q) || (TYPE_WORDS[it.type] || []).some(w => w.startsWith(q) || q.startsWith(w)));
-    const byCost = (x, y) => (badges[x.key] == null ? 1e9 : badges[x.key]) - (badges[y.key] == null ? 1e9 : badges[y.key]) || x.name.localeCompare(y.name);
+    else if (q) list = list.filter(it => it.name.toLowerCase().includes(q) || (it.boss || '').toLowerCase().includes(q) || Object.keys(it.stats).some(n => n.toLowerCase().includes(q) || metaFor(n).short.toLowerCase().includes(q)) || (it.affinity || '').toLowerCase().includes(q) || TYPE_SINGULAR[it.type].toLowerCase().includes(q) || (TYPE_WORDS[it.type] || []).some(w => w.startsWith(q) || q.startsWith(w)));
+    const byCost = (x, y) => costShare(x) - costShare(y) || x.name.localeCompare(y.name);
     if (picker.sort === 'cost') list = list.slice().sort(byCost);
     else list = list.slice().sort((x, y) => x.name.localeCompare(y.name));
     const row = it => `<button class="row ${state.item === it.key ? 'on' : ''}" type="button" data-action="pick" data-key="${it.key}">
         <div class="icon-frame sm">${iconSVG(it.key)}</div>
-        <div style="min-width:0"><div class="nm">${esc(it.name)}</div><div class="st">${esc(TYPE_SINGULAR[it.type])}${it.affinity ? ' · ' + esc(AFF_LABEL(it.affinity)) : ''} · ${statsLine(it)}</div></div>
-        <div class="badge">${badges[it.key] != null ? `<b class="${badges[it.key] <= 160 ? 'hot' : ''}">${fmt(badges[it.key])}</b>P10 cost` : `<b>·</b>`}</div>
+        <div style="min-width:0"><div class="nm">${esc(it.name)}</div><div class="st">${esc(TYPE_SINGULAR[it.type])}${it.boss ? ' · max P' + maxOf(it) : ''}${it.affinity ? ' · ' + esc(AFF_LABEL(it.affinity)) : ''} · ${statsLine(it)}</div></div>
+        <div class="badge">${badges[it.key] != null ? `<b class="${isHot(it) ? 'hot' : ''}">${fmt(badges[it.key])}</b>P${maxOf(it)} cost` : `<b>·</b>`}</div>
       </button>`;
     const tile = it => `<button class="tile-item ${state.item === it.key ? 'on' : ''}" type="button" data-action="pick" data-key="${it.key}" title="${esc(it.name)} · ${esc(statsLine(it))}">
-        ${iconSVG(it.key)}<span class="tn">${esc(it.name)}</span>${badges[it.key] != null ? `<span class="tc ${badges[it.key] <= 160 ? 'hot' : ''}">P10 · ${fmt(badges[it.key])}</span>` : ''}
+        ${iconSVG(it.key)}<span class="tn">${esc(it.name)}</span>${badges[it.key] != null ? `<span class="tc ${isHot(it) ? 'hot' : ''}">P${maxOf(it)} · ${fmt(badges[it.key])}</span>` : ''}
       </button>`;
     // icons only: the name is in the tooltip / screen-reader label
-    const bare = it => `<button class="icon-only ${state.item === it.key ? 'on' : ''}" type="button" data-action="pick" data-key="${it.key}" aria-label="${esc(it.name)}" title="${esc(it.name)} · ${esc(statsLine(it))}${badges[it.key] != null ? ` · P10 ${fmt(badges[it.key])}` : ''}">${iconSVG(it.key)}</button>`;
+    const bare = it => `<button class="icon-only ${state.item === it.key ? 'on' : ''}" type="button" data-action="pick" data-key="${it.key}" aria-label="${esc(it.name)}" title="${esc(it.name)} · ${esc(statsLine(it))}${badges[it.key] != null ? ` · P${maxOf(it)} ${fmt(badges[it.key])}` : ''}">${iconSVG(it.key)}</button>`;
     const grid = picker.view === 'grid', icons = picker.view === 'icons';
     const cell = icons ? bare : grid ? tile : row;
     const box = icons ? 'icon-grid' : grid ? 'tile-grid' : 'list';
     const viewSeg = `<div class="seg view-seg" role="group" aria-label="View"><button type="button" class="${grid || icons ? '' : 'on'}" data-action="picker-view" data-view="list" aria-label="List view" title="List"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg></button><button type="button" class="${grid ? 'on' : ''}" data-action="picker-view" data-view="grid" aria-label="Icon view" title="Icons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg></button><button type="button" class="${icons ? 'on' : ''}" data-action="picker-view" data-view="icons" aria-label="Icons only" title="Icons only"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="3.5" y="3.5" width="4.5" height="4.5" rx="1"/><rect x="9.75" y="3.5" width="4.5" height="4.5" rx="1"/><rect x="16" y="3.5" width="4.5" height="4.5" rx="1"/><rect x="3.5" y="9.75" width="4.5" height="4.5" rx="1"/><rect x="9.75" y="9.75" width="4.5" height="4.5" rx="1"/><rect x="16" y="9.75" width="4.5" height="4.5" rx="1"/><rect x="3.5" y="16" width="4.5" height="4.5" rx="1"/><rect x="9.75" y="16" width="4.5" height="4.5" rx="1"/><rect x="16" y="16" width="4.5" height="4.5" rx="1"/></svg></button></div>`;
-    let html = `<div class="sort-row"><span>${list.length} item${list.length === 1 ? '' : 's'}</span><div class="sort-tools">${viewSeg}<div class="seg"><button type="button" class="${picker.sort === 'name' ? 'on' : ''}" data-action="sort" data-sort="name">A–Z</button><button type="button" class="${picker.sort === 'cost' ? 'on' : ''}" data-action="sort" data-sort="cost">Cheapest<span class="p10"> P10</span></button></div></div></div>`;
+    let html = `<div class="sort-row"><span>${list.length} item${list.length === 1 ? '' : 's'}</span><div class="sort-tools">${viewSeg}<div class="seg"><button type="button" class="${picker.sort === 'name' ? 'on' : ''}" data-action="sort" data-sort="name">A–Z</button><button type="button" class="${picker.sort === 'cost' ? 'on' : ''}" data-action="sort" data-sort="cost">Cheapest<span class="p10"> ${picker.type === 'BOSS' ? 'P5' : picker.type === 'ALL' ? 'max' : 'P10'}</span></button></div></div></div>`;
     if (!q && picker.type === 'ALL' && recent.length) {
       let rec = recent.map(k => ITEM_BY_KEY.get(k)).filter(Boolean);
       if (picker.sort === 'cost') rec = rec.slice().sort(byCost);
@@ -2643,7 +2652,7 @@ __SOLVER_JS__
     const list = Object.entries(it.stats).map(([name, value]) => ({ name, value, meta: metaFor(name) }));
     const rates = list.map(x => rateOf(x.meta.cat));
     const chain = S.perfectChain(list.map(x => x.value), rates, 10, S.makeCtx('exact', [], list.length));
-    return { it, list, chain, cost: badges[it.key] };
+    return { it, list, chain, cost: badges[it.key], max: maxOf(it), std: Math.pow(2, maxOf(it) - 1) };
   }
   function compareHTML() {
     const cur = state.item && state.item !== 'custom' ? ITEM_BY_KEY.get(state.item) : null;
@@ -2651,12 +2660,12 @@ __SOLVER_JS__
     if (!cur || !other) return '';
     const A = itemFacts(cur), B = itemFacts(other);
     const statsTxt = (F, L) => F.list.map((x, i) => `${F.chain[L][i]} ${x.meta.short}`).join(' · ');
-    const costTxt = F => F.cost != null ? `${fmt(F.cost)} <small>of 512</small>` : '–';
-    const save = F => F.cost != null ? `${Math.round((512 - F.cost) / 512 * 100)}%` : '–';
-    const per = F => F.cost ? F.list.map((x, i) => `${(F.chain[10][i] / F.cost).toFixed(2)} ${x.meta.short}`).join(' · ') : '–';
+    const costTxt = F => F.cost != null ? `${fmt(F.cost)} <small>of ${fmt(F.std)}</small>` : '–';
+    const save = F => F.cost != null ? `${Math.round((F.std - F.cost) / F.std * 100)}%` : '–';
+    const per = F => F.cost ? F.list.map((x, i) => `${(F.chain[F.max][i] / F.cost).toFixed(2)} ${x.meta.short}`).join(' · ') : '–';
     const cats = F => F.list.map(x => `${x.meta.short} ${CATS[x.meta.cat].pct}`).join(' · ');
     const better = (a, b) => (a == null || b == null ? ['', ''] : a < b ? ['win', ''] : b < a ? ['', 'win'] : ['', '']);
-    const [wa, wb] = better(A.cost, B.cost);
+    const [wa, wb] = A.max === B.max ? better(A.cost, B.cost) : ['', ''];   // a P5 and a P10 cost are not comparable
     const row = (label, a, b, ca = '', cb = '') => `<div class="cmp-row"><span class="cmp-lab">${label}</span><span class="${ca}">${a}</span><span class="${cb}">${b}</span></div>`;
     return `<div class="card compare" id="compareCard">
       <div class="section-title"><h3>Compare</h3><button class="mini" type="button" data-action="compare-close">close</button></div>
@@ -2664,10 +2673,11 @@ __SOLVER_JS__
         <span>${iconSVG(A.it.key)}<b>${esc(A.it.name)}</b></span>
         <span><button class="cmp-pick" type="button" data-action="pick" data-key="${B.it.key}" title="Plan ${esc(B.it.name)}">${iconSVG(B.it.key)}<b>${esc(B.it.name)}</b></button></span></div>
       ${row('Base (P1)', statsTxt(A, 1), statsTxt(B, 1))}
-      ${row('Perfect P10', statsTxt(A, 10), statsTxt(B, 10))}
-      ${row('Cheapest P10', costTxt(A), costTxt(B), wa, wb)}
+      ${row('Max level', `P${A.max}`, `P${B.max}`)}
+      ${row('Perfect max', statsTxt(A, A.max), statsTxt(B, B.max))}
+      ${row('Cheapest max', costTxt(A), costTxt(B), wa, wb)}
       ${row('Saved', save(A), save(B))}
-      ${row('P10 stat per base item', per(A), per(B))}
+      ${row('Max stat per base item', per(A), per(B))}
       ${row('Refine rates', cats(A), cats(B))}
       <div class="cmp-foot"><button class="btn small" type="button" data-action="compare-pick">Compare with another</button><button class="btn small ghost" type="button" data-action="pick" data-key="${B.it.key}">Plan ${esc(B.it.name)}</button></div>
     </div>`;
@@ -2774,6 +2784,9 @@ __SOLVER_JS__
   }
 
   function pickItem(key) {
+    // leaving a boss weapon (capped at P5) for a normal item: go back to aiming for P10
+    const prevMax = maxOf(ITEM_BY_KEY.get(state.item));
+    if (prevMax < 10 && state.L === prevMax && maxOf(ITEM_BY_KEY.get(key)) > prevMax) state.L = 10;
     state.item = key;
     state.t = {}; state.o = []; state.stock = 0; state.k = {};
     last = null; openObsForm = null;
@@ -2789,12 +2802,12 @@ __SOLVER_JS__
     if (item) toast(`Planning ${item.name}`);
   }
 
-  /* ================= badges (cheapest P10 for every item) ================= */
+  /* ================= badges (cheapest perfect max level for every item: P10, P5 for boss weapons) ================= */
   function computeBadges() {
     const missing = ITEMS.filter(it => badges[it.key] == null);
     if (!missing.length) return;
     const id = 'badges-' + Date.now();
-    Solver.post({ type: 'batch', id, items: missing.map(it => ({ key: it.key, base: Object.values(it.stats), rates: itemRates(it) })) }, msg => {
+    Solver.post({ type: 'batch', id, items: missing.map(it => ({ key: it.key, base: Object.values(it.stats), rates: itemRates(it), level: maxOf(it) })) }, msg => {
       if (msg.partial) { badges[msg.key] = msg.cost; return; }
       if (msg.done) { saveJSON(STORAGE.badges, badges); if (!ui.pickerSheet.hidden && picker.type !== 'CUSTOM') renderPickerList(); }
     });
@@ -2978,9 +2991,9 @@ __SOLVER_JS__
         const i = item.stats.length === 1 ? 0 : Number((box.querySelector('[data-need-stat]') || {}).value || 0);
         const want = Math.round(Number((box.querySelector('[data-need-val]') || {}).value));
         if (!(want > 0)) { toast('Enter the value you need'); break; }
-        let L = 2; while (L <= 10 && item.chain[L][i] < want) L++;
+        let L = 2; while (L <= item.maxL && item.chain[L][i] < want) L++;
         const st = item.stats[i];
-        if (L > 10) { toast(`Even P10 reaches at most ${item.chain[10][i]} ${st.short}`); break; }
+        if (L > item.maxL) { toast(`Even P${item.maxL} reaches at most ${item.chain[item.maxL][i]} ${st.short}`); break; }
         state.L = L; state.t = {};
         item.stats.forEach((x, k) => { state.t[x.name] = k === i ? want : 'skip'; });
         if (item.stats.length === 1 && want === item.chain[L][0]) state.t = {};

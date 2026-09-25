@@ -1,4 +1,4 @@
-// Precompute the cheapest perfect-P10 cost for every item -> data/badges.json
+// Precompute the cheapest perfect max-level (P10, or P5 for boss weapons) cost for every item -> data/badges.json
 //   node tools/badges.mjs
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -26,7 +26,7 @@ for (const it of db.items) {
   const names = Object.keys(it.stats);
   const base = names.map(n => it.stats[n]);
   const rates = names.map(n => CATS[catFor(n)]);
-  badges['i' + it.id] = S.cheapest(base, rates, 10);
+  badges['i' + it.id] = S.cheapest(base, rates, it.maxLevel || 10);   // boss weapons stop at P5
 }
 writeFileSync(path.join(root, 'data', 'badges.json'), JSON.stringify(badges) + '\n');
 const costs = Object.values(badges);
