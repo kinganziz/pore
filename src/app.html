@@ -1698,6 +1698,13 @@
   .npc-name .npc-face { width: 26px; height: 26px; flex: 0 0 auto; }
   .npc-head { display: flex; align-items: center; gap: 10px; }
   .npc-head .npc-face { width: 48px; height: 48px; flex: 0 0 auto; }
+  .boss-head { display: grid; grid-template-columns: 64px 1fr; gap: 12px; align-items: center; margin: 0 2px 12px; }
+  .boss-head .boss-pic { width: 64px; height: 64px; }
+  .boss-head small { color: var(--gold); font-size: 13px; } .boss-head p { margin: 4px 0 0; color: var(--soft); font-size: 13px; line-height: 1.35; }
+  .boss-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 0 2px 14px; }
+  .boss-stats > div { background: rgba(0, 0, 0, .26); border: 2px solid rgba(255, 255, 255, .06); border-radius: 10px; box-shadow: inset 2px 2px 0 rgba(0, 0, 0, .35); padding: 6px 8px; }
+  .boss-stats small { display: block; color: var(--gold); font-size: 11px; opacity: .85; } .boss-stats b { font-size: 16px; }
+  .boss-row-pic { grid-template-columns: 1fr; } .boss-row-pic .pixel { width: 40px; height: 40px; }
 </style>
 </head>
 <body>
@@ -1964,6 +1971,10 @@ __SOLVER_JS__
     for (const l of e[3] || []) n.locs.add(l);
   }
   const npcIcon = name => iconSVG('n-' + name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''), 'npc-face');   // our own portrait of each NPC
+  // world bosses in the wiki's order, each with the weapon it drops
+  const BOSSES = (ITEM_DB.bosses || []).map(b => Object.assign({}, b, { weapon: Object.keys(WHERE).find(k => (WHERE[k] || []).some(e => e[0] === 'boss' && e[1] === b.name)) }));
+  const BOSS_BY = new Map(BOSSES.map(b => [b.name, b]));
+  const ELEMENT = e => String(e || '').split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' & ');
   const mapAt = name => { const i = MAPS.findIndex(m => m.name === name); return i < 0 ? 99 : i; };
   const NPC_LIST = [...NPCS.values()].sort((a, b) => Math.min(...[...a.locs].map(mapAt), 99) - Math.min(...[...b.locs].map(mapAt), 99) || a.name.localeCompare(b.name));
   const npcDeal = (key, npc) => { const n = NPCS.get(npc), pr = n && n.items.get(key); return pr == null ? [0, ''] : [1e9 - pr, '$' + pr]; };   // cheapest first
@@ -4993,7 +5004,7 @@ __SOLVER_JS__
   // The charms inventory: which charms PORE may use (tap to switch one off) and, optionally, how many you have
   // The inventory as a game bag: category tabs (Items, Charms, Coins) and a grid of slots with count badges; tapping
   // a slot opens a small editor under the grid (count stepper, remove or use-in-plans)
-  let invTab = 'all', invSel = null, invMap = null, invNpc = null;   // invMap: the map (location) whose items are shown
+  let invTab = 'all', invSel = null, invMap = null, invNpc = null, invBoss = null;   // invMap: the map (location) whose items are shown
   // counts the way the game shows them: 1x, 57x, 1.9k
   const invQty = n => {   // 1x, 57x, 1.9k, 12m, 12b, 3.4t
     for (const [v, u] of [[1e12, 't'], [1e9, 'b'], [1e6, 'm'], [1e3, 'k']]) if (n >= v * (v === 1e3 ? 1 : 0.9995)) { const x = n / v; return (x >= 100 ? Math.round(x) : x.toFixed(1).replace(/\.0$/, '')) + u; }
@@ -5024,11 +5035,11 @@ __SOLVER_JS__
     if (!ui.charmsBody || (!force && ui.charmsSheet.hidden)) return;
     // every category the bag can hold: all, charms, each item type (like the game's filter row), coins
     if (invGear && invTab.startsWith('g:')) invTab = 'all';
-    const cats = [['all', 'All'], ['maps', 'Maps'], ['npcs', 'NPCs'], ['charms', 'Charms'], ...TYPES.map(t => ['t:' + t[0], t[1]]), ...(invGear ? [] : GOOD_TYPES.map(t => ['g:' + t[0], t[1]])), ['coins', 'Coins']];
+    const cats = [['all', 'All'], ['maps', 'Maps'], ['npcs', 'NPCs'], ['bosses', 'World bosses'], ['charms', 'Charms'], ...TYPES.map(t => ['t:' + t[0], t[1]]), ...(invGear ? [] : GOOD_TYPES.map(t => ['g:' + t[0], t[1]])), ['coins', 'Coins']];
     const catName = (cats.find(c => c[0] === invTab) || cats[0])[1];
-    const nameEl = document.getElementById('invCatName'); if (nameEl) nameEl.textContent = invTab === 'all' ? (invGear ? 'Gear only' : '') : invTab === 'maps' && invMap ? invMap : invTab === 'npcs' && invNpc ? invNpc : catName;
-    const mapList = (invTab === 'maps' && !invMap) || (invTab === 'npcs' && !invNpc);   // the list of maps: no gear filter or item views to pick
-    ui.charmsBody.innerHTML = `<label class="inv-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></svg><input type="search" placeholder="${mapList ? (invTab === 'npcs' ? 'Search NPCs' : 'Search maps') : 'Search items or places'}" value="${esc(invQ)}" data-field="inv-q" aria-label="Search the inventory">` +
+    const nameEl = document.getElementById('invCatName'); if (nameEl) nameEl.textContent = invTab === 'all' ? (invGear ? 'Gear only' : '') : invTab === 'maps' && invMap ? invMap : invTab === 'npcs' && invNpc ? invNpc : invTab === 'bosses' && invBoss ? invBoss : catName;
+    const mapList = (invTab === 'maps' && !invMap) || (invTab === 'npcs' && !invNpc) || invTab === 'bosses';   // the list of maps: no gear filter or item views to pick
+    ui.charmsBody.innerHTML = `<label class="inv-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></svg><input type="search" placeholder="${mapList ? (invTab === 'npcs' ? 'Search NPCs' : invTab === 'bosses' ? 'Search bosses' : 'Search maps') : 'Search items or places'}" value="${esc(invQ)}" data-field="inv-q" aria-label="Search the inventory">` +
       (mapList ? '</label>' : `<button type="button" class="inv-gear ${invGear ? 'on' : ''}" data-action="inv-gear" aria-pressed="${invGear}" aria-label="Gear only: hide what you cannot equip" title="Gear only">${iconSVG((ITEMS.find(it => it.name === 'Iron Sword') || ITEMS[0]).key)}</button>` +
       `<span class="inv-views" role="group" aria-label="View">${['grid', 'list', 'icons'].map(v => `<button type="button" class="${invView === v ? 'on' : ''}" data-action="inv-view" data-view="${v}" aria-label="${v === 'grid' ? 'Tiles with names' : v === 'list' ? 'List' : 'Icons only'}" title="${v === 'grid' ? 'Tiles' : v === 'list' ? 'List' : 'Icons'}">${INV_VIEW_SVG[v]}</button>`).join('')}</span></label>`) +
       `<div id="invGrid"></div>`;
@@ -5036,7 +5047,7 @@ __SOLVER_JS__
     const goodArt = t => { const g = GOODS.find(x => x.name === (GOOD_TYPES.find(y => y[0] === t) || [])[3]) || GOODS.find(x => x.type === t); return g ? iconSVG(g.key) : ''; };
     const clover = CHARMS.find(c => c.name === 'Clover') || CHARMS[0];
     const allArt = () => `<span class="cat-quad">${['Iron Sword', 'Potion of Luck', 'Gold ore', 'Apple'].map(n => { const x = ITEMS.find(i => i.name === n) || GOODS.find(i => i.name === n); return x ? iconSVG(x.key) : ''; }).join('')}</span>`;
-    const catArt = k => ({ all: allArt(), maps: iconSVG('u-map'), npcs: iconSVG('n-merchant'), charms: clover ? iconSVG(clover.key) : '', coins: iconSVG('u-gold') })[k] || (k.startsWith('g:') ? goodArt(k.slice(2)) : filterIcon(k.slice(2)));   // item types use the item list's type icons
+    const catArt = k => ({ all: allArt(), maps: iconSVG('u-map'), npcs: iconSVG('n-merchant'), bosses: iconSVG((BOSSES.find(b => b.weapon) || {}).weapon || 'u-wb'), charms: clover ? iconSVG(clover.key) : '', coins: iconSVG('u-gold') })[k] || (k.startsWith('g:') ? goodArt(k.slice(2)) : filterIcon(k.slice(2)));   // item types use the item list's type icons
     const strip = document.getElementById('invCats'), sx = strip.scrollLeft;
     strip.innerHTML = cats.map(([k, l]) => `<button type="button" role="tab" class="inv-cat ${invTab === k ? 'on' : ''}" data-action="inv-tab" data-tab="${k}" aria-selected="${invTab === k}" aria-label="${l}" title="${l}">${catArt(k)}<i class="cat-n" data-cat="${k}" hidden></i></button>`).join('');
     strip.scrollLeft = sx;   // stays where the player left it
@@ -5057,6 +5068,27 @@ __SOLVER_JS__
     const q = invQ.trim().toLowerCase(), onMap = invTab === 'maps' && invMap && MAP_KEYS.get(invMap);
     const onNpc = invTab === 'npcs' && invNpc && NPCS.has(invNpc) && new Set(NPCS.get(invNpc).items.keys());
     const onSet = onMap || onNpc, placeOf = k => onMap ? mapChance(k, invMap) : npcDeal(k, invNpc);
+    if (invTab === 'bosses') {
+      const statRow = b => [['HP', b.hp], ['Attack', b.atk], ['Defense', b.def], ['Speed', b.spd], ['Luck', b.luck], ['Mana', b.mana]].filter(x => x[1]);
+      if (invBoss && BOSS_BY.has(invBoss)) {   // one boss: what it is, its fight stats, and the weapon it drops
+        const b = BOSS_BY.get(invBoss), w = b.weapon && ITEM_BY_KEY.get(b.weapon);
+        box.innerHTML = `<button type="button" class="inv-back" data-action="inv-boss-back">‹ All bosses</button>` +
+          `<div class="boss-head">${w ? iconSVG(w.key, 'boss-pic') : ''}<div><small>${esc(ELEMENT(b.element))} world boss</small>${b.desc ? `<p>${esc(b.desc)}</p>` : ''}</div></div>` +
+          `<div class="boss-stats">${statRow(b).map(([n, v]) => `<div><small>${n}</small><b>${fmt(v)}</b></div>`).join('')}</div>` +
+          (w ? `<div class="ip-lab">Drops</div><button type="button" class="inv-row" data-action="inv-sel" data-key="${w.key}"><span class="ir-ic">${iconSVG(w.key)}</span><span class="ir-main"><b>${esc(w.name)}</b><small>Boss weapon · ${esc(statsLine(w))}</small></span><span class="ir-n"></span></button>` : '') +
+          '<p class="inv-hint">World boss weapons refine up to P5, with fees paid in world boss tokens (WB). Tap the weapon to plan it.</p>';
+        invRenderPop();
+        return;
+      }
+      const list = BOSSES.filter(b => !q || `${b.name} ${b.element} ${b.desc} ${(ITEM_BY_KEY.get(b.weapon) || {}).name || ''}`.toLowerCase().includes(q));
+      box.innerHTML = (list.length ? `<div class="map-list">${list.map(b => { const w = b.weapon && ITEM_BY_KEY.get(b.weapon);
+        return `<button type="button" class="map-row" data-action="inv-boss" data-boss="${esc(b.name)}"><span class="npc-pic boss-row-pic">${w ? iconSVG(w.key) : ''}</span>` +
+          `<span class="ir-main"><b>${esc(b.name)}</b><small>${esc(ELEMENT(b.element))} · ${fmt(b.hp)} HP</small><small class="map-desc">drops ${w ? esc(w.name) : 'a weapon'}</small></span>` +
+          `<span class="map-go">›</span></button>`; }).join('')}</div>` : '<p class="inv-hint">Nothing matches.</p>') +
+        '<p class="inv-hint">Every world boss, with the weapon it drops. Tap one for its stats.</p>';
+      invRenderPop();
+      return;
+    }
     if (invTab === 'npcs' && !onNpc) {   // the NPCs, in the order you meet them, with a few of their wares
       const list = NPC_LIST.filter(n => !q || `${n.name} ${[...n.locs].join(' ')}`.toLowerCase().includes(q));
       box.innerHTML = (list.length ? `<div class="map-list">${list.map(n => { const wares = [...n.items.entries()].sort((a, b) => b[1] - a[1]), low = Math.min(...n.items.values());
@@ -5300,13 +5332,20 @@ __SOLVER_JS__
       case 'close-projects': closeProjects(); break;
       case 'close-settings': closeSettings(); break;
       case 'close-charms': closeCharms(); break;
-      case 'inv-tab': invTab = el.dataset.tab; invSel = null; invMap = null; invNpc = null; haptic(6); renderCharms(); break;   // the category icons at the bottom
+      case 'inv-tab': invTab = el.dataset.tab; invSel = null; invMap = null; invNpc = null; invBoss = null; haptic(6); renderCharms(); break;   // the category icons at the bottom
       case 'inv-sel': invSel = invSel === el.dataset.key ? null : el.dataset.key; haptic(6); invRenderGrid(); break;
       case 'inv-map': invMap = el.dataset.place; invQ = ''; invSel = null; haptic(6); renderCharms(); { const b = document.getElementById('charmsBody'); if (b) b.scrollTop = 0; } break;
       case 'inv-map-back': invMap = null; invSel = null; haptic(6); renderCharms(); break;
       case 'inv-npc': invNpc = el.dataset.npc; invQ = ''; invSel = null; haptic(6); renderCharms(); { const b = document.getElementById('charmsBody'); if (b) b.scrollTop = 0; } break;
       case 'inv-npc-back': invNpc = null; invSel = null; haptic(6); renderCharms(); break;
-      case 'inv-place': if (NPCS.has(el.dataset.q)) {   // an NPC: their page in NPCs
+      case 'inv-boss': invBoss = el.dataset.boss; invQ = ''; invSel = null; haptic(6); renderCharms(); { const b = document.getElementById('charmsBody'); if (b) b.scrollTop = 0; } break;
+      case 'inv-boss-back': invBoss = null; invSel = null; haptic(6); renderCharms(); break;
+      case 'inv-place': if (BOSS_BY.has(el.dataset.q)) {   // a world boss: its page in World bosses
+          invTab = 'bosses'; invBoss = el.dataset.q; invMap = null; invNpc = null; invQ = ''; invSel = null; haptic(6);
+          if (ui.charmsSheet.hidden) tabGo('inventory'); else renderCharms();
+          break;
+        }
+        if (NPCS.has(el.dataset.q)) {   // an NPC: their page in NPCs
           invTab = 'npcs'; invNpc = el.dataset.q; invMap = null; invQ = ''; invSel = null; haptic(6);
           if (ui.charmsSheet.hidden) tabGo('inventory'); else renderCharms();
           break;

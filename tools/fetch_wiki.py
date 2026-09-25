@@ -247,6 +247,22 @@ def sources(index: dict, items: list, charms: list, goods: list, frontmatter_of)
     return where, uses
 
 
+def bosses_of(index):
+    """The world bosses in the wiki's order: description, element and fight stats (their weapon is in `where`)."""
+    num = lambda v: int(float(v)) if str(v).replace(".", "", 1).isdigit() else 0
+    out = []
+    for path, meta in index.items():
+        fm = (meta or {}).get("frontmatter") or {}
+        if fm.get("fileClass") != "world-boss" or not fm.get("name"):
+            continue
+        out.append({"name": fm["name"], "id": num(fm.get("id")), "desc": (fm.get("description") or "").strip(),
+                    "element": str(fm.get("element") or "").strip(),
+                    "hp": num(fm.get("hp")), "atk": num(fm.get("attack")), "def": num(fm.get("defense")),
+                    "spd": num(fm.get("speed")), "luck": num(fm.get("luck")), "mana": num(fm.get("mana"))})
+    out.sort(key=lambda b: (b["id"], b["name"]))
+    return out
+
+
 def main() -> None:
     offline = "--offline" in sys.argv
     CACHE_DIR.mkdir(exist_ok=True)
@@ -370,6 +386,8 @@ def main() -> None:
         places.append({"name": fm["name"], "desc": (fm.get("description") or "").strip(), "steps": int(fm.get("required-steps") or 0), "kind": fm.get("bg-name") or fm.get("type") or ""})
     places.sort(key=lambda pl: (pl["steps"], pl["name"]))
 
+    bosses = bosses_of(index)
+
     stat_names = sorted({name for it in items for name in it["stats"]})
     payload = {
         "source": WIKI_URL,
@@ -382,6 +400,7 @@ def main() -> None:
         "where": where,
         "uses": uses,
         "places": places,
+        "bosses": bosses,
     }
     OUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     OUT_FILE.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
