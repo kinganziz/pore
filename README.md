@@ -84,3 +84,8 @@ Edit `src/app.html` / `src/solver.js`, rebuild, commit `index.html` together wit
 
 Item names and stats belong to Pixel Odyssey and are taken from the official wiki. The icons are
 PORE's own drawings. PORE is a fan-made tool.
+
+## License
+
+Copyright (c) 2026 anz. All rights reserved. The source code, icons and artwork may not be copied,
+modified, redistributed or reused without written permission. See [LICENSE](LICENSE).

@@ -1664,6 +1664,10 @@
   .info-body .why-name { font-size: 13px; color: var(--text); opacity: .85; }
   :root[data-sky="day"] .home-why { color: #9a4a00; }
   :root[data-sky="day"] .home-saved b { color: #0f6a2c; }
+  .map-pic.wait { background: rgba(255, 255, 255, .06); box-shadow: none; }
+  .map-pic.in { animation: map-in .3s ease-out; }
+  @keyframes map-in { from { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .map-pic.in { animation: none; } }
 </style>
 </head>
 <body>
@@ -2363,6 +2367,14 @@ function createSolver() {
   const chanceTxt = ([c, how]) => how === 'found' ? `found ${c}%` : how === 'mined' || how.startsWith('sold') ? how : `${how} ${c}%`;
   const chanceShort = ([c, how]) => how === 'mined' ? 'mine' : how.startsWith('sold') ? 'shop' : c + '%';
   const mapArt = {};
+  // A map's picture is shown only when it is complete (never the bare landscape first): until then an empty
+  // frame, then the finished picture fades in. All of them are made in the background shortly after start.
+  const BLANK_PX = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+  function mapImg(m) {
+    const src = mapPic(m), ready = !!mapArt[m.name];
+    return `<img class="map-pic${ready ? '' : ' wait'}" data-map="${esc(m.name)}" src="${ready ? src : BLANK_PX}" alt="" draggable="false">`;
+  }
+  setTimeout(() => { try { MAPS.forEach(m => mapPic(m)); } catch (e) { /* ignore */ } }, 1500);
   function mapPic(m) {
     if (mapArt[m.name]) return mapArt[m.name];
     const base = bgThumb(MAP_BG[m.kind] || 'hills', MAP_NIGHT.has(m.kind) ? 'night' : 'day');
@@ -2381,7 +2393,7 @@ function createSolver() {
         g.drawImage(im, x, y, sz, sz);
       });
       mapArt[m.name] = c.toDataURL();
-      document.querySelectorAll('img.map-pic').forEach(el => { if (el.dataset.map === m.name) el.src = mapArt[m.name]; });
+      document.querySelectorAll('img.map-pic.wait').forEach(el => { if (el.dataset.map === m.name) { el.src = mapArt[m.name]; el.classList.remove('wait'); el.classList.add('in'); } });
     });
     return base;
   }
@@ -5396,7 +5408,7 @@ function createSolver() {
     if (invTab === 'maps' && !onMap) {   // the maps, in game order, with a picture of their world
       const list = MAPS.filter(m => !q || `${m.name} ${m.kind || ''} ${m.desc || ''}`.toLowerCase().includes(q));   // by name, kind (cave, snow…) or description
       box.innerHTML = (list.length ? `<div class="map-list">${list.map(m => `<button type="button" class="map-row" data-action="inv-map" data-place="${esc(m.name)}">` +
-        `<img class="map-pic" data-map="${esc(m.name)}" src="${mapPic(m)}" alt="" draggable="false">` +
+        mapImg(m) +
         `<span class="ir-main"><b>${esc(m.name)}</b><small>${m.steps ? fmt(m.steps) + ' steps to unlock' : 'where it starts'} · ${MAP_KEYS.get(m.name).size} items</small>${m.desc ? `<small class="map-desc">${esc(m.desc)}</small>` : ''}</span>` +
         `<span class="map-go">›</span></button>`).join('')}</div>` : '<p class="inv-hint">Nothing matches.</p>') +
         '<p class="inv-hint">Every place in the game, in the order you reach them. Tap one to see what you can get there, and go straight to the right place.</p>';
@@ -5436,7 +5448,7 @@ function createSolver() {
     const hint = invTab.startsWith('g:') ? 'Tap an item to see where to get it and set how many you own.' : { all: 'Tap anything to see where to get it and set how many you own. Dim means you have none. Search finds places too.', charms: 'Tap a charm to set your stock or keep it out of plans.', coins: 'Gold pays fees, world boss (WB) tokens pay boss weapons.' }[invTab] || 'Tap an item to see it and set how many base (P1) copies you own.';
     const mp = onMap && MAPS.find(m => m.name === invMap);
     box.innerHTML = (onMap ? `<button type="button" class="inv-back" data-action="inv-map-back">‹ All maps</button>` +
-      (mp ? `<div class="map-head"><img class="map-pic" data-map="${esc(mp.name)}" src="${mapPic(mp)}" alt="" draggable="false">` +
+      (mp ? `<div class="map-head">${mapImg(mp)}` +
         `<div><small>${mp.steps ? fmt(mp.steps) + ' steps to unlock' : 'where it starts'} · ${onMap.size} items</small>${mp.desc ? `<p>${esc(mp.desc)}</p>` : ''}</div></div>` : '') : '') +
       (rows.length ? html : '<p class="inv-hint">Nothing matches.</p>') + `<p class="inv-hint">${onMap ? `Everything you can get in ${esc(invMap)}. Tap an item for where exactly.` : hint}</p>`;
     invRenderPop();
