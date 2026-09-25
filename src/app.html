@@ -19,7 +19,9 @@
     var d = document.documentElement, g = function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } };
     var t = g('pore.theme') || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
     d.setAttribute('data-theme', t);
-    d.setAttribute('data-skin', g('pore.skin') === 'pixel' ? 'pixel' : 'modern');
+    var sk = g('pore.skin');
+    d.setAttribute('data-skin', sk === 'pixel' || sk === 'game' ? 'pixel' : 'modern');
+    if (sk === 'game') d.setAttribute('data-flavor', 'game');
     d.setAttribute('data-font', g('pore.font') === 'jersey' ? 'jersey' : 'vt323');   // VT323 is the default reading font
   })();
 </script>
@@ -1042,6 +1044,55 @@
   :root[data-skin="pixel"] .home-hero { border: 2px solid var(--line) !important; }
   :root[data-skin="pixel"] .home-cta { border-radius: 12px; }
   @media (prefers-reduced-motion: reduce) { .home-hero::after, .floater, .home-cta { animation: none; } }
+  /* ---------- game theme: the pixel look in Pixel Odyssey's own colours ---------- */
+  .lvr { display: none; }
+  :root[data-flavor="game"] .lvn { display: none; }
+  :root[data-flavor="game"] .lvr { display: inline; }
+  :root[data-flavor="game"][data-skin="pixel"] {
+    --bg: #081713; --bg-2: #0b1d18;
+    --surface: #0f241e; --surface-2: #143027; --surface-3: #1b3d31;
+    --tile: #0f2a22; --tile-2: #173a2e; --tile-on: #1d4a38;
+    --text: #eaf6ee; --muted: #8fb8a2; --soft: #6a917d;
+    --accent: #5fd873; --accent-2: #5fd873; --on-accent: #06180f;
+    --gold: #ffd84a; --gold-ink: #102010;
+    --good: #5fd873; --warn: #ffd84a; --bad: #ff5a5a; --info: #7ab8ff;
+    --line: #21483a; --line-2: #2f6a52;
+    --px-shadow: #030a08;
+  }
+  :root[data-flavor="game"][data-skin="pixel"][data-theme="light"] {   /* the sandy daylight of the Step screen */
+    --bg: #eadcc2; --bg-2: #e2d2b4;
+    --surface: #f4ead6; --surface-2: #ecdfc4; --surface-3: #dfcfae;
+    --tile: #f4ead6; --tile-2: #ecdfc4; --tile-on: #d8ecd0;
+    --text: #1a2a22; --muted: #5a6e62; --soft: #86978c;
+    --accent: #2c9a48; --accent-2: #2c9a48; --on-accent: #fff;
+    --gold: #d49a00; --gold-ink: #1a2a22;
+    --good: #2c9a48; --warn: #b87800; --bad: #d23434; --info: #2f6fd0;
+    --line: #c4ad86; --line-2: #a58c62;
+    --px-shadow: #b8a27c;
+  }
+  :root[data-flavor="game"] body { background: var(--bg); }
+  /* primary buttons: dark green with a bright green frame, like Take Step and Craft */
+  /* doubled classes: the pixel theme's button rule is weighted up by its .seg.accent button.on branch */
+  :root[data-flavor="game"][data-skin="pixel"] .btn.btn.primary, :root[data-flavor="game"][data-skin="pixel"] .btn.btn.home-cta, :root[data-flavor="game"][data-skin="pixel"] .btn.btn.guide-cta {
+    background: #0c2a1e !important; color: #c8ffd2 !important; border: 3px solid #5fd873 !important; box-shadow: 0 0 0 0 transparent !important; }
+  :root[data-flavor="game"][data-skin="pixel"][data-theme="light"] .btn.btn.primary, :root[data-flavor="game"][data-skin="pixel"][data-theme="light"] .btn.btn.home-cta { background: #11402a !important; color: #eafff0 !important; }
+  :root[data-flavor="game"] .home-cta { animation: none; }
+  /* the home hero and town-style cards: deep plum panels like the game's Town screen */
+  :root[data-flavor="game"] .home-hero { background: linear-gradient(160deg, #2a1732, #1a1024 70%) !important; border: 2px solid #3a2244 !important; }
+  :root[data-flavor="game"] .home-title span { background: none; color: #ffd84a; -webkit-text-fill-color: #ffd84a; }
+  /* level badges: a white Roman numeral on a chip with a corner glow in the level's colour */
+  :root[data-flavor="game"][data-skin="pixel"] .chip.chip { --lvc: #3aa84a; background: radial-gradient(130% 150% at 100% 0%, color-mix(in srgb, var(--lvc) 75%, transparent) 0, transparent 58%), var(--tile) !important; border-color: var(--line) !important; }
+  :root[data-flavor="game"][data-skin="pixel"] .chip.chip b { background: transparent !important; box-shadow: none !important; border: 0 !important; color: #fff !important;
+    font-family: "Press Start 2P", monospace; font-size: 11px; padding: 0 2px; white-space: nowrap; text-shadow: 1px 1px 0 #000; }
+  :root[data-flavor="game"][data-skin="pixel"][data-theme="light"] .chip.chip b { color: #1a2a22 !important; text-shadow: none; }
+  :root[data-flavor="game"] .chip.lv1 { --lvc: #3aa84a; } :root[data-flavor="game"] .chip.lv2 { --lvc: #4cc85a; }
+  :root[data-flavor="game"] .chip.lv3 { --lvc: #c8d24a; } :root[data-flavor="game"] .chip.lv4 { --lvc: #8a6ae0; }
+  :root[data-flavor="game"] .chip.lv5 { --lvc: #5a5af0; } :root[data-flavor="game"] .chip.lv6 { --lvc: #c060e0; }
+  :root[data-flavor="game"] .chip.lv7 { --lvc: #e08a3a; } :root[data-flavor="game"] .chip.lv8 { --lvc: #e0c03a; }
+  :root[data-flavor="game"] .chip.lv9 { --lvc: #9a4ad8; } :root[data-flavor="game"] .chip.lv10 { --lvc: #e03a4a; }
+  :root[data-flavor="game"] .chip-btn .lvr { font-family: "Press Start 2P", monospace; font-size: 10px; }
+  .theme-pick button { font-family: inherit !important; }
+  :root[data-skin="pixel"] .home-title { font-size: clamp(20px, 6vw, 30px); line-height: 1.25; letter-spacing: 0; }
 </style>
 </head>
 <body>
@@ -1142,6 +1193,9 @@
         <button class="btn small" type="button" data-action="reload"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg>Reload app</button>
         <button class="btn small" type="button" data-action="check-update"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Check for update</button>
       </div>
+      <div class="font-pick theme-pick"><span>Look</span><div class="seg" role="group" aria-label="Look">
+        <button type="button" data-action="skin-pick" data-skin="modern">Modern</button><button type="button" data-action="skin-pick" data-skin="pixel">Pixel</button><button type="button" data-action="skin-pick" data-skin="game">Game</button>
+      </div></div>
       <div class="font-pick"><span>Font</span><div class="seg" role="group" aria-label="Font">
         <button type="button" data-action="font" data-font="jersey">Jersey 15</button><button type="button" data-action="font" data-font="vt323">VT323</button>
       </div></div>
@@ -1648,13 +1702,18 @@ __SOLVER_JS__
     try { localStorage.setItem(STORAGE.font, readFont); } catch (e) { /* ignore */ }
     syncTopbar();
   }
+  // Three looks: modern (default), pixel, and game (the pixel look in Pixel Odyssey's own colours and level badges)
+  const SKINS = { modern: 'Modern theme', pixel: 'Pixel theme', game: 'Game theme' };
   let skin = 'modern';
   function setSkin(next) {
-    skin = next === 'pixel' ? 'pixel' : 'modern';
-    document.documentElement.setAttribute('data-skin', skin);
+    skin = SKINS[next] ? next : 'modern';
+    const d = document.documentElement;
+    d.setAttribute('data-skin', skin === 'modern' ? 'modern' : 'pixel');
+    if (skin === 'game') d.setAttribute('data-flavor', 'game'); else d.removeAttribute('data-flavor');
     syncTopbar();
     const b = document.querySelector('[data-action="skin"]');
-    if (b) b.setAttribute('aria-pressed', String(skin === 'pixel'));
+    if (b) b.setAttribute('aria-pressed', String(skin !== 'modern'));
+    document.querySelectorAll('[data-action="skin-pick"]').forEach(x => x.classList.toggle('on', x.dataset.skin === skin));
     try { localStorage.setItem(STORAGE.skin, skin); } catch (e) { /* ignore */ }
   }
   function syncHdButton() {
@@ -1730,7 +1789,7 @@ __SOLVER_JS__
     const item = resolveItem();
     if (!item) return;
     const chips = [];
-    for (let L = 2; L <= item.maxL; L++) chips.push(`<button class="chip-btn ${L === state.L ? 'on' + (L === item.maxL ? ' gold' : '') : ''}" type="button" data-action="set-level" data-level="${L}">P${L}</button>`);
+    for (let L = 2; L <= item.maxL; L++) chips.push(`<button class="chip-btn ${L === state.L ? 'on' + (L === item.maxL ? ' gold' : '') : ''}" type="button" data-action="set-level" data-level="${L}">${lvTag(L, 'P')}</button>`);
     const perfect = item.chain[state.L];
     const target = targetVector(item);
     const isPerfect = target.every((t, i) => t === perfect[i]);
@@ -1836,10 +1895,13 @@ __SOLVER_JS__
 
   /* ================= rendering: results ================= */
   function isPerfectNode(nd, chain) { const p = chain[nd.L]; return !!p && nd.s.every((v, i) => v === p[i]); }
+  const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+  // a level label in both notations; the game look shows the Roman numeral, like the badges on the game's item tiles
+  const lvTag = (L, prefix) => `<span class="lvn">${prefix}${L}</span><span class="lvr">${ROMAN[L] || L}</span>`;
   function chipHTML(nd, item, cls, observed) {
     const perfect = isPerfectNode(nd, item.chain);
     const stats = nd.s.map((v, i) => `${v} ${item.stats[i].short}`).join(' · ');
-    return `<span class="chip ${perfect ? 'perfect' : ''} ${nd.k === 1 ? 'owned' : ''} ${cls || ''}"><b>${perfect ? 'P' : 'L'}${nd.L}</b><span>${stats}</span>${nd.k === 1 ? '<i>yours</i>' : ''}${observed ? '<i class="obs">observed</i>' : ''}</span>`;
+    return `<span class="chip lv${nd.L} ${perfect ? 'perfect' : ''} ${nd.k === 1 ? 'owned' : ''} ${cls || ''}"><b>${lvTag(nd.L, perfect ? 'P' : 'L')}</b><span>${stats}</span>${nd.k === 1 ? '<i>yours</i>' : ''}${observed ? '<i class="obs">observed</i>' : ''}</span>`;
   }
   function jitSequence(plan) {
     const nodes = plan.nodes;
@@ -3136,7 +3198,8 @@ __SOLVER_JS__
     const act = el.dataset.action;
     switch (act) {
       case 'home': e.preventDefault(); goHome(); break;
-      case 'skin': setSkin(skin === 'pixel' ? 'modern' : 'pixel'); toast(skin === 'pixel' ? 'Pixel game theme' : 'Modern theme'); break;
+      case 'skin': setSkin({ modern: 'pixel', pixel: 'game', game: 'modern' }[skin]); toast(SKINS[skin]); break;
+      case 'skin-pick': setSkin(el.dataset.skin); toast(SKINS[skin]); break;
       case 'icon-style': setIconStyle(iconStyle === 'modern' ? 'pixelhd' : 'modern'); toast(ICON_STYLES[iconStyle].label); break;
       case 'reload': location.reload(); break;
       case 'next-tip': {
