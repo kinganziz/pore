@@ -1974,6 +1974,7 @@ __SOLVER_JS__
   // world bosses in the wiki's order, each with the weapon it drops
   const BOSSES = (ITEM_DB.bosses || []).map(b => Object.assign({}, b, { weapon: Object.keys(WHERE).find(k => (WHERE[k] || []).some(e => e[0] === 'boss' && e[1] === b.name)) }));
   const BOSS_BY = new Map(BOSSES.map(b => [b.name, b]));
+  const bossIcon = (name, cls) => iconSVG('b-' + name.toLowerCase().replace(/'/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''), cls || 'npc-face');   // our own portrait of each boss
   const ELEMENT = e => String(e || '').split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' & ');
   const mapAt = name => { const i = MAPS.findIndex(m => m.name === name); return i < 0 ? 99 : i; };
   const NPC_LIST = [...NPCS.values()].sort((a, b) => Math.min(...[...a.locs].map(mapAt), 99) - Math.min(...[...b.locs].map(mapAt), 99) || a.name.localeCompare(b.name));
@@ -5047,7 +5048,7 @@ __SOLVER_JS__
     const goodArt = t => { const g = GOODS.find(x => x.name === (GOOD_TYPES.find(y => y[0] === t) || [])[3]) || GOODS.find(x => x.type === t); return g ? iconSVG(g.key) : ''; };
     const clover = CHARMS.find(c => c.name === 'Clover') || CHARMS[0];
     const allArt = () => `<span class="cat-quad">${['Iron Sword', 'Potion of Luck', 'Gold ore', 'Apple'].map(n => { const x = ITEMS.find(i => i.name === n) || GOODS.find(i => i.name === n); return x ? iconSVG(x.key) : ''; }).join('')}</span>`;
-    const catArt = k => ({ all: allArt(), maps: iconSVG('u-map'), npcs: iconSVG('n-merchant'), bosses: iconSVG((BOSSES.find(b => b.weapon) || {}).weapon || 'u-wb'), charms: clover ? iconSVG(clover.key) : '', coins: iconSVG('u-gold') })[k] || (k.startsWith('g:') ? goodArt(k.slice(2)) : filterIcon(k.slice(2)));   // item types use the item list's type icons
+    const catArt = k => ({ all: allArt(), maps: iconSVG('u-map'), npcs: iconSVG('n-merchant'), bosses: bossIcon('Goblin King', ''), charms: clover ? iconSVG(clover.key) : '', coins: iconSVG('u-gold') })[k] || (k.startsWith('g:') ? goodArt(k.slice(2)) : filterIcon(k.slice(2)));   // item types use the item list's type icons
     const strip = document.getElementById('invCats'), sx = strip.scrollLeft;
     strip.innerHTML = cats.map(([k, l]) => `<button type="button" role="tab" class="inv-cat ${invTab === k ? 'on' : ''}" data-action="inv-tab" data-tab="${k}" aria-selected="${invTab === k}" aria-label="${l}" title="${l}">${catArt(k)}<i class="cat-n" data-cat="${k}" hidden></i></button>`).join('');
     strip.scrollLeft = sx;   // stays where the player left it
@@ -5073,7 +5074,7 @@ __SOLVER_JS__
       if (invBoss && BOSS_BY.has(invBoss)) {   // one boss: what it is, its fight stats, and the weapon it drops
         const b = BOSS_BY.get(invBoss), w = b.weapon && ITEM_BY_KEY.get(b.weapon);
         box.innerHTML = `<button type="button" class="inv-back" data-action="inv-boss-back">‹ All bosses</button>` +
-          `<div class="boss-head">${w ? iconSVG(w.key, 'boss-pic') : ''}<div><small>${esc(ELEMENT(b.element))} world boss</small>${b.desc ? `<p>${esc(b.desc)}</p>` : ''}</div></div>` +
+          `<div class="boss-head">${bossIcon(b.name, 'boss-pic')}<div><small>${esc(ELEMENT(b.element))} world boss</small>${b.desc ? `<p>${esc(b.desc)}</p>` : ''}</div></div>` +
           `<div class="boss-stats">${statRow(b).map(([n, v]) => `<div><small>${n}</small><b>${fmt(v)}</b></div>`).join('')}</div>` +
           (w ? `<div class="ip-lab">Drops</div><button type="button" class="inv-row" data-action="inv-sel" data-key="${w.key}"><span class="ir-ic">${iconSVG(w.key)}</span><span class="ir-main"><b>${esc(w.name)}</b><small>Boss weapon · ${esc(statsLine(w))}</small></span><span class="ir-n"></span></button>` : '') +
           '<p class="inv-hint">World boss weapons refine up to P5, with fees paid in world boss tokens (WB). Tap the weapon to plan it.</p>';
@@ -5083,7 +5084,7 @@ __SOLVER_JS__
       const list = BOSSES.filter(b => !q || `${b.name} ${b.element} ${b.desc} ${(ITEM_BY_KEY.get(b.weapon) || {}).name || ''}`.toLowerCase().includes(q));
       box.innerHTML = (list.length ? `<div class="map-list">${list.map(b => { const w = b.weapon && ITEM_BY_KEY.get(b.weapon);
         return `<button type="button" class="map-row" data-action="inv-boss" data-boss="${esc(b.name)}"><span class="npc-pic boss-row-pic">${w ? iconSVG(w.key) : ''}</span>` +
-          `<span class="ir-main"><b>${esc(b.name)}</b><small>${esc(ELEMENT(b.element))} · ${fmt(b.hp)} HP</small><small class="map-desc">drops ${w ? esc(w.name) : 'a weapon'}</small></span>` +
+          `<span class="ir-main"><b class="npc-name">${esc(b.name)}${bossIcon(b.name)}</b><small>${esc(ELEMENT(b.element))} · ${fmt(b.hp)} HP</small><small class="map-desc">drops ${w ? esc(w.name) : 'a weapon'}</small></span>` +
           `<span class="map-go">›</span></button>`; }).join('')}</div>` : '<p class="inv-hint">Nothing matches.</p>') +
         '<p class="inv-hint">Every world boss, with the weapon it drops. Tap one for its stats.</p>';
       invRenderPop();
