@@ -4,7 +4,7 @@
   "description": "PORE build tooling (the app itself is static and dependency-free)",
   "scripts": {
     "test": "node tools/test_solver.mjs",
-    "pixel-modern": "node tools/pixelate.mjs"
+    "pixel": "node tools/pixelart.mjs"
   },
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2"

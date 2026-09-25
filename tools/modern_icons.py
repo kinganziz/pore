@@ -849,14 +849,14 @@ def shirt(ic, pal, long_=False, pattern=None):
 
 
 def greaves(ic, pal, trim=None, pattern=None):
-    legs = ("M11 12 L53 12 L54 53 C54 56.5 52 58 49 58 L37 58 C35 58 34 56.5 34 54.5 L32.4 29 L31.6 29 "
-            "L30 54.5 C30 56.5 29 58 27 58 L15 58 C12 58 10 56.5 10 53 Z")
+    legs = ("M11 12 L53 12 L54 53 C54 56.5 52 58 49 58 L37 58 C35.5 58 34.7 57 34.7 55 L34.7 29 L29.3 29 "
+            "L29.3 55 C29.3 57 28.5 58 27 58 L15 58 C12 58 10 56.5 10 53 Z")   # the gap between the legs is 2 pixels at 24x24
     s = [shape(ic, legs, pal, ic.lg(pal, 0, 0, 0, 1))]   # top to bottom: both legs shade alike
     if pattern:
         s.append(pattern_marks(pattern, 10, 12, 54, 56))
     band = trim or pal
     s.append(f'<rect x="9" y="6" width="46" height="9" rx="3" fill="{ic.lg(band, 0, 0, 0, 1)}" stroke="{band[3]}" stroke-width="2"/>')
-    for cx in (20.8, 43.2):
+    for cx in (19.6, 44.4):
         knee = f"M{cx - 7} 36 L{cx} 30.5 L{cx + 7} 36 L{cx + 5.5} 43 L{cx} 46 L{cx - 5.5} 43 Z"
         s.append(shape(ic, knee, band, ic.lg(band, 0, 0, 0, 1), 1.8))
     if trim:
@@ -1079,16 +1079,17 @@ def necklace(ic, metal, pendant=None, kind="mining"):
 
 # ----------------------------------------------------------------------------- tools
 def glove(ic, pal, pattern=None, cuff=None):
-    d = ("M18.6 50 L18.6 36 L13 30 C10.5 27.5 11 23.5 14.5 23.5 C16.5 23.5 17.8 25 18.6 27 "
-         "L18.6 12 C18.6 9 23 9 23 12 L23 26 L25 26 L25 8 C25 5 29.4 5 29.4 8 L29.4 26 L31.4 26 "
-         "L31.4 10 C31.4 7 35.8 7 35.8 10 L35.8 26 L37.8 26 L37.8 14 C37.8 11 42.2 11 42.2 14 "
-         "L42.2 38 C42.2 44 41.4 47 41.4 50 Z")
+    # fingers 2 pixels wide with 1-pixel gaps on the 24x24 pixel grid (8/3 units per pixel)
+    d = ("M16 50 L16 36 L10.5 30 C8 27.5 8.5 23.5 12 23.5 C14 23.5 15.2 25 16 27 "
+         "L16 12 C16 9 21.33 9 21.33 12 L21.33 26 L24 26 L24 8 C24 5 29.33 5 29.33 8 L29.33 26 L32 26 "
+         "L32 10 C32 7 37.33 7 37.33 10 L37.33 26 L40 26 L40 14 C40 11 45.33 11 45.33 14 "
+         "L45.33 38 C45.33 44 44.5 47 44.5 50 Z")
     s = [shape(ic, d, pal, ic.lg(pal, 0, 0, 0, 1))]
     if pattern == "scales":
         for x, y in ((23, 36), (29, 34), (35, 36), (26, 42), (32, 42), (38, 42)):
             s.append(f'<path d="M{x - 2.4} {y} A2.4 2.4 0 0 0 {x + 2.4} {y}" fill="none" stroke="{pal[0]}" stroke-width="1.2" opacity=".6"/>')
-    s.append(f'<rect x="16" y="48" width="28.8" height="9.6" rx="2.5" fill="{ic.lg(cuff or pal, 0, 0, 0, 1)}" stroke="{(cuff or pal)[3]}" stroke-width="1.6"/>')
-    s.append(line("M20.8 13 L20.8 24 M27.2 9 L27.2 24 M33.6 11 L33.6 24", HL, 1.3, 0.4))
+    s.append(f'<rect x="13.33" y="48" width="34.67" height="9.6" rx="2.5" fill="{ic.lg(cuff or pal, 0, 0, 0, 1)}" stroke="{(cuff or pal)[3]}" stroke-width="1.6"/>')
+    s.append(line("M18.67 13 L18.67 24 M26.67 9 L26.67 24 M34.67 11 L34.67 24", HL, 1.3, 0.4))
     return "".join(s)
 
 def broom(ic):

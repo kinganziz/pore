@@ -18,6 +18,6 @@ jobs:
         run: |
           node tools/badges.mjs
           python3 tools/build.py
-          node tools/pixelate.mjs
+          node tools/pixelart.mjs
           python3 tools/check_icons.py
-          git diff --exit-code -- index.html sw.js data/badges.json icons/sprite-pixel-modern.svg icons/pixel-modern
+          git diff --exit-code -- index.html sw.js data/badges.json icons/sprite-pixel.svg icons/pixel icons/pixel-src

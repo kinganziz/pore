@@ -24,7 +24,7 @@ def icons_version() -> str:
     """Content hash of every icon file the app loads. It goes into the icon URLs (?v=...), so a deploy that
     changes icons never shows stale cached copies. Line endings are normalised so CI and Windows agree."""
     h = hashlib.sha1()
-    files = sorted((ROOT / "icons" / "modern").glob("*.svg")) + [ROOT / "icons" / "sprite-pixel-modern.svg"]
+    files = sorted((ROOT / "icons" / "modern").glob("*.svg")) + [ROOT / "icons" / "sprite-pixel.svg"]
     for path in files:
         h.update(path.name.encode())
         h.update(path.read_bytes().replace(b"\r\n", b"\n"))

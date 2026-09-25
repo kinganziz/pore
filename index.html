@@ -1984,15 +1984,15 @@ function createSolver() {
 
   /* ================= rendering: item ================= */
   // All icons are PORE's own drawings, in two styles (internal key -> name shown to the user):
-  //   pixelhd -> "Pixel" (default): the drawings as 20x20 pixel art (icons/sprite-pixel-modern.svg)
+  //   pixelhd -> "Pixel" (default): 24x24 pixel art compiled from the drawings (icons/sprite-pixel.svg, tools/pixelart.mjs)
   //   modern  -> "HD":   the smooth vector drawings, one file each (icons/modern/<key>.svg), shown as <img>;
   //   hundreds of these gradient drawings drawn live through <use> left grey, half-painted tiles on Android Chrome.
-  const ICON_STYLES = { pixelhd: { sprite: 'sprite-pixel-modern', label: 'Pixel icons' }, modern: { label: 'HD icons' } };
+  const ICON_STYLES = { pixelhd: { sprite: 'sprite-pixel', label: 'Pixel icons' }, modern: { label: 'HD icons' } };
   const DEFAULT_ICONS = 'pixelhd';   // "Pixel"
   let iconStyle = DEFAULT_ICONS;
   // HD images load eagerly and decode synchronously: a re-rendered list (e.g. a new group filter) then paints its
   // already-cached icons in the same frame instead of flashing empty tiles.
-  const ICONS_V = 'a37cd4d3bb';
+  const ICONS_V = 'c18a6759cd';
   // Re-rendering a list would create fresh <img> elements that flash empty while they load, even from cache.
   // Loaded HD images are kept in a pool and moved into the new markup instead, so they paint at once.
   const imgPool = new Map();   // src -> [loaded <img>]
@@ -3287,7 +3287,7 @@ function createSolver() {
     g.beginPath(); g.roundRect ? g.roundRect(pad, pad, W - pad * 2, H - pad * 2, 48) : g.rect(pad, pad, W - pad * 2, H - pad * 2); g.fill(); g.stroke();
     // icon
     const sprite = ICON_STYLES[iconStyle].sprite;
-    const iconSrc = item.key === 'custom' ? null : (sprite ? `icons/pixel-modern/${item.key}.svg?v=${ICONS_V}` : `icons/modern/${item.key}.svg?v=${ICONS_V}`);
+    const iconSrc = item.key === 'custom' ? null : (sprite ? `icons/pixel/${item.key}.svg?v=${ICONS_V}` : `icons/modern/${item.key}.svg?v=${ICONS_V}`);
     if (iconSrc) {
       try { const im = await loadImg(iconSrc); g.imageSmoothingEnabled = !sprite; g.drawImage(im, pad + 60, pad + 60, 200, 200); } catch (e) { /* no icon */ }
     }
