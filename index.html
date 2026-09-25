@@ -914,7 +914,10 @@
   .data-btns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .data-btns .btn { width: 100%; }
   :root[data-skin="pixel"] .data-pick { border-bottom: 2px dashed var(--line); }
-  .cstock { margin: 0 0 10px; }
+  .cstock { margin: 0; }
+  .cstock-wrap { padding: 0 12px 12px; }
+  .charm-chip:not(.on) { opacity: .5; }
+  .charm-chip:not(.on) .pixel { filter: grayscale(1); }
   .cstock summary { cursor: pointer; font-weight: 600; font-size: 14px; list-style: none; }
   .cstock summary::-webkit-details-marker { display: none; }
   .cstock summary::before { content: "▸ "; color: var(--accent); }
@@ -1083,7 +1086,7 @@
         <button class="btn small ghost" type="button" data-action="intro-replay" style="grid-column: 1 / -1">Replay the intro</button>
       </div><input type="file" id="backupFile" accept=".json,application/json" hidden></div>
       <p>Refining combines two copies of the same item. The <b>base</b> item goes up one level and gains stats from the <b>material</b> item. A "perfect" refine uses two identical items, so a perfect P10 normally eats 512 base items (1 → 2 → 4 → … → 512).</p>
-      <p><b>World boss weapons</b> can only be refined up to <b>P5</b> (16 base items the standard way), so PORE lists them in their own group and caps their plans at P5.</p>
+      <p><b>World boss weapons</b> can only be refined up to <b>P5</b> (16 base items the standard way), so PORE lists them in their own group and caps their plans at P5. Their refining fees are paid in world boss tokens (WB) instead of gold: 125 at P2, 250 at P3, 375 at P4 and 500 at P5.</p>
       <p>PORE searches every other way to combine items. Because stat gains are rounded down and every refine adds at least +2, weaker materials often reach the very same stats. The planner keeps only the cheapest way to reach each stat combination at each level and builds up to your target, so the answer is the cheapest plan under the chosen formula.</p>
       <h3>Stat formula (per stat)</h3>
       <div class="formula"><span class="nw">new = floor( base +</span> <span class="nw">max(2, material × rate) )</span></div>
@@ -1101,7 +1104,7 @@
       <ul>
         <li><b>Base items (P1)</b>: unrefined copies you must collect. This is what PORE minimises.</li>
         <li><b>Gold</b>: the sum of refining fees from the wiki table (250 gold at level 2 up to 3,000 gold at level 10).</li>
-        <li><b>Charm factor</b>: how much the base success chance must be multiplied to reach 100%. Charms stack multiplicatively, so a ×20 could be a ×4 Clover with a ×5 Horseshoe. Multi-refining divides the chance by the number of items in the batch (success = base × charm ÷ items), so a batch of N needs N times the factor, but only one set of charms per action.</li>
+        <li><b>Charm factor</b>: how much the base success chance must be multiplied to reach 100%. Charms stack multiplicatively, so a ×20 could be a ×4 Clover with a ×5 Horseshoe. Multi-refining divides the chance by the number of items in the batch (success = base × charm ÷ items), so a batch of N needs N times the factor, but only one set of charms per action. You can stack any number of charms (up to 5 types per refine) and they are used up either way, so PORE refines each batch in one action with the fewest charms that reach 100%, using only the charms you switch on.</li>
       </ul>
       <h3>Items you already have</h3>
       <p>Owned items are used for free wherever they fit, and their quantity is respected exactly for small inventories. With very large inventories PORE caps the search and slots the leftovers in greedily. The plan is then marked "approximate": still valid, possibly a little more expensive than the true optimum.</p>
@@ -1578,6 +1581,13 @@ function createSolver() {
   // cost as a share of the standard 2^(max-1) base items, so P5 and P10 items sort and colour fairly
   const costShare = it => badges[it.key] == null ? 1e9 : badges[it.key] / Math.pow(2, maxOf(it) - 1);
   const isHot = it => costShare(it) <= 160 / 512;
+  // Refining fees: gold, except boss weapons, which cost world boss tokens (WB). P5 follows the +125 per level pattern.
+  const BOSS_FEES = { 2: 125, 3: 250, 4: 375, 5: 500 };
+  const isBossItem = item => !!(item && item.maxL < 10);
+  const feeAt = (item, L) => isBossItem(item) ? BOSS_FEES[L] || 0 : S.GOLD[L];
+  const feeNum = (item, n) => isBossItem(item) ? fmt(n) : fmtGold(n);          // the number, compact
+  const feeText = (item, n) => isBossItem(item) ? `${fmt(n)} WB` : `${fmtGold(n)} gold`;
+  const feeWord = item => isBossItem(item) ? 'WB tokens' : 'gold';
   const noShortcut = it => badges[it.key] != null && badges[it.key] >= Math.pow(2, maxOf(it) - 1);
   const ITEM_BY_KEY = new Map(ITEMS.map(it => [it.key, it]));
   const CHARMS = (ITEM_DB.charms || []).map(c => Object.assign({ key: 'c' + c.id }, c));
@@ -1612,8 +1622,7 @@ function createSolver() {
   const STAT_NAMES = Array.from(new Set(ITEM_DB.statNames.concat(Object.keys(STAT_META)))).sort();
   const AFF_LABEL = a => a ? a.split('_').map(w => w[0] + w.slice(1).toLowerCase()).join(' + ') : '';
   const EXAMPLES = ['Wooden Sword', 'Soldier Sword', 'Platinum Dagger', 'Purpurite Sword'];
-  const STORAGE = { state: 'pore.state.v3', badges: 'pore.badges.v4', recent: 'pore.recent.v1', theme: 'pore.theme', done: 'pore.done.', obs: 'pore.observations.v1', icons: 'pore.iconstyle.v2', skin: 'pore.skin', font: 'pore.font', projects: 'pore.projects.v1', cstock: 'pore.charmstock.v1', community: 'pore.community.v1', intro: 'pore.intro.v1' };
-  const CHARM_ITEMS = 'Rabbits Foot ×2 · Lucky Egg ×3 · Wishbone ×3 · Clover ×4 · Starfish ×4 · Horseshoe ×5 · Lucky Rose ×6';
+  const STORAGE = { state: 'pore.state.v3', badges: 'pore.badges.v4', recent: 'pore.recent.v1', theme: 'pore.theme', done: 'pore.done.', obs: 'pore.observations.v1', icons: 'pore.iconstyle.v2', skin: 'pore.skin', font: 'pore.font', projects: 'pore.projects.v1', cstock: 'pore.charmstock.v1', charmoff: 'pore.charmoff.v1', community: 'pore.community.v1', intro: 'pore.intro.v1' };
   const REPO_URL = 'https://github.com/kinganziz/pore';
   const MODEL_KEYS = new Set(S.models.map(m => m.key));
 
@@ -1662,8 +1671,6 @@ function createSolver() {
     if (state.stock) s.s = state.stock;
     if (state.view !== 'up') s.v = state.view;
     if (state.m !== 'exact') s.m = state.m;
-    if (state.cf > 0) s.cf = state.cf;
-    if (Object.keys(state.ch).length) s.ch = state.ch;
     if (forShare && state.item) {
       const ob = observations.filter(o => o.item === state.item).map(o => [o.baseL, o.base, o.matL, o.mat, o.actual]);
       if (ob.length) s.ob = ob;
@@ -1922,6 +1929,7 @@ function createSolver() {
       if (!msg.ok) { last = { item, req, sig, error: msg.error }; renderResults(); return; }
       const res = msg.result;
       last = { item, req, sig, res, analysis: res.plan ? S.analyze(res.plan, req.owned.length) : null, alt: null };
+      if (last.analysis && isBossItem(item)) last.analysis.gold = last.analysis.steps.reduce((t, st) => t + st.count * feeAt(item, st.L), 0);
       renderResults();
       // price the other safety setting so the Exact / Safe switch can show both costs
       const altModel = state.m === 'robust' ? 'exact' : 'robust';
@@ -2238,7 +2246,6 @@ function createSolver() {
   function charmFactor(L) { const p = S.SUCCESS[L]; return p >= 100 ? 1 : Math.ceil(100 / p - 1e-9); }
   // Multi-refine rule (verified in-game): success = base% x charm factor / items in the batch.
   function batchCharm(L, n) { return Math.max(1, Math.ceil(n * 100 / S.SUCCESS[L] - 1e-9)); }
-  function perAction(L, factor) { return Math.floor(factor * S.SUCCESS[L] / 100 + 1e-9); }
   function compactFactor(n) {
     if (n < 10000) return fmt(n);
     const units = [[1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'k']];
@@ -2246,93 +2253,84 @@ function createSolver() {
     return fmt(n);
   }
   function factorClass(n) { const len = compactFactor(n).length; return len <= 3 ? '' : len <= 5 ? 'mid' : 'long'; }
-  function charmPickerHTML() {
-    return charmStockHTML() + `<div class="charm-chips">${CHARMS.map(c => { const n = state.ch[c.key] || 0; return `<button type="button" class="charm-chip ${n ? 'on' : ''}" data-action="charm" data-key="${c.key}" title="${esc(c.desc || c.name)}">${iconSVG(c.key)}<span class="cn">${esc(c.name)}</span><b>×${c.factor}</b>${n > 1 ? `<i>${n}×</i>` : ''}</button>`; }).join('')}<div class="charm-total ${cfMax() > 0 ? 'on' : ''}" aria-live="polite" title="${cfMax() > 0 ? '×' + fmt(cfMax()) + ' per refine action' : 'No charms equipped'}">${cfMax() > 0 ? `<small>total</small><b class="${factorClass(cfMax())}">×${compactFactor(cfMax())}</b><small>per action</small>` : '<small>total</small><b>—</b><small>none yet</small>'}</div></div>`;
-  }
-  // Which of your equipped charms to use for one refine action that needs factor F: the fewest charms that
-  // reach it (ties: the smallest product, so less is wasted). Charms are used up by each refine action.
-  let comboCache = { key: null, list: [] };
-  function charmCombos() {
-    const key = JSON.stringify(state.ch);
-    if (comboCache.key === key) return comboCache.list;
-    const types = CHARMS.filter(c => (state.ch[c.key] || 0) > 0);
-    const list = [];
-    (function rec(i, use, prod, cnt) {
-      if (i === types.length) { if (cnt) list.push({ use: Object.assign({}, use), prod, cnt }); return; }
-      const c = types[i];
-      for (let k = 0; k <= state.ch[c.key]; k++) {
-        if (k) use[c.key] = k; else delete use[c.key];
-        rec(i + 1, use, prod * Math.pow(c.factor, k), cnt + k);
-      }
+  // Charms (confirmed in-game): stack any number of each, up to 5 different types in one refine action; they are
+  // used up whether the refine succeeds or not. Factors multiply, so one action for a whole batch always needs the
+  // fewest charms. PORE picks the fewest that reach 100% from the charms you are willing to use (some are rare
+  // collectibles); your stock is only checked against the total.
+  const CHARM_TYPES_MAX = 5;
+  let charmOff = new Set();   // charm types you don't want to use
+  const charmsInUse = () => CHARMS.filter(c => !charmOff.has(c.key));
+  const comboMemo = new Map();
+  function bestCombo(F) {
+    if (F <= 1) return { use: {}, prod: 1, cnt: 0 };
+    const types = charmsInUse().sort((x, y) => y.factor - x.factor);
+    const mk = F + '|' + types.map(c => c.key).join(',');
+    if (comboMemo.has(mk)) return comboMemo.get(mk);
+    let best = null;
+    (function rec(i, use, prod, cnt, kinds) {
+      if (prod >= F) { if (!best || cnt < best.cnt || (cnt === best.cnt && prod < best.prod)) best = { use: Object.assign({}, use), prod, cnt }; return; }
+      if (i === types.length || kinds === CHARM_TYPES_MAX || (best && cnt + 1 > best.cnt)) return;
+      const c = types[i], need = Math.ceil(Math.log(F / prod) / Math.log(c.factor) - 1e-9);
+      for (let k = need; k >= 1; k--) { use[c.key] = k; rec(i + 1, use, prod * Math.pow(c.factor, k), cnt + k, kinds + 1); }
       delete use[c.key];
-    })(0, {}, 1, 0);
-    list.sort((x, y) => x.cnt - y.cnt || x.prod - y.prod);
-    comboCache = { key, list };
-    return list;
+      rec(i + 1, use, prod, cnt, kinds);
+    })(0, {}, 1, 0, 0);
+    if (comboMemo.size > 2000) comboMemo.clear();
+    comboMemo.set(mk, best);
+    return best;
   }
-  function comboFor(F) { return F <= 1 ? { use: {}, prod: 1, cnt: 0 } : (charmCombos().find(c => c.prod >= F) || null); }
   function comboText(c) {
-    if (!c) return '';
-    if (!c.cnt) return 'no charm needed';
+    if (!c || !c.cnt) return 'no charm';
     return CHARMS.filter(x => c.use[x.key]).map(x => `${c.use[x.key] > 1 ? c.use[x.key] + '× ' : ''}${esc(x.name)}`).join(' + ') + ` (×${compactFactor(c.prod)})`;
   }
-  // the refine actions of one recipe under the current charm limit: [{ size, times }]
-  function roundsFor(L, n) {
-    const cf = cfMax();
-    if (!(cf > 0)) return [{ size: n, times: 1 }];
-    const per = perAction(L, cf);
-    if (per < 1) return [{ size: 1, times: n }];
-    const k = Math.floor(n / per), rest = n - k * per, r = [];
-    if (k) r.push({ size: per, times: k });
-    if (rest) r.push({ size: rest, times: 1 });
-    return r;
-  }
-  // charms the whole plan uses, per charm (only when charms are equipped)
-  function charmUse(steps) {
-    if (!(charmProduct() > 0)) return null;
-    const tot = {};
-    for (const st of steps) for (const r of roundsFor(st.L, st.count)) {
-      const c = comboFor(batchCharm(st.L, r.size));
-      if (!c) continue;
-      for (const [k, v] of Object.entries(c.use)) tot[k] = (tot[k] || 0) + v * r.times;
-    }
-    return tot;
-  }
   let charmStock = {};
+  const charmLimited = () => CHARMS.some(c => charmStock[c.key] > 0);
+  // one refine action per recipe with the fewest charms; totals per charm and what your stock falls short of
+  let charmCache = { key: null, val: null };
+  function charmPlan(steps) {
+    const key = JSON.stringify([steps.map(st => stepId(st) + '*' + st.count), Array.from(charmOff), charmStock]);
+    if (charmCache.key === key) return charmCache.val;
+    const by = new Map(), tot = {};
+    let missing = false;
+    for (const st of steps) {
+      const F = batchCharm(st.L, st.count), combo = bestCombo(F);
+      by.set(stepId(st), { combo, F });
+      if (!combo) { missing = true; continue; }
+      for (const [k, v] of Object.entries(combo.use)) tot[k] = (tot[k] || 0) + v;
+    }
+    const limited = charmLimited(), shortOf = new Set(limited ? Object.keys(tot).filter(k => tot[k] > (charmStock[k] || 0)) : []);
+    const val = { by, tot, limited, shortOf, missing };
+    charmCache = { key, val };
+    return val;
+  }
+  function charmFor(st) {
+    const F = batchCharm(st.L, st.count);
+    const cp = last && last.analysis ? charmPlan(last.analysis.steps) : null, p = cp && cp.by.get(stepId(st));
+    const combo = p && p.F === F ? p.combo : bestCombo(F);   // just-in-time steps are smaller than their batch
+    return { combo, F, short: !!(cp && combo && Object.keys(combo.use).some(k => cp.shortOf.has(k))) };
+  }
+  // which charms you are willing to use: tap to switch one off (rare or collectible ones, say)
+  function charmPickHTML() {
+    return `<div class="charm-chips">${CHARMS.map(c => `<button type="button" class="charm-chip ${charmOff.has(c.key) ? '' : 'on'}" data-action="charm" data-key="${c.key}" aria-pressed="${!charmOff.has(c.key)}" title="${esc(c.desc || c.name)}">${iconSVG(c.key)}<span class="cn">${esc(c.name)}</span><b>×${c.factor}</b></button>`).join('')}</div>`;
+  }
   function charmStockHTML() {
-    const any = CHARMS.some(c => charmStock[c.key] > 0);
-    return `<details class="cstock" ${any ? '' : ''}><summary>My charm stock <small>${any ? CHARMS.filter(c => charmStock[c.key] > 0).map(c => `${charmStock[c.key]} ${esc(c.name)}`).join(' · ') : 'optional: how many of each you own'}</small></summary>` +
-      `<div class="cstock-grid">${CHARMS.map(c => `<label title="${esc(c.name)} (×${c.factor})">${iconSVG(c.key)}<span>${esc(c.name)}</span><input class="num small" type="number" inputmode="numeric" min="0" step="1" value="${charmStock[c.key] || ''}" placeholder="0" data-field="cstock" data-key="${c.key}"></label>`).join('')}</div></details>`;
+    const lim = charmLimited();
+    return `<details class="cstock" ${lim ? 'open' : ''}><summary>My charm stock <small>${lim ? CHARMS.filter(c => charmStock[c.key] > 0).map(c => `${charmStock[c.key]} ${esc(c.name)}`).join(' · ') : 'optional: to check you have enough'}</small></summary>` +
+      `<div class="cstock-grid">${CHARMS.map(c => `<label title="${esc(c.name)} (×${c.factor})">${iconSVG(c.key)}<span>${esc(c.name)}</span><input class="num small" type="number" inputmode="numeric" min="0" step="1" value="${charmStock[c.key] || ''}" placeholder="0" data-field="cstock" data-key="${c.key}" aria-label="${esc(c.name)} owned"></label>`).join('')}</div></details>`;
   }
-  function charmProduct() { let f = 1, any = false; for (const c of CHARMS) { const n = state.ch[c.key] || 0; if (n > 0) { any = true; f *= Math.pow(c.factor, n); } } return any ? f : 0; }
-  // effective max charm factor per action: typed value wins, otherwise the product of equipped charms (0 = unlimited)
-  function cfMax() { return state.cf > 0 ? state.cf : charmProduct(); }
-  // number of refine actions a card needs under the user's max charm factor (0 = unlimited)
-  function actionsFor(L, n) {
-    const cf = cfMax();
-    if (!(cf > 0)) return 1;
-    const per = perAction(L, cf);
-    return per >= 1 ? Math.ceil(n / per) : n;
+  function charmBoxHTML() {
+    return `<div class="charm-row"><div class="nm">Charms you'll use<small>Tap to switch off rare ones you'd rather keep. PORE picks the fewest for each refine; up to 5 types per refine, used up either way.</small></div>${charmOff.size ? '<button class="mini" type="button" data-action="charm-all">Use all</button>' : ''}</div>` +
+      charmPickHTML() + `<div class="cstock-wrap">${charmStockHTML()}</div>`;
   }
-  function batchMeta(L, n) {
-    const whole = batchCharm(L, n);
+  function batchMeta(st) {
+    const n = st.count, c = charmFor(st);
     let txt;
-    const cf = cfMax();
-    if (cf > 0) {
-      const per = perAction(L, cf);
-      if (per < 1) txt = `<b style="color:var(--bad)">needs ×${batchCharm(L, 1)} per item, above your ×${compactFactor(cf)} max</b>`;
-      else if (per >= n) txt = `1 action · ×${whole} charm for 100%`;
-      else {
-        const k = Math.ceil(n / per), rest = n - (k - 1) * per;
-        txt = `<b>${k} actions</b>: ${k - 1 > 0 ? `${k - 1} × ${per} items (×${batchCharm(L, per)} charm)` : ''}${k - 1 > 0 && rest ? ' + ' : ''}${rest ? `${rest} item${rest > 1 ? 's' : ''} (×${batchCharm(L, rest)} charm)` : ''}`;
-      }
-    } else {
-      txt = n > 1 ? `batch of ${n}: ×${whole} charm for 100%` : `×${whole} charm for 100%`;
-      if (n > 1) {
-        const p6 = perAction(L, 6), p30 = perAction(L, 30);
-        if (p6 >= 1 && p6 < n) txt += ` · ×6 covers ${p6} per action`;
-        if (p30 >= 1 && p30 < n && p30 > p6) txt += `, ×30 covers ${p30}`;
-      }
+    if (!c.combo) txt = `<b style="color:var(--bad)">needs ×${compactFactor(c.F)}: switch on more charms</b>`;
+    else if (!c.combo.cnt) txt = n > 1 ? `all ${n} at once · 100% without charms` : '100% without charms';
+    else {
+      txt = `${n > 1 ? `all ${n} at once: ` : ''}${comboText(c.combo)}`;
+      if (c.short) txt = `<b style="color:var(--bad)">${txt} · not enough in stock</b>`;
+      if (S.SUCCESS[st.L] >= 100 && n > 1) txt += ' · or one at a time without charms';
     }
     return `<span class="jit-meta">${txt}</span>`;
   }
@@ -2494,7 +2492,8 @@ function createSolver() {
     const stock = Math.min(state.stock || 0, cost);
     const toCollect = cost - stock;
     const ownedUsed = a.ownedUse.reduce((x, y) => x + y, 0);
-    const goldStd = S.standardGold(state.L);
+    let goldStd = S.standardGold(state.L);
+    if (isBossItem(item)) { goldStd = 0; for (let L = 2; L <= state.L; L++) goldStd += Math.pow(2, state.L - L) * feeAt(item, L); }
     const ringOffset = 264 * (1 - Math.max(0, Math.min(1, saved / standard)));
     const newPlan = last.sig !== lastSig;
     const hadPlan = lastSig !== null;
@@ -2546,31 +2545,32 @@ function createSolver() {
         </div>`;
     };
     let guide;
-    let actionsBatch = a.steps.reduce((t, st) => t + actionsFor(st.L, st.count), 0);
+    let actionsBatch = a.steps.length;   // one refine action per recipe
     let actionsView = actionsBatch;
     if (state.view === 'jit') {
       const seq = jitSequence(res.plan);
       totalSteps = seq.length;
-      actionsView = seq.reduce((t, st) => t + actionsFor(st.L, st.count), 0);
+      actionsView = seq.length;
       const seen = new Map();
       guide = `<div class="steps" style="margin-top:12px">${seq.map(st => {
         const base = stepId(st);
         const n = (seen.get(base) || 0) + 1; seen.set(base, n);
         const cf = charmFactor(st.L);
-        const extra = `<span class="jit-meta">L${st.L} · ${fmt(S.GOLD[st.L])}g · ${S.SUCCESS[st.L]}%</span>` + batchMeta(st.L, st.count);
+        const extra = `<span class="jit-meta">L${st.L} · ${isBossItem(item) ? `${fmt(feeAt(item, st.L))} WB` : `${fmt(S.GOLD[st.L])}g`} · ${S.SUCCESS[st.L]}%</span>` + batchMeta(st);
         return stepCard(st, `jit:${base}#${n}`, extra);
       }).join('')}</div>`;
     } else guide = levels.map(L => {
       const steps = groups.get(L);
       const n = steps.reduce((x, st) => x + st.count, 0);
       const cf = charmFactor(L);
-      const cards = steps.map(st => stepCard(st, stepId(st), batchMeta(st.L, st.count))).join('');
-      const acts = steps.reduce((x, st) => x + actionsFor(st.L, st.count), 0);
+      const cards = steps.map(st => stepCard(st, stepId(st), batchMeta(st))).join('');
+      const acts = steps.length;
+      const lvCharms = steps.reduce((x, st) => x + ((charmFor(st).combo || {}).cnt || 0), 0);
       const allDone = steps.every(st => done.has(stepId(st)));
       return `<div class="lvl-group">
         <div class="lvl-head">
           <span class="lv">Level ${L}</span>
-          <div class="facts"><span>${n} refine${n > 1 ? 's' : ''} · ${acts} action${acts === 1 ? '' : 's'}</span><span>${fmtGold(S.GOLD[L] * n)} gold (${fmt(S.GOLD[L])} each)</span><span>${S.SUCCESS[L]}% base success</span><span class="charm">×${cf} charm per item</span></div>
+          <div class="facts"><span>${n} refine${n > 1 ? 's' : ''} · ${acts} action${acts === 1 ? '' : 's'}</span><span>${feeText(item, feeAt(item, L) * n)} (${fmt(feeAt(item, L))} each)</span><span>${S.SUCCESS[L]}% base success</span>${lvCharms ? `<span class="charm">${lvCharms} charm${lvCharms === 1 ? '' : 's'}</span>` : ''}</div>
           <button class="mini lvl-all ${allDone ? 'on' : ''}" type="button" data-action="level-done" data-level="${L}">${allDone ? '↺ undo level' : '✓ mark level done'}</button>
         </div>
         <div class="steps">${cards}</div>
@@ -2602,7 +2602,7 @@ function createSolver() {
         ${plain ? `<div class="plain-title">Just refine in pairs</div>
         <p class="plain-sub">No cheaper path exists for this item${item.maxL < 10 && state.L === item.maxL ? ` (boss weapons stop at P${item.maxL})` : ''}: every refine combines two identical copies.</p>
         <div class="pair-flow ${state.L <= 6 ? 'one-row' : ''}" aria-label="Pairing chain">${Array.from({ length: state.L }, (_, i) => `<div class="pf ${i === state.L - 1 ? 'end' : ''}"><b>${fmt(Math.pow(2, state.L - 1 - i))}×</b><span>P${i + 1}</span></div>`).join('<i class="pf-arrow">→</i>')}</div>
-        <div class="plain-facts"><span><b>${fmt(toCollect)}</b> ${stock ? `to collect (${fmt(stock)} in stock)` : 'base items'}</span><span><b>${fmt(a.refines)}</b> refines</span><span><b>${fmtGold(a.gold)}</b> gold</span></div>` : `<div class="hero-body">
+        <div class="plain-facts"><span><b>${fmt(toCollect)}</b> ${stock ? `to collect (${fmt(stock)} in stock)` : 'base items'}</span><span><b>${fmt(a.refines)}</b> refines</span><span><b>${feeNum(item, a.gold)}</b> ${feeWord(item)}</span></div>` : `<div class="hero-body">
           <div>
             <div class="hero-num"><span id="heroNum">${fmt(cost)}</span><small>base items</small></div>
             <div class="hero-sub">instead of <b>${fmt(standard)}</b> the standard way${targetPerfect ? '' : ' · custom target'}</div>
@@ -2621,7 +2621,7 @@ function createSolver() {
         </div>
         <div class="tiles">
           <div class="tile"><small>Refines</small><b>${fmt(a.refines)}</b><i>vs ${fmt(standard - 1)}</i></div>
-          <div class="tile"><small>Gold</small><b>${fmtGold(a.gold)}</b><i>vs ${fmtGold(goldStd)}</i></div>
+          <div class="tile"><small>${isBossItem(item) ? 'WB tokens' : 'Gold'}</small><b>${feeNum(item, a.gold)}</b><i>vs ${feeNum(item, goldStd)}</i></div>
           <div class="tile"><small>Collect</small><b>${fmt(toCollect)}</b><i>${stock ? `${stock} in stock` : 'base items'}</i></div>
         </div>`}
         <div class="note">Result: ${chipHTML(res.plan.nodes[res.plan.root], item, 'result')}${res.ms > 400 ? ` · solved in ${(res.ms / 1000).toFixed(1)}s` : ''}</div>
@@ -2646,15 +2646,9 @@ function createSolver() {
       <div class="card" id="guideCard">
         <div class="section-title"><h3>Crafting guide</h3><span class="hint">${actionsView} refine action${actionsView === 1 ? '' : 's'}</span></div>
         <div class="seg seg-full"><button type="button" class="${state.view === 'up' ? 'on' : ''}" data-action="view" data-view="up">Batches</button><button type="button" class="${state.view === 'down' ? 'on' : ''}" data-action="view" data-view="down">Top-down</button><button type="button" class="${state.view === 'jit' ? 'on' : ''}" data-action="view" data-view="jit">Just-in-time</button></div>
-        <div class="charm-box">
-          <div class="charm-row">
-            <div class="nm">Charms per refine action<small>Tap to equip, tap again to stack. Factors multiply.</small></div>
-            ${cfMax() > 0 ? '<button class="mini" type="button" data-action="charm-clear">Clear</button>' : ''}
-          </div>
-          ${charmPickerHTML()}
-        </div>
+        <div class="charm-box">${charmBoxHTML()}</div>
         <div class="progress"><span id="progressText">${doneCount}/${totalSteps} done</span><div class="track"><div class="fill" id="progressFill" style="width:${totalSteps ? (doneCount / totalSteps) * 100 : 0}%"></div></div>${doneCount ? `<button class="mini" type="button" data-action="reset-progress">reset</button>` : ''}</div>
-        <div class="note" style="margin:0 0 4px">${state.view === 'jit' ? `One branch at a time: make the two ingredients, refine them, move on. Keeps your inventory small, but it means <b>${actionsView} refine actions</b> and charms are spent per action, so Batches (${actionsBatch} actions) needs far fewer charms.` : `Each card is one recipe: <b>base</b> + material → result, grouped so you can multi-refine the whole batch in one action. <b>${actionsBatch} refine actions</b> in total${cfMax() > 0 ? ` with batches split to fit a ×${compactFactor(cfMax())} charm factor` : '. A batch of N items needs a charm factor of N × 100 ÷ base success; pick your charms above to split batches automatically'}.`} Tap to tick off what you have crafted; use the pencil if the game gave you a different result. P = perfect stats, L = below perfect; every chip shows the exact stats to look for.</div>
+        <div class="note" style="margin:0 0 4px">${state.view === 'jit' ? `One branch at a time: make the two ingredients, refine them, move on. Keeps your inventory small, but it means <b>${actionsView} refine actions</b> and charms are spent per action, so Batches (${actionsBatch} actions) needs far fewer charms.` : `Each card is one recipe: <b>base</b> + material → result. Refine the whole batch in one action with the charms shown: charms multiply, so one action per card needs the fewest. <b>${actionsBatch} refine actions</b> in total.`} Tap to tick off what you have crafted; use the pencil if the game gave you a different result. P = perfect stats, L = below perfect; every chip shows the exact stats to look for.</div>
         ${guide}
       </div>
 
@@ -2663,14 +2657,13 @@ function createSolver() {
         <div class="shop">
           <div class="shop-row"><div class="qty">${fmt(toCollect)}</div><div class="what">${esc(item.name)} · unrefined (P1)<small>${stock ? `${fmt(cost)} needed, ${fmt(stock)} already in stock` : 'base items to collect'}</small></div></div>
           ${ownedRows}
-          <div class="shop-row"><div class="qty">${fmtGold(a.gold)}</div><div class="what">gold in refining fees<small>${fmt(a.refines)} refines${charmUse(a.steps) ? '' : ` · charms: ${CHARM_ITEMS}`}</small></div></div>
+          <div class="shop-row"><div class="qty">${feeNum(item, a.gold)}</div><div class="what">${isBossItem(item) ? 'world boss tokens (WB)' : 'gold'} in refining fees<small>${fmt(a.refines)} refines in ${fmt(actionsBatch)} actions</small></div></div>
           ${(() => {
-            const use = charmUse(a.steps);
-            if (!use) return `<div class="shop-row"><div class="qty">–</div><div class="what">charms<small>equip your charms in the crafting guide to see how many this plan uses</small></div></div>`;
+            const cp = charmPlan(a.steps), use = cp.tot;
             const rows = CHARMS.filter(c => use[c.key]).map(c => {
-              const have = charmStock[c.key] || 0, need = use[c.key], short = Math.max(0, need - have);
-              return `<div class="shop-row ${short && have ? 'short' : ''}"><div class="qty">${fmt(need)}</div><div class="what">${esc(c.name)} (×${c.factor})<small>${have ? (short ? `you have ${fmt(have)}: <b>${fmt(short)} short</b>` : `you have ${fmt(have)}: enough`) : 'used up across all refine actions'}</small></div></div>`;
-            }).join('');
+              const have = charmStock[c.key] || 0, need = use[c.key], short = cp.limited ? Math.max(0, need - have) : 0;   // stock is only a check
+              return `<div class="shop-row ${short ? 'short' : ''}"><div class="qty">${fmt(need)}</div><div class="what">${esc(c.name)} (×${c.factor})<small>${cp.limited ? (short ? `you have ${fmt(have)}: <b>${fmt(short)} short</b>` : `you have ${fmt(have)}: enough`) : 'used up by the refines'}</small></div></div>`;
+            }).join('') + (!cp.limited && Object.keys(use).length ? '<div class="shop-row"><div class="qty"></div><div class="what"><small>Add your charm stock in the crafting guide to check you have enough.</small></div></div>' : '') + (cp.missing ? `<div class="shop-row short"><div class="qty">!</div><div class="what">charms<small><b>some refines can't reach 100% with the charms you switched on</b></small></div></div>` : '');
             return rows || `<div class="shop-row"><div class="qty">0</div><div class="what">charms<small>every refine in this plan is 100% without charms</small></div></div>`;
           })()}
         </div>
@@ -2916,7 +2909,7 @@ function createSolver() {
   const TIPS = [
     'Tap a level in "Cost by target level" to plan up to it.',
     'Already own refined copies? Add them in step 3 and PORE uses them for free.',
-    'Equip your charms in the crafting guide: batches split so every multi-refine stays at 100%.',
+    'Switch off rare charms in the crafting guide: PORE plans with the ones you are willing to use.',
     'Got a different number in-game? Tap the pencil on that step and PORE re-plans from it.',
     '"Copy link" shares your plan exactly as you see it: item, target, charms and progress.',
     'Sort the item list by "Cheapest P10" to find the easiest items to max.',
@@ -2982,8 +2975,8 @@ function createSolver() {
       const owned = a.ownedUse.reduce((x, y) => x + y, 0);
       body = anzSays(`Let's take your <b>${esc(item.name)}</b> to <b>P${state.L}</b>. First, gather <b>${fmt(toCollect)}</b> base items (P1 ${esc(item.name)})` +
         `${stock ? `; you already have ${fmt(stock)}` : ''}${owned ? `, plus the ${owned} refined cop${owned === 1 ? 'y' : 'ies'} you own` : ''}. ` +
-        `After that it's ${n} refine step${n === 1 ? '' : 's'} and about ${fmtGold(a.gold)} gold. I'll tell you exactly what to combine.`) +
-        `<div class="g-how"><b>Which charms do you use?</b><p>Tap to equip, tap again to stack. I'll use them to tell you how many items to refine at once.</p>${charmPickerHTML()}</div>` +
+        `After that it's ${n} refine step${n === 1 ? '' : 's'} and about ${feeText(item, a.gold)}. I'll tell you exactly what to combine.`) +
+        `<div class="g-how"><b>Which charms will you use?</b><p>Switch off any you'd rather keep, rare ones for example. I'll pick the fewest for every refine.</p>${charmPickHTML()}</div>` +
         `<div class="guide-actions"><button class="btn primary block" type="button" data-action="guide-next">I have them, let's go</button></div>`;
     } else if (guide.i >= n) {
       const root = last.res.plan.nodes[last.res.plan.root];
@@ -3006,7 +2999,7 @@ function createSolver() {
       const inputs = item.stats.map((x, k) => `<label>${x.short}<input class="num small" type="number" inputmode="numeric" min="1" step="1" value="${st.result.s[k]}" data-guide-input="${k}"></label>`).join('');
       const other = guide.other ? `<div class="guide-other"><div class="obs-title">What did the game give you?</div><div class="obs-inputs">${inputs}</div>` +
         `<div class="btn-row"><button class="btn small primary" type="button" data-action="guide-save">Save &amp; re-plan</button><button class="btn small ghost" type="button" data-action="guide-other">Cancel</button></div></div>` : '';
-      body = anzSays(say) + recipe + sharedTagHTML(sharedBases(a.steps)(st), item) + guideHowTo(st.L, n) + verdictHTML(item, st) +
+      body = anzSays(say) + recipe + sharedTagHTML(sharedBases(a.steps)(st), item) + guideHowTo(st) + verdictHTML(item, st) +
         `<div class="guide-actions">` +
         (isDone
           ? `<button class="btn primary block" type="button" data-action="guide-skip">Already done ✓ · next step</button><button class="btn small ghost" type="button" data-action="guide-undo">Not done yet</button>`
@@ -3020,31 +3013,19 @@ function createSolver() {
   function guideStep() { const steps = guideSteps(); return steps[guide.i]; }
   function nodeName(nd, item) { return `${isPerfectNode(nd, item.chain) ? 'P' : 'L'}${nd.L}`; }
   function sameNode(x, y) { return x.L === y.L && x.k === y.k && sameVec(x.s, y.s); }
-  function guideHowTo(L, n) {
-    const p = S.SUCCESS[L], cf = cfMax(), one = batchCharm(L, 1);
-    const lines = [];
-    if (cf > 0) {
-      const per = perAction(L, cf);
-      if (per < 1) {
-        lines.push(`Your charms add up to <b>×${compactFactor(cf)}</b>, but one item here needs <b>×${one}</b> for 100%. Add a charm, or refine without and accept ${p}%.`);
-      } else if (per >= n) {
-        lines.push(`Refine all <b>${n}</b> at once: 100% success.`);
-        const c = comboFor(batchCharm(L, n));
-        if (c) lines.push(`Equip: <b>${comboText(c)}</b>.`);
-      } else {
-        const k = Math.ceil(n / per), rest = n - (k - 1) * per;
-        lines.push(`Refine <b>${per} at a time</b>: <b>${k} rounds</b>${rest < per ? ` (the last one with ${rest})` : ''}, 100% each.`);
-        const full = comboFor(batchCharm(L, per)), lastC = rest < per ? comboFor(batchCharm(L, rest)) : null;
-        if (full) lines.push(`Equip each round: <b>${comboText(full)}</b>${lastC && comboText(lastC) !== comboText(full) ? `; last round: <b>${comboText(lastC)}</b>` : ''}.`);
-      }
-    } else if (p >= 100) {
-      lines.push(`Success is 100% here, so single refines need no charm.`);
-      if (n > 1) lines.push(`To do several in one go, equip charms: <b>×N</b> covers <b>N items</b> at once (all ${n} need ×${n}). Pick your charms on the first page and I'll split it for you.`);
-    } else {
-      lines.push(`Base success here is only <b>${p}%</b>. For 100%, one item needs a <b>×${one}</b> charm${n > 1 ? `; ${n} at once need ×${batchCharm(L, n)}` : ''}.`);
-      lines.push(`Pick your charms on the first page and I'll split it into rounds for you.`);
+  function guideHowTo(st) {
+    const L = st.L, n = st.count, c = charmFor(st), lines = [];
+    if (!c.combo) lines.push(`For 100% this needs <b>×${compactFactor(c.F)}</b>, more than the charms you switched on can make. Switch on more charms, or accept a lower chance.`);
+    else if (!c.combo.cnt) lines.push(n > 1 ? `Refine all <b>${n}</b> at once: 100% success, no charm needed.` : 'Success is 100% here: no charm needed.');
+    else {
+      lines.push(`Refine ${n > 1 ? `all <b>${n}</b> at once` : 'it'} with <b>${comboText(c.combo)}</b>: 100% success.`);
+      if (c.short) lines.push(`<span class="talk-warn">Your stock is short of these charms for the whole plan: check the shopping list.</span>`);
+      if (S.SUCCESS[L] >= 100 && n > 1) lines.push('Or refine them one at a time: 100% each without charms, just more taps.');
+      else if (n > 1) lines.push('One action for the whole batch needs the fewest charms: splitting it would need a set for every action.');
+      lines.push('Charms are used up whether the refine succeeds or not.');
     }
-    lines.push(`Fee: ${fmtGold(S.GOLD[L])} gold per refine (${fmtGold(S.GOLD[L] * n)} in total).`);
+    const item = last && last.item;
+    lines.push(`Fee: ${feeText(item, feeAt(item, L))} per refine (${feeText(item, feeAt(item, L) * n)} in total).`);
     return `<div class="g-how"><b>In the game</b>${lines.map(x => `<p>${x}</p>`).join('')}</div>`;
   }
 
@@ -3210,7 +3191,7 @@ function createSolver() {
     const statTxt = root.s.map((v, i) => `${v} ${item.stats[i].short}`).join(' · ');
     g.fillStyle = col('--text'); fit(`Result: ${statTxt}`, 48, W - pad * 2 - 120, font); g.fillText(`Result: ${statTxt}`, pad + 60, pad + 720);
     g.fillStyle = col('--muted'); g.font = `40px ${font}`;
-    g.fillText(`${fmt(a.refines)} refines · ${fmtGold(a.gold)} gold`, pad + 60, pad + 790);
+    g.fillText(`${fmt(a.refines)} refines · ${feeText(item, a.gold)}`, pad + 60, pad + 790);
     // footer
     g.fillStyle = col('--accent'); g.font = `44px ${disp}`; g.fillText('PORE', pad + 60, H - pad - 60);
     g.fillStyle = col('--muted'); g.font = `36px ${font}`; g.fillText('kinganziz.github.io/pore', pad + 220, H - pad - 62);
@@ -3295,16 +3276,16 @@ function createSolver() {
     const item = last.item, a = last.analysis, res = last.res;
     const lines = [];
     lines.push(`PORE plan — ${item.name} → P${state.L} (${res.plan.nodes[res.plan.root].s.map((v, i) => `${v} ${item.stats[i].short}`).join(', ')})`);
-    lines.push(`Base items: ${a.p1}${a.p1 < res.standard ? ` (standard ${res.standard}) — save ${res.standard - a.p1} (${Math.round((res.standard - a.p1) / res.standard * 100)}%)` : ' (no shortcut: the standard way is the cheapest)'} · ${a.refines} refines · ${fmt(a.gold)} gold${state.m !== 'exact' ? ` · formula: ${(S.models.find(m => m.key === state.m) || {}).label}` : ''}`);
+    lines.push(`Base items: ${a.p1}${a.p1 < res.standard ? ` (standard ${res.standard}) — save ${res.standard - a.p1} (${Math.round((res.standard - a.p1) / res.standard * 100)}%)` : ' (no shortcut: the standard way is the cheapest)'} · ${a.refines} refines · ${isBossItem(item) ? `${fmt(a.gold)} WB tokens` : `${fmt(a.gold)} gold`}${state.m !== 'exact' ? ` · formula: ${(S.models.find(m => m.key === state.m) || {}).label}` : ''}`);
     const lbl = nd => `${isPerfectNode(nd, item.chain) ? 'P' : 'L'}${nd.L} (${nd.s.map((v, i) => `${v} ${item.stats[i].short}`).join(', ')})${nd.k === 1 ? ' [owned]' : ''}`;
     if (state.view === 'jit') {
       lines.push('\nJust-in-time order (one branch at a time):');
-      for (const st of jitSequence(res.plan)) lines.push(`  ×${st.count}  ${lbl(st.base)} + ${lbl(st.mat)} → ${lbl(st.result)}   [L${st.L}, ${fmt(S.GOLD[st.L])} gold each]`);
+      for (const st of jitSequence(res.plan)) lines.push(`  ×${st.count}  ${lbl(st.base)} + ${lbl(st.mat)} → ${lbl(st.result)}   [L${st.L}, ${fmt(feeAt(item, st.L))} ${feeWord(item)} each]`);
     } else {
       let cur = null;
       const ordered = state.view === 'down' ? a.steps.slice().sort((x, y) => y.L - x.L) : a.steps;
       for (const st of ordered) {
-        if (st.L !== cur) { cur = st.L; lines.push(`\nLevel ${cur} · ${fmt(S.GOLD[cur])} gold each · ${S.SUCCESS[cur]}% base success`); }
+        if (st.L !== cur) { cur = st.L; lines.push(`\nLevel ${cur} · ${fmt(feeAt(item, cur))} ${feeWord(item)} each · ${S.SUCCESS[cur]}% base success`); }
         lines.push(`  ×${st.count}  ${lbl(st.base)} + ${lbl(st.mat)} → ${lbl(st.result)}${st.ownedIn ? `   (${st.ownedIn} from your inventory)` : ''}`);
       }
     }
@@ -3447,8 +3428,8 @@ function createSolver() {
       case 'owned-qty': { const o = state.o[Number(el.dataset.idx)]; if (!o) return; o.q = Math.max(1, Math.min(999, o.q + Number(el.dataset.delta))); haptic(); afterChange(); break; }
       case 'view': state.view = el.dataset.view; persist(); renderResults(); break;
       case 'reset-progress': saveJSON(doneKey(), []); renderResults(); toast('Progress reset'); break;
-      case 'charm-clear': state.ch = {}; state.cf = 0; haptic(); persist(); renderResults(); break;
-      case 'charm': { const k = el.dataset.key; state.cf = 0; state.ch[k] = ((state.ch[k] || 0) + 1) % 4; if (!state.ch[k]) delete state.ch[k]; haptic(); persist(); renderResults(); break; }
+      case 'charm': { const k = el.dataset.key; if (charmOff.has(k)) charmOff.delete(k); else charmOff.add(k); saveJSON(STORAGE.charmoff, Array.from(charmOff)); haptic(); renderResults(); if (!ui.guideSheet.hidden) renderGuide(); break; }
+      case 'charm-all': charmOff.clear(); saveJSON(STORAGE.charmoff, []); haptic(); renderResults(); if (!ui.guideSheet.hidden) renderGuide(); break;
       case 'share': share(); break;
       case 'share-image': sharePlanImage(); break;
       case 'copy-plan': copy(planText(), 'Plan copied'); break;
@@ -3708,6 +3689,7 @@ function createSolver() {
     document.querySelectorAll('.dataDate').forEach(el => el.textContent = date);
     projects = loadJSON(STORAGE.projects, []);
     charmStock = loadJSON(STORAGE.cstock, {}) || {};
+    charmOff = new Set((loadJSON(STORAGE.charmoff, []) || []).filter(k => CHARMS.some(c => c.key === k)));
     loadCommunity();   // the cached copy now, a refresh from GitHub in the background when it is older than 6 h
     document.getElementById('backupFile').addEventListener('change', e => {
       const f = e.target.files && e.target.files[0]; e.target.value = '';
