@@ -5524,7 +5524,7 @@ function createSolver() {
     box.innerHTML = (onNpc ? `<button type="button" class="inv-back" data-action="inv-npc-back">‹ All NPCs</button>` +
       `<div class="npc-head"><small>${[...np.locs].map(l => MAP_KEYS.has(l) ? `<button type="button" class="ip-map" data-action="inv-place" data-q="${esc(l)}">${esc(l)}</button>` : esc(l)).join(', ')} · sells ${np.items.size} item${np.items.size === 1 ? '' : 's'} for gold</small></div>` : '') +
       (onMap ? `<button type="button" class="inv-back" data-action="inv-map-back">‹ All maps</button>` +
-      (mp ? `<div class="map-head">${mapImg(mp)}` +
+      (mp ? `<div class="map-head"><img class="map-pic" src="${bgThumb(MAP_BG[mp.kind] || 'hills', MAP_NIGHT.has(mp.kind) ? 'night' : 'day')}" alt="" draggable="false">` +   // the landscape alone: its items are listed below
         `<div><small>${mp.steps ? fmt(mp.steps) + ' steps to unlock' : 'where it starts'} · ${onMap.size} items</small>${mp.desc ? `<p>${esc(mp.desc)}</p>` : ''}` +
         `${(MAP_ORES.get(mp.name) || []).length ? `<p class="map-ores">Ores: ${MAP_ORES.get(mp.name).map(([k, pw]) => `${esc(((anyItem(k) || {}).name || '').replace(/ Node$/, ''))}${pw ? ` <i>(power ${pw})</i>` : ''}`).join(' · ')}</p>` : ''}</div></div>` : '') : '') +
       (rows.length ? html : '<p class="inv-hint">Nothing matches.</p>') + `<p class="inv-hint">${onMap ? `Everything you can get in ${esc(invMap)}. Tap an item for where exactly.` : onNpc ? `What ${esc(invNpc)} sells, cheapest first.` : hint}</p>`;
