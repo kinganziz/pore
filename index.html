@@ -4855,8 +4855,8 @@ function createSolver() {
   // the whole bag: search on top, the slots and a slot editor, and the category icons right above the tab bar (like the game)
   function renderCharms(force) {
     if (!ui.charmsBody || (!force && ui.charmsSheet.hidden)) return;
-    // every category the bag can hold: all, each item type (like the game's filter row), charms and coins
-    const cats = [['all', 'All'], ...TYPES.map(t => ['t:' + t[0], t[1]]), ['charms', 'Charms'], ['coins', 'Coins']];
+    // every category the bag can hold: all, charms, each item type (like the game's filter row), coins
+    const cats = [['all', 'All'], ['charms', 'Charms'], ...TYPES.map(t => ['t:' + t[0], t[1]]), ['coins', 'Coins']];
     ui.charmsBody.innerHTML = `<label class="inv-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></svg><input type="search" placeholder="Search by name" value="${esc(invQ)}" data-field="inv-q" aria-label="Search the inventory"></label>` +
       `<div id="invGrid"></div>`;
     // the category icons: a fixed strip at the foot of the sheet, right above the tab bar (like the game)
