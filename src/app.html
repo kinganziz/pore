@@ -1681,6 +1681,19 @@
   .ip-head b, .ip-head small { white-space: normal; overflow: visible; text-overflow: clip; }
   :is(#pickerSheet, #projectsSheet, #charmsSheet, #settingsSheet) .sheet-head [data-action^="close-"] { display: none !important; }
   .home-best .hb-icon { --pk-shadow: 0; }
+  /* the result card in the game's own style (like the item cards): a solid panel with a gold frame and a hard shadow,
+     no gradient border or glow; its numbers sit in recessed slots and the saving is a plain green arc */
+  .card.hero, :root[data-theme="light"] .card.hero { background: color-mix(in srgb, var(--bg-2) 97%, black) !important; border: 2px solid color-mix(in srgb, var(--gold) 45%, transparent);
+    border-radius: 18px; box-shadow: 4px 5px 0 rgba(0, 0, 0, .45); backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .card.hero::before { display: none; }
+  .card.hero.plain { border-color: var(--gold); }
+  .hero .hero-label { color: var(--gold); }
+  .hero .ring .disc { fill: rgba(0, 0, 0, .28); }
+  .hero .ring .track { stroke: rgba(255, 255, 255, .08); opacity: 1; }
+  .hero .ring .arc { stroke: var(--good, #37d39a); stroke-linecap: butt; filter: none; }
+  .hero .tile { background: rgba(0, 0, 0, .26); border: 2px solid rgba(255, 255, 255, .06); border-radius: 10px; box-shadow: inset 2px 2px 0 rgba(0, 0, 0, .35); }
+  .hero .tile small { color: var(--gold); opacity: .85; }
+  :root[data-theme="light"] .hero .tile { background: rgba(0, 0, 0, .05); border-color: rgba(0, 0, 0, .08); box-shadow: inset 2px 2px 0 rgba(0, 0, 0, .08); }
 </style>
 </head>
 <body>
