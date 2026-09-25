@@ -4874,14 +4874,15 @@ function createSolver() {
     if (show('coins')) for (const k of ['gold', 'wb']) { const nm = k === 'gold' ? 'Gold' : 'WB tokens'; if (hit(nm)) grid += invSlot(k, INV_COIN_SVG[k], inv[k] != null ? (inv[k] >= 1000 ? invQty(inv[k]) : inv[k] + '') : '', { cls: inv[k] == null ? 'blank' : '', glow: k === 'gold' ? '#f6c453' : '#cf8f4f', label: nm }); }
     if (show('charms')) for (const c of CHARMS) if (hit(c.name)) grid += invSlot(c.key, iconSVG(c.key), charmStock[c.key] ? invQty(charmStock[c.key]) : '', { cls: charmOff.has(c.key) ? 'off' : '', glow: '#ff9d3c', label: c.name, lv: '×' + c.factor });
     if (show('items')) {
-      const owned = Object.keys(inv.items).filter(k => ITEM_BY_KEY.has(k)).map(k => ITEM_BY_KEY.get(k)).filter(it => hit(it.name) && typeOk(it)).sort((a, b) => a.name.localeCompare(b.name));
-      grid += owned.map(it => invSlot(it.key, iconSVG(it.key), invQty(inv.items[it.key] || 0), { cls: inv.items[it.key] ? '' : 'blank', glow: '#3aa84a', label: it.name, lv: 'I' })).join('');
-      if (!q) grid += `<button type="button" class="slot add" data-action="inv-add" aria-label="Add an item" title="Add an item"><svg viewBox="0 0 8 8" shape-rendering="crispEdges"><path fill="currentColor" d="M3 0h2v3h3v2H5v3H3V5H0V3h3z"/></svg></button>`;
+      // every item has a slot: the ones you own first (with their count), the rest in grey, like the charms
+      const has = it => (inv.items[it.key] || 0) > 0;
+      const list = ITEMS.filter(it => it.key !== 'custom' && hit(it.name) && typeOk(it)).sort((a, b) => (has(b) - has(a)) || a.name.localeCompare(b.name));
+      grid += list.map(it => invSlot(it.key, iconSVG(it.key), has(it) ? invQty(inv.items[it.key]) : '', { cls: has(it) ? '' : 'off', glow: '#3aa84a', label: it.name, lv: has(it) ? 'I' : '' })).join('');
     }
-    hint = invTab.startsWith('t:') ? `${(TYPES.find(t => 't:' + t[0] === invTab) || [0, 'Items'])[1]} you own (base copies). Tap + to add one.` : { all: 'Everything you own. Plans fill themselves in and check against it; ticking a step uses things up.', items: 'Base (P1) copies you own. Tap + to add an item.', charms: 'Tap a charm to set your stock or keep it out of plans.', coins: 'Gold pays fees, world boss (WB) tokens pay boss weapons. Empty = not tracked.' }[invTab];
+    hint = invTab.startsWith('t:') ? `${(TYPES.find(t => 't:' + t[0] === invTab) || [0, 'Items'])[1]}: tap one to set how many base copies you own.` : { all: 'Tap anything to set how many you own; grey means none. Plans fill themselves in and check against it, and ticking a step uses things up.', items: 'Tap an item to set how many base (P1) copies you own.', charms: 'Tap a charm to set your stock or keep it out of plans.', coins: 'Gold pays fees, world boss (WB) tokens pay boss weapons. Empty = not tracked.' }[invTab];
     const it = invSel && ITEM_BY_KEY.get(invSel), c = invSel && CHARMS.find(x => x.key === invSel);
-    if (it && invSel in inv.items) editor = `<div class="inv-edit"><div class="ie-head">${iconSVG(it.key)}<b>${esc(it.name)}</b><small>base copies (P1)</small></div>${invStepper('inv-item', it.key, inv.items[it.key] || 0, it.name + ' base copies')}` +
-      `<div class="ie-acts"><button type="button" data-action="pick" data-key="${it.key}">Plan it ›</button><button type="button" class="danger" data-action="inv-del" data-key="${it.key}">Remove</button></div></div>`;
+    if (it) editor = `<div class="inv-edit"><div class="ie-head">${iconSVG(it.key)}<b>${esc(it.name)}</b><small>base copies (P1)</small></div>${invStepper('inv-item', it.key, inv.items[it.key] || 0, it.name + ' base copies')}` +
+      `<div class="ie-acts"><button type="button" data-action="pick" data-key="${it.key}">Plan it ›</button>${inv.items[it.key] ? `<button type="button" class="danger" data-action="inv-del" data-key="${it.key}">Clear</button>` : ''}</div></div>`;
     else if (c) editor = `<div class="inv-edit"><div class="ie-head">${iconSVG(c.key)}<b>${esc(c.name)}</b><small>×${c.factor} success</small></div>${invStepper('cstock', c.key, charmStock[c.key] || null, c.name + ' in stock')}` +
       `<div class="ie-acts gm-opts"><span>Use in plans</span><button type="button" class="${charmOff.has(c.key) ? '' : 'on'}" data-action="charm" data-key="${c.key}" data-set="on">On</button><button type="button" class="${charmOff.has(c.key) ? 'on' : ''}" data-action="charm" data-key="${c.key}" data-set="off">Off</button></div></div>`;
     else if (invSel === 'gold' || invSel === 'wb') editor = `<div class="inv-edit"><div class="ie-head">${INV_COIN_SVG[invSel]}<b>${invSel === 'gold' ? 'Gold' : 'WB tokens'}</b></div>` +
@@ -5271,6 +5272,7 @@ function createSolver() {
     if (f === 'inv-item') {
       const n = Math.max(0, Math.min(99999, Math.round(Number(el.value)) || 0));
       inv.items[el.dataset.key] = n; invSave();
+      clearTimeout(invBadgeT); invBadgeT = setTimeout(() => { const k = el.dataset.key, pos = el.selectionStart; invRenderGrid(); const g = document.querySelector(`[data-field="inv-item"][data-key="${k}"]`); if (g && document.activeElement !== g) { g.focus(); try { g.setSelectionRange(pos, pos); } catch (e) { /* number inputs */ } } }, 700);
       if (state.item === el.dataset.key) { state.stock = n; persist(); renderResults(); }
       return;
     }
