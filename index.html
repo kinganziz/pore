@@ -4899,6 +4899,7 @@ function createSolver() {
     resetPlan(); pendingScroll = null; revealResults = true;
     jumpTo(0);
     renderAll(); scheduleSolve(0);
+    openGuide();   // a project goes straight to the guide at the next step (back returns to the plan)
   }
   function projectsHTML() {
     if (!projects.length) return '';
