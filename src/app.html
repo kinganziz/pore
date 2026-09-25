@@ -952,6 +952,26 @@
   .coach-bubble img { width: 52px; height: auto; flex: 0 0 auto; }
   .coach-bubble p { margin: 2px 0 8px; font-size: 15px; line-height: 1.45; }
   :root[data-skin="pixel"] .coach-bubble { border: 2px solid var(--line); border-radius: 12px; box-shadow: var(--px-raised); }
+  /* ---------- no shortcut: the plan is plain pairing ---------- */
+  .hero.plain, :root[data-theme="light"] .hero.plain { background: var(--surface); border: 1px solid var(--gold); }
+  .hero.plain::before { display: none; }
+  .hero.plain .hero-label { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+  .plain-badge { padding: 3px 10px; border-radius: 999px; background: var(--gold); color: #1b1b33; font-weight: 800; letter-spacing: .6px; }
+  .plain-title { font-family: var(--display); font-size: 26px; font-weight: 700; line-height: 1.15; margin-top: 14px; }
+  .plain-sub { color: var(--muted); margin: 6px 0 14px; }
+  .pair-flow { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; padding: 12px 8px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--line); }
+  .pf { display: grid; justify-items: center; min-width: 44px; padding: 6px 4px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line-2); }
+  .pf b { font-size: 16px; font-variant-numeric: tabular-nums; }
+  .pf span { font-size: 12px; font-weight: 700; color: var(--muted); }
+  .pf.end { border-color: var(--gold); }
+  .pf.end span { color: var(--gold); }
+  .pf-arrow { font-style: normal; color: var(--muted); }
+  .pair-flow.one-row { flex-wrap: nowrap; gap: 4px; }
+  .pair-flow.one-row .pf { flex: 1 1 0; min-width: 0; }
+  .pair-flow.one-row .pf-arrow { flex: 0 0 auto; font-size: 12px; }
+  .plain-facts { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 16px; margin: 12px 0 4px; color: var(--muted); }
+  .plain-facts b { color: var(--text); }
+  :root[data-skin="pixel"] .plain-badge { border-radius: 6px; }
 </style>
 </head>
 <body>
@@ -2131,33 +2151,36 @@ __SOLVER_JS__
     }
 
     patchHTML(ui.resultsBody, `${compareKey ? compareHTML() : ''}
-      <div class="card hero">
+      <div class="card hero ${plain ? 'plain' : ''}">
         <div class="hero-top">
-          <span class="hero-label">${plain ? 'No shortcut' : 'Cheapest path'} · ${esc(item.name)} → P${state.L}</span>
+          <span class="hero-label">${plain ? `<span class="plain-badge">No shortcut</span>${esc(item.name)} → P${state.L}` : `Cheapest path · ${esc(item.name)} → P${state.L}`}</span>
           ${solving ? '<span class="solving"><span class="dot"></span>updating</span>' : ''}
         </div>
-        <div class="hero-body">
+        ${plain ? `<div class="plain-title">Just refine in pairs</div>
+        <p class="plain-sub">No cheaper path exists for this item${item.maxL < 10 && state.L === item.maxL ? ` (boss weapons stop at P${item.maxL})` : ''}: every refine combines two identical copies.</p>
+        <div class="pair-flow ${state.L <= 6 ? 'one-row' : ''}" aria-label="Pairing chain">${Array.from({ length: state.L }, (_, i) => `<div class="pf ${i === state.L - 1 ? 'end' : ''}"><b>${fmt(Math.pow(2, state.L - 1 - i))}×</b><span>P${i + 1}</span></div>`).join('<i class="pf-arrow">→</i>')}</div>
+        <div class="plain-facts"><span><b>${fmt(toCollect)}</b> ${stock ? `to collect (${fmt(stock)} in stock)` : 'base items'}</span><span><b>${fmt(a.refines)}</b> refines</span><span><b>${fmtGold(a.gold)}</b> gold</span></div>` : `<div class="hero-body">
           <div>
             <div class="hero-num"><span id="heroNum">${fmt(cost)}</span><small>base items</small></div>
-            <div class="hero-sub">${plain ? `No cheaper path exists: the standard way is the cheapest. Refine identical copies in pairs, level by level (${Array.from({ length: state.L }, (_, i) => fmt(Math.pow(2, state.L - 1 - i))).join(' → ')}).` : `instead of <b>${fmt(standard)}</b> the standard way${targetPerfect ? '' : ' · custom target'}`}</div>
+            <div class="hero-sub">instead of <b>${fmt(standard)}</b> the standard way${targetPerfect ? '' : ' · custom target'}</div>
             <div class="pills">
-              ${saved > 0 ? `<span class="pill good">− ${fmt(saved)} items</span>` : plain ? '' : `<span class="pill info">already optimal</span>`}
+              ${saved > 0 ? `<span class="pill good">− ${fmt(saved)} items</span>` : `<span class="pill info">already optimal</span>`}
               ${ownedUsed ? `<span class="pill info">${ownedUsed} owned used</span>` : ''}
               ${state.m === 'robust' ? `<span class="pill gold">safe rounding</span>` : state.m !== 'exact' ? `<span class="pill gold">formula: ${esc(modelInfo.label)}</span>` : ''}
               ${res.overrideHits ? `<span class="pill info">${obs.length} observation${obs.length > 1 ? 's' : ''} applied</span>` : ''}
               ${res.approximate ? `<span class="pill warn" title="Large inventory: search was capped, plan is valid but may not be the absolute optimum">approximate</span>` : ''}
             </div>
           </div>
-          ${plain ? '' : `<div class="ring" aria-label="${pct}% saved">
+          <div class="ring" aria-label="${pct}% saved">
             <svg viewBox="0 0 100 100"><defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#37d39a"/><stop offset="1" stop-color="#8b7cff"/></linearGradient></defs><circle class="disc" cx="50" cy="50" r="37"/><circle class="track" cx="50" cy="50" r="42"/><circle class="arc" id="ringArc" cx="50" cy="50" r="42" style="stroke-dashoffset:${ringOffset.toFixed(1)}"/></svg>
             <div class="lbl"><b>${pct}%</b><small>saved</small></div>
-          </div>`}
+          </div>
         </div>
         <div class="tiles">
-          <div class="tile"><small>Refines</small><b>${fmt(a.refines)}</b><i>${plain ? 'in total' : `vs ${fmt(standard - 1)}`}</i></div>
-          <div class="tile"><small>Gold</small><b>${fmtGold(a.gold)}</b><i>${plain ? 'in fees' : `vs ${fmtGold(goldStd)}`}</i></div>
+          <div class="tile"><small>Refines</small><b>${fmt(a.refines)}</b><i>vs ${fmt(standard - 1)}</i></div>
+          <div class="tile"><small>Gold</small><b>${fmtGold(a.gold)}</b><i>vs ${fmtGold(goldStd)}</i></div>
           <div class="tile"><small>Collect</small><b>${fmt(toCollect)}</b><i>${stock ? `${stock} in stock` : 'base items'}</i></div>
-        </div>
+        </div>`}
         <div class="note">Result: ${chipHTML(res.plan.nodes[res.plan.root], item, 'result')}${res.ms > 400 ? ` · solved in ${(res.ms / 1000).toFixed(1)}s` : ''}</div>
         ${(() => {
           const dn = a.steps.filter(st => loadDone().has(stepId(st))).length, tot = a.steps.length;
