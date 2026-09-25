@@ -1226,7 +1226,18 @@
   :root[data-sky="day"] .hb-arrow { color: #1b1f33; filter: drop-shadow(1px 1px 0 rgba(255, 255, 255, .7)); }
   /* ---------- background pictures (title screen and help page) ---------- */
   .bg-strip { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; }
-  .home-hero .bg-strip { margin: -14px 0 6px; }
+  /* title screen: one small button in the corner; the pictures slide out beside it */
+  .bg-switch { position: absolute; top: 4px; left: 0; z-index: 3; display: flex; align-items: center; gap: 8px; }
+  .bg-cur { width: 36px; height: 36px; padding: 0; border-radius: 50%; overflow: hidden; border: 2px solid rgba(255, 255, 255, .55); background: rgba(0, 0, 0, .35);
+    display: grid; place-items: center; color: #fff; cursor: pointer; box-shadow: 2px 2px 0 rgba(0, 0, 0, .35); transition: transform .15s; }
+  .bg-cur img { width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
+  .bg-cur svg { width: 16px; height: 16px; }
+  .bg-cur:active { transform: scale(.9); }
+  .bg-switch.open .bg-cur { border-color: #fff; box-shadow: 0 0 0 2px var(--accent); }
+  .home-hero .bg-strip { flex-wrap: nowrap; gap: 6px; opacity: 0; transform: translateX(-12px); pointer-events: none; visibility: hidden;
+    transition: opacity .2s, transform .25s cubic-bezier(.3, 1.4, .5, 1), visibility 0s .25s; }
+  .bg-switch.open .bg-strip { opacity: 1; transform: none; pointer-events: auto; visibility: visible; transition: opacity .2s, transform .25s cubic-bezier(.3, 1.4, .5, 1); }
+  .home-hero .bg-thumb { width: 40px; height: 29px; }
   .bg-thumb { width: 46px; height: 33px; padding: 0; border: 2px solid rgba(255, 255, 255, .28); border-radius: 9px; overflow: hidden; background: rgba(0, 0, 0, .35);
     cursor: pointer; display: grid; place-items: center; color: #fff; box-shadow: 2px 2px 0 rgba(0, 0, 0, .35); transition: transform .12s, border-color .15s; }
   .bg-thumb img { width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; display: block; }
@@ -2337,6 +2348,7 @@ __SOLVER_JS__
     syncBgPicker(); sceneHide(); sceneShow();
   }
   function syncBgPicker() {
+    document.querySelectorAll('.bg-cur').forEach(el => { el.innerHTML = bgCurHTML(); });
     document.querySelectorAll('[data-action="bg-pick"]').forEach(b => b.classList.toggle('on', b.dataset.bg === bgPref));
     document.querySelectorAll('[data-action="bg-motion"]').forEach(b => b.classList.toggle('on', (b.dataset.motion === 'on') === bgMotion));
   }
@@ -2723,7 +2735,22 @@ __SOLVER_JS__
   }
   function refreshBgStrips() {
     document.querySelectorAll('.bg-strip').forEach(el => { el.innerHTML = bgStripHTML(el.dataset.none === '1'); });
+    document.querySelectorAll('.bg-cur').forEach(el => { el.innerHTML = bgCurHTML(); });
   }
+  // the title screen's one small button: the current scene (or the shuffle icon for Auto); tap to show the pictures
+  function bgCurHTML() { return BG_ICON[bgPref] || `<img src="${bgThumb(bgPref)}" alt="" draggable="false">`; }
+  let bgSwitchTimer = 0;
+  function bgSwitchOpen(el, open) {
+    if (!el) return;
+    el.classList.toggle('open', open);
+    const b = el.querySelector('.bg-cur'); if (b) b.setAttribute('aria-expanded', String(open));
+    clearTimeout(bgSwitchTimer);
+    if (open) bgSwitchTimer = setTimeout(() => bgSwitchOpen(el, false), 5000);
+  }
+  document.addEventListener('pointerdown', e => {   // a tap anywhere else closes the pictures
+    const open = document.querySelector('.bg-switch.open');
+    if (open && !open.contains(e.target)) bgSwitchOpen(open, false);
+  }, { passive: true });
   function sceneDraw(dt, calm) {
     if (!scene.ctx || !scene.key.startsWith(bgNow)) { if (!sceneSetup()) return; }   // the scene was switched: set it up first
     const { ctx: g, W, H } = scene, pal = bgPalette();
@@ -2893,7 +2920,10 @@ __SOLVER_JS__
     const pct = it => Math.round((1 - badges[it.key] / std(it)) * 100);
     const hero = `<section class="home-hero">
         <div class="home-copy">
-          <div class="bg-strip" role="group" aria-label="Background">${bgStripHTML(false)}</div>
+          <div class="bg-switch">
+            <button class="bg-cur" type="button" data-action="bg-toggle" aria-expanded="false" aria-label="Change background" title="Background">${bgCurHTML()}</button>
+            <div class="bg-strip" role="group" aria-label="Background">${bgStripHTML(false)}</div>
+          </div>
           <span class="home-kicker">~ Pixel Odyssey ~</span>
           <h1 class="home-title ${titleDrop ? 'drop' : ''}"><i class="tw" style="--i:0">Max</i> <i class="tw" style="--i:1">your</i> <i class="tw" style="--i:2">gear</i><br><span>for a fraction.</span></h1>
           <p class="home-sub">A perfect P10 normally eats <b>512</b> base items. PORE finds the cheapest path, step by step.</p>
@@ -3998,7 +4028,8 @@ __SOLVER_JS__
       case 'home': e.preventDefault(); if (ui.pickerSheet.hidden && ui.infoSheet.hidden && ui.guideSheet.hidden) goHome(); else closeSheets(); break;
       case 'skin': try { localStorage.setItem('pore.skin.chosen', '1'); } catch (e) { /* ignore */ } setSkin({ modern: 'pixel', pixel: 'game', game: 'modern' }[skin]); toast(SKINS[skin]); break;
       case 'skin-pick': try { localStorage.setItem('pore.skin.chosen', '1'); } catch (e) { /* ignore */ } setSkin(el.dataset.skin); toast(SKINS[skin]); break;
-      case 'bg-pick': setBg(el.dataset.bg); toast(`Background: ${BG_NAMES[bgPref]}${bgPref === 'auto' ? ' (a new one each time you open PORE)' : ''}`); break;
+      case 'bg-toggle': { const sw = el.closest('.bg-switch'); bgSwitchOpen(sw, !sw.classList.contains('open')); haptic(6); break; }
+      case 'bg-pick': bgSwitchOpen(el.closest('.bg-switch'), false); setBg(el.dataset.bg); toast(`Background: ${BG_NAMES[bgPref]}${bgPref === 'auto' ? ' (a new one each time you open PORE)' : ''}`); break;
       case 'bg-motion': setBgMotion(el.dataset.motion === 'on'); toast(bgMotion ? 'Background moves' : 'Background still: saves battery'); break;
       case 'icon-style': setIconStyle(iconStyle === 'modern' ? 'pixelhd' : 'modern'); toast(ICON_STYLES[iconStyle].label); break;
       case 'reload': location.reload(); break;
