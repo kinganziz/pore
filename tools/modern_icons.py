@@ -748,8 +748,8 @@ def mask(ic, kind):
 
 
 # ----------------------------------------------------------------------------- body armor
-TORSO = ("M20 8 C24 12 40 12 44 8 L54 14 C57 18 58 26 57 32 L48 32 L48 54 C48 57 46 58 44 58 L20 58 "
-         "C18 58 16 57 16 54 L16 32 L7 32 C6 26 7 18 10 14 Z")
+TORSO = ("M20 8 C24 12 40 12 44 8 L54.5 14 C58 18 59 26 58.4 32 L48 32 L48 54 C48 57 46 58 44 58 L20 58 "
+         "C18 58 16 57 16 54 L16 32 L5.6 32 C5 26 6 18 9.5 14 Z")   # sleeves land on whole pixels at 20x20
 
 
 def chestplate(ic, pal, trim=None, pattern=None, emblem=None):
@@ -761,7 +761,7 @@ def chestplate(ic, pal, trim=None, pattern=None, emblem=None):
     s.append(line("M32 17 L32 56", pal[3], 1.4, 0.5))
     s.append(line("M18 42 C26 45 38 45 46 42 M18 49 C26 52 38 52 46 49", pal[3], 1.4, 0.45))
     for cx in (15, 49):
-        s.append(f'<ellipse cx="{cx}" cy="20" rx="8" ry="6.5" fill="{ic.lg(pal)}" stroke="{pal[3]}" stroke-width="1.8"/>')
+        s.append(f'<ellipse cx="{cx}" cy="20" rx="8" ry="6.5" fill="{ic.lg(pal)}" stroke="{pal[2]}" stroke-width="1.8"/>')   # mid-tone edge: no dark specks in pixels
     if trim:
         s.append(line("M8 26 C10 18 14 14 22 12", trim[1], 2.2))
         s.append(line("M56 26 C54 18 50 14 42 12", trim[1], 2.2))
@@ -864,11 +864,18 @@ def boot(ic, pal, trim=None, pattern=None, kind="boot", gem_=None):
         parts += tube(ic, "M20 47 C26 51 38 51 44 47", pal, 4.2)
         parts.append(circle(ic, 32, 13, 3, pal, sw=1.4))
         s.append(rot(parts, -25))
-    elif kind == "clog":
-        s.append(shape(ic, "M4 46 C4 36 14 30 26 30 L50 26 C56 25 60 30 60 36 L60 48 C60 54 56 56 50 56 L12 56 C7 56 4 52 4 46 Z", pal))
-        s.append(f'<path d="M30 30 C38 28 46 28 54 30 C52 36 44 38 34 38 Z" fill="{pal[3]}" opacity=".6"/>')
-        s.append(pattern_marks("planks", 12, 36, 52, 54))
-        s.append(line("M10 42 C14 36 20 33 26 32", HL, 2, 0.55))
+    elif kind == "clog":   # a Dutch clog from the side: upturned toe, tall heel, opening on top, painted flower
+        body = "M3 31 C6 31 10 32 16 31 L31 25 C34 24 37 23.5 40 23.5 L56 21 C60 20.5 62 24 62 29 L62 46 C62 53 58 57 51 57 L22 57 C13 57 8 51 5.5 43 C4 39 2.6 35 3 31 Z"
+        s.append(shape(ic, body, pal, ic.lg(pal, 0, 0, 0.6, 1)))
+        s.append(f'<path d="M36.5 25.5 C43 22.5 52 21.5 58 23.2 C57.5 28.5 49 31 39.5 30 C37.5 29.4 36.3 27.6 36.5 25.5 Z" fill="{pal[3]}" stroke="{pal[3]}" stroke-width="1.4"/>')
+        s.append(f'<path d="M40 26.8 C45 25 51 24.6 55.5 25.4" fill="none" stroke="{pal[2]}" stroke-width="1.6" stroke-linecap="round" opacity=".8"/>')
+        for d in ("M12 40 C22 37 36 36 58 38", "M14 47 C26 45 40 45 59 46"):   # grain
+            s.append(line(d, pal[2], 1.4, 0.55))
+        for k in range(5):   # painted flower on the toe
+            a = k * 2 * math.pi / 5 - math.pi / 2
+            s.append(dot(21 + 3.2 * math.cos(a), 39.5 + 3.2 * math.sin(a), 2.2, "#e2343e"))
+        s.append(dot(21, 39.5, 1.8, "#fff2a6"))
+        s.append(line("M8 34 C14 34.5 22 32 30 28.5", HL, 2.2, 0.6))
     elif kind == "shackle":
         s.append(f'<ellipse cx="32" cy="30" rx="24" ry="18" fill="none" stroke="#141216" stroke-width="12"/>')
         s.append(f'<ellipse cx="32" cy="30" rx="24" ry="18" fill="none" stroke="{ic.lgu(PAL["slate"])}" stroke-width="8"/>')

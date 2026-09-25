@@ -202,6 +202,25 @@ function pixelate(svg) {
     }
   }
 
+  // 4b. drop specks: groups of 1-2 cells cut off from the drawing (sparkles, drips) read as stray pixels at 20x20
+  const seen = new Set(), comps = [];
+  for (let y = 0; y < GRID; y++) for (let x = 0; x < GRID; x++) {
+    if (grid[y][x] === T || seen.has(y * GRID + x)) continue;
+    const comp = [], stack = [[x, y]];
+    seen.add(y * GRID + x);
+    while (stack.length) {
+      const [cx, cy] = stack.pop();
+      comp.push([cx, cy]);
+      for (const [dx, dy] of N8) {
+        const nx = cx + dx, ny = cy + dy;
+        if (nx < 0 || ny < 0 || nx >= GRID || ny >= GRID || grid[ny][nx] === T || seen.has(ny * GRID + nx)) continue;
+        seen.add(ny * GRID + nx); stack.push([nx, ny]);
+      }
+    }
+    comps.push(comp);
+  }
+  if (comps.some(c => c.length > 2)) for (const c of comps) if (c.length <= 2) for (const [x, y] of c) grid[y][x] = T;
+
   // 5. emit horizontal runs grouped by colour
   const runs = new Map();
   for (let y = 0; y < GRID; y++) {
