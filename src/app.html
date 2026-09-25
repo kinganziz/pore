@@ -1640,6 +1640,12 @@
   .map-head small { color: var(--gold); font-size: 13px; }
   .map-head p { margin: 4px 0 0; color: var(--soft); font-size: 13px; line-height: 1.35; }
   .named-slot .ns-ch { display: block; text-align: center; font-size: 11px; color: var(--gold); opacity: .85; margin-top: 1px; }
+  .proj-new { display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 10px; padding: 14px 16px; border: 2px dashed color-mix(in srgb, var(--gold) 45%, transparent); border-radius: 14px;
+    background: none; color: var(--gold); font: inherit; font-weight: 700; font-size: 15px; cursor: pointer; text-align: left; }
+  .proj-new span { font-size: 22px; line-height: 1; }
+  .proj-new small { color: var(--muted); font-weight: 400; font-size: 12px; margin-left: auto; }
+  .proj-new:active { transform: scale(.98); }
+  @media (hover: hover) { .proj-new:hover { background: color-mix(in srgb, var(--gold) 8%, transparent); } }
 </style>
 </head>
 <body>
@@ -4562,7 +4568,8 @@ __SOLVER_JS__
         `${i === 0 ? '<span class="proj-go">Continue ›</span>' : ''}</button>` +
         `<button class="proj-x" type="button" data-action="project-remove" data-id="${esc(pr.id)}" aria-label="Remove ${esc(pr.name)} from my projects" title="Remove from my projects"><svg viewBox="0 0 7 7" shape-rendering="crispEdges"><path fill="currentColor" d="M0 0h2v1h1v1h1V1h1V0h2v2H6v1H5v1h1v1h1v2H5V6H4V5H3v1H2v1H0V5h1V4h1V3H1V2H0z"/></svg></button></div>`;
     }).join('');
-    return `<div class="card projects"><div class="section-title"><h3>My projects</h3><span class="hint">${projects.length} item${projects.length === 1 ? '' : 's'}</span></div><div class="proj-list">${rows}</div></div>`;
+    return `<div class="card projects"><div class="section-title"><h3>My projects</h3><span class="hint">${projects.length} item${projects.length === 1 ? '' : 's'}</span></div><div class="proj-list">${rows}</div>` +
+      `<button class="proj-new" type="button" data-action="tab" data-tab="items"><span>+</span> New project <small>pick an item to plan</small></button></div>`;
   }
 
   /* ================= backup ================= */
@@ -5065,7 +5072,7 @@ __SOLVER_JS__
   function renderProjects(force) {
     if (!ui.projectsBody || (!force && ui.projectsSheet.hidden)) return;
     ui.projectsBody.innerHTML = projectsHTML() || `<div class="empty-note proj-empty"><p>No projects yet.</p><p>Open an item and start its plan: it lands here, with your progress, so you can pick it up again any time.</p>
-      <button class="btn primary" type="button" data-action="open-picker">Choose an item</button></div>`;
+      <button class="btn primary" type="button" data-action="tab" data-tab="items">Choose an item</button></div>`;
   }
   function openInfo(opts) {
     if (!ui.infoSheet.hidden) return;
