@@ -3641,7 +3641,8 @@ function createSolver() {
       each(scene.st.far, 0.2, 24, W, (b, x) => {
         g.fillStyle = pal.far; g.fillRect(x, fy - b.h, b.w, b.h + (gy - fy));
         g.fillStyle = pal.farWin; g.globalAlpha = 0.6;
-        for (let wy = fy - b.h + 3; wy < fy + 6; wy += 4) for (let wx = x + 2; wx < x + b.w - 1; wx += 3) if (((wx * 7 + wy * 13 + Math.floor(b.wins * 97)) % 5) === 0) g.fillRect(wx, wy, 1, 1);
+        // which windows are lit depends on the building, not on where it is on screen (it scrolls): steady lights
+        for (let wy = fy - b.h + 3; wy < fy + 6; wy += 4) for (let wx = x + 2; wx < x + b.w - 1; wx += 3) if ((((wx - x) * 7 + (wy - fy + b.h) * 13 + Math.floor(b.wins * 97)) % 5) === 0) g.fillRect(wx, wy, 1, 1);
         g.globalAlpha = 1;
       });
       each([{ x: 200 }], 0.2, 12, W, (t, x) => { g.fillStyle = pal.far; g.fillRect(x - 4, fy - 58, 9, 70); for (let k = 0; k < 8; k++) g.fillRect(x - 4 + Math.floor(k / 2), fy - 66 + k, 9 - Math.floor(k / 2) * 2, 1); g.fillStyle = pal.lamp; g.fillRect(x - 2, fy - 52, 5, 5); g.fillStyle = pal.far; g.fillRect(x, fy - 51, 1, 2); g.fillRect(x, fy - 50, 2, 1); });
@@ -3652,8 +3653,10 @@ function createSolver() {
         if (h.roof) { g.fillStyle = pal.roof; const half = Math.ceil(h.w / 2) + 1; for (let k = 0; k < half; k++) g.fillRect(x - 1 + k, top - half + k + 1, h.w + 2 - k * 2, 1); }
         else { g.fillStyle = pal.roof; g.fillRect(x - 1, top - 2, h.w + 2, 2); }
         if (h.chim) { g.fillStyle = pal.house; g.fillRect(x + h.w - 5, top - (h.roof ? Math.ceil(h.w / 2) - 1 : 5), 3, 5); }
-        for (let wy = top + 3; wy < gy - 4; wy += 6) for (let wx = x + 3; wx < x + h.w - 3; wx += 5) {
-          const on = Math.sin(now * 0.15 + (h.seed + wx * 3 + wy) * 0.7) > -0.2;
+        for (let wy = top + 3, j = 0; wy < gy - 4; wy += 6, j++) for (let wx = x + 3, i = 0; wx < x + h.w - 3; wx += 5, i++) {
+          // each window keeps its light for a while (about 40 s, each on its own clock), like people switching lamps
+          const id = h.seed * 31 + i * 7 + j * 13, bucket = Math.floor(now / 40 + (id % 40) / 40);
+          const on = ((id * 2654435761 + bucket * 40503) >>> 0) % 10 < 7;
           g.fillStyle = on ? pal.win : pal.winOff; g.fillRect(wx, wy, 2, 3);
         }
       });
