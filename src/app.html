@@ -2427,6 +2427,9 @@ __SOLVER_JS__
       if (cap && h < capLine) { g.fillStyle = cap; g.fillRect(x, h, 1, Math.max(1, Math.round(capLine - h + 1.5 + 1.5 * Math.sin((x + o) * 1.3)))); }   // solid down to a jagged snow line
     }
   }
+  // Wide things (castle, pyramids, cabin, stones) stand on the lowest ground under their whole width and are drawn
+  // before their hill layer, which then covers their base: planted in the slope, never hanging over a dip.
+  function ground(x0, x1, o, base, amps, H) { let m = -1e9; for (let x = x0; x <= x1; x++) m = Math.max(m, Math.round(ridge(x + o, P, base, amps, H))); return m; }
   function each(items, speed, pad, W, fn) {   // things standing on a scrolling layer, repeated every P pixels
     const o = off(speed);
     for (const it of items) for (let x = ((Math.round(it.x) - o) % P + P) % P - pad; x <= W + pad; x += P) fn(it, x, o);
@@ -2446,16 +2449,17 @@ __SOLVER_JS__
     hills(g, W, H, pal, now, dt) {
       drawSky(g, W, H, pal, H * 0.62); drawStars(g, pal, now, H * 0.5); drawShootingStar(g, pal, dt, W, H);
       drawMoon(g, pal, W, H, pal.far); drawClouds(g, pal, W, H, 0.25);
-      drawRidge(g, W, H, 0.2, 0.46, [[0.07, 1, 0.3], [0.05, 3, 1.7], [0.025, 7, 0.9]], pal.far, pal.cap, H * 0.43, 9);
+      const farAmps = [[0.07, 1, 0.3], [0.05, 3, 1.7], [0.025, 7, 0.9]];
       // a castle on the far hills, windows lit
-      each([{ x: 150 }], 0.2, 20, W, (it, x) => {
-        const b = Math.round(ridge(x + off(0.2), P, 0.46, [[0.07, 1, 0.3], [0.05, 3, 1.7], [0.025, 7, 0.9]], H)) + 2;
+      each([{ x: 150 }], 0.2, 20, W, (it, x, o) => {
+        const b = ground(x - 12, x + 12, o, 0.46, farAmps, H) + 1;
         g.fillStyle = pal.castle;
         g.fillRect(x - 10, b - 9, 21, 9); g.fillRect(x - 12, b - 15, 5, 15); g.fillRect(x + 8, b - 15, 5, 15); g.fillRect(x - 2, b - 20, 5, 11);
         for (const tx of [x - 12, x - 10, x + 8, x + 10, x - 2, x + 2]) g.fillRect(tx, (tx === x - 2 || tx === x + 2) ? b - 22 : b - 17, 1, 2);
         g.fillStyle = pal.win; for (const [wx, wy] of [[x - 10, b - 12], [x + 10, b - 12], [x, b - 16], [x - 5, b - 5], [x + 5, b - 5]]) { g.globalAlpha = 0.6 + 0.4 * Math.sin(now * 0.8 + wx); g.fillRect(wx, wy, 1, 2); }
         g.globalAlpha = 1;
       });
+      drawRidge(g, W, H, 0.2, 0.46, farAmps, pal.far, pal.cap, H * 0.43);
       const midAmps = [[0.03, 2, 2.2], [0.02, 3, 0.4], [0.01, 7, 1.1]];
       drawRidge(g, W, H, 0.55, 0.62, midAmps, pal.mid);
       each(scene.st.trees, 0.55, 8, W, (t, x, o) => {
@@ -2464,9 +2468,9 @@ __SOLVER_JS__
         else pine(g, x, base, t.h, pal.tree, pal.treeHi);
       });
       const nearAmps = [[0.012, 3, 0.2], [0.008, 8, 2.4]];
+      each(scene.st.rocks, 1.1, 8, W, (rk, x, o) => { const b = ground(x - 1, x + rk.w, o, 0.8, nearAmps, H) + 1; g.fillStyle = pal.near; g.fillRect(x, b - rk.h, rk.w, rk.h + 1); g.fillRect(x - 1, b - rk.h, rk.w + 2, 1); g.fillStyle = pal.grass; g.fillRect(x, b - rk.h, 1, rk.h); });
       drawRidge(g, W, H, 1.1, 0.8, nearAmps, pal.near);
       each(scene.st.tufts, 1.1, 2, W, (t, x, o) => { const b = Math.round(ridge(x + o, P, 0.8, nearAmps, H)); g.fillStyle = pal.grass; g.fillRect(x, b - t.h, 1, t.h); if (t.h > 1) g.fillRect(x + 1, b - 1, 1, 1); });
-      each(scene.st.rocks, 1.1, 8, W, (rk, x, o) => { const b = Math.round(ridge(x + o, P, 0.8, nearAmps, H)); g.fillStyle = pal.near; g.fillRect(x, b - rk.h, rk.w, rk.h + 1); g.fillRect(x - 1, b - rk.h, rk.w + 2, 1); g.fillStyle = pal.grass; g.fillRect(x, b - rk.h, 1, rk.h); });
       for (const f of scene.st.flies) {
         f.y -= f.s * dt * 0.06; if (f.y < H * 0.45) { f.y = H + 2; f.x = Math.random() * W; }
         const x = Math.round(f.x + Math.sin(now * 0.9 + f.p) * 3), y = Math.round(f.y), glow = 0.5 + 0.5 * Math.sin(now * 2.2 + f.p);
@@ -2523,11 +2527,11 @@ __SOLVER_JS__
       drawSky(g, W, H, pal, H * 0.64); drawStars(g, pal, now, H * 0.55); drawShootingStar(g, pal, dt, W, H);
       drawMoon(g, pal, W, H, pal.far); drawClouds(g, pal, W, H, 0.15);
       const farA = [[0.02, 1, 0.5], [0.015, 2, 2.1], [0.008, 5, 0.4]];
-      drawRidge(g, W, H, 0.2, 0.6, farA, pal.far);
       each(scene.st.pyrs, 0.2, 30, W, (p, x, o) => {   // pyramids with a shaded side
-        const b = Math.round(ridge(x + o, P, 0.6, farA, H)) + 2;
+        const b = ground(x - p.s, x + p.s, o, 0.6, farA, H) + 1;
         for (let k = 0; k < p.s; k++) { g.fillStyle = pal.pyr; g.fillRect(x - k, b - p.s + k, k + 1, 1); g.fillStyle = pal.pyrShade; g.fillRect(x + 1, b - p.s + k, k, 1); }
       });
+      drawRidge(g, W, H, 0.2, 0.6, farA, pal.far);
       const midA = [[0.025, 2, 1.2], [0.012, 5, 0.3]];
       drawRidge(g, W, H, 0.5, 0.7, midA, pal.mid);
       // a camel caravan walking along the dunes
@@ -2564,11 +2568,10 @@ __SOLVER_JS__
       drawRidge(g, W, H, 0.55, 0.62, midA, pal.mid, pal.midCap, H * 0.66, 3);
       each(scene.st.pines, 0.55, 8, W, (t, x, o) => { const b = Math.round(ridge(x + o, P, 0.62, midA, H)); pine(g, x, b, t.h, pal.pine, null, pal.pineSnow); });
       const nearA = [[0.012, 3, 0.4], [0.008, 7, 1.6]];
-      drawRidge(g, W, H, 1.0, 0.8, nearA, pal.near);
       // a cabin with a warm window and chimney smoke
       let chim = null;
       each([{ x: 120 }], 1.0, 20, W, (it, x, o) => {
-        const b = Math.round(ridge(x + o, P, 0.8, nearA, H)) + 1;
+        const b = ground(x - 11, x + 11, o, 0.8, nearA, H) + 1;
         g.fillStyle = pal.cabin; g.fillRect(x - 9, b - 9, 19, 9);
         g.fillStyle = pal.roof; for (let k = 0; k < 7; k++) g.fillRect(x - 11 + k, b - 10 - k, 23 - k * 2, 1);
         g.fillStyle = pal.cabin; g.fillRect(x + 5, b - 17, 3, 5);
@@ -2576,6 +2579,7 @@ __SOLVER_JS__
         g.fillStyle = pal.cabin; g.fillRect(x - 1, b - 6, 3, 6);
         if (x > -20 && x < W + 20) chim = { x: x + 6, y: b - 18 };
       });
+      drawRidge(g, W, H, 1.0, 0.8, nearA, pal.near);
       const sm = scene.st.smoke;
       if (chim && (sm.length < 14) && Math.random() < dt / 260) sm.push({ x: chim.x, y: chim.y, a: 1 });
       g.fillStyle = pal.smoke;
