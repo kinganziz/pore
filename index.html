@@ -1286,6 +1286,7 @@
   #projectsBody .proj-bar i { border-radius: 0; background: repeating-linear-gradient(90deg, var(--good) 0 9px, transparent 9px 11px); filter: drop-shadow(0 0 3px color-mix(in srgb, var(--good) 60%, transparent)); }
   #projectsBody .proj-go { position: absolute; right: 8px; bottom: 12px; color: var(--gold); text-transform: uppercase; font-size: 12px; letter-spacing: 1px; text-shadow: 1px 1px 0 rgba(0, 0, 0, .5); }
   #projectsBody .proj-x { width: 36px; height: 44px; border: 0 !important; background: none !important; box-shadow: none !important; color: var(--soft); font-size: 22px; opacity: .55; transition: opacity .15s, color .15s; }
+  #projectsBody .proj-x svg { width: 12px; height: 12px; display: block; margin: 0 auto; }   /* a square pixel cross (the font's x was tall and narrow) */
   #projectsBody .proj-x:hover, #projectsBody .proj-x:focus-visible { opacity: 1; color: var(--bad); }
   @media (prefers-reduced-motion: reduce) { #projectsBody .proj-open::before { animation: none; } }
 </style>
@@ -4230,7 +4231,7 @@ function createSolver() {
         `<span class="proj-bar"><i style="width:${pct}%"></i></span>` +
         `<small>${pr.total ? `${pr.done || 0}/${pr.total} steps done` : 'not started'}${pr.star ? ' · ★' : ''}</small></span>` +
         `${i === 0 ? '<span class="proj-go">Continue ›</span>' : ''}</button>` +
-        `<button class="proj-x" type="button" data-action="project-remove" data-id="${esc(pr.id)}" aria-label="Remove ${esc(pr.name)} from my projects" title="Remove from my projects">×</button></div>`;
+        `<button class="proj-x" type="button" data-action="project-remove" data-id="${esc(pr.id)}" aria-label="Remove ${esc(pr.name)} from my projects" title="Remove from my projects"><svg viewBox="0 0 7 7" shape-rendering="crispEdges"><path fill="currentColor" d="M0 0h2v1h1v1h1V1h1V0h2v2H6v1H5v1h1v1h1v2H5V6H4V5H3v1H2v1H0V5h1V4h1V3H1V2H0z"/></svg></button></div>`;
     }).join('');
     return `<div class="card projects"><div class="section-title"><h3>My projects</h3><span class="hint">${projects.length} item${projects.length === 1 ? '' : 's'}</span></div><div class="proj-list">${rows}</div></div>`;
   }
