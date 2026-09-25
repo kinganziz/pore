@@ -1572,6 +1572,15 @@
   /* screensaver: the app fades away, the scene stays */
   body.saver > :where(:not(#scene):not(script)) { opacity: 0 !important; pointer-events: none !important; transition: opacity .8s ease; }   /* fades out; comes back at once */
   body.saver { cursor: none; }
+  .ip-place { display: block; padding: 0; border: 0; background: none; font: inherit; font-size: 15px; font-weight: 700; color: var(--text); text-align: left; cursor: pointer; text-decoration: underline dotted color-mix(in srgb, var(--gold) 60%, transparent); text-underline-offset: 3px; }
+  .ip-place:active { color: var(--gold); }
+  .item-where { margin: 4px 0 2px; }
+  .item-where > summary { cursor: pointer; color: var(--gold); font-size: 15px; list-style: none; padding: 4px 0; }
+  .item-where > summary::before { content: "▸ "; }
+  .item-where[open] > summary::before { content: "▾ "; }
+  .item-where > summary::-webkit-details-marker { display: none; }
+  .item-where .ip-sec > .ip-lab:first-child { display: none; }
+  .item-where .ip-sec { margin-top: 6px; }
 </style>
 </head>
 <body>
@@ -2313,6 +2322,7 @@ __SOLVER_JS__
       <div class="stat-list">${rows}</div>
       ${assumed ? `<div class="assumed-note">Dashed category = not listed on the wiki's refining page, best guess. Change it if you know better.</div>` : ''}
       ${sameFormulaHTML(item)}
+      ${item.key !== 'custom' && (WHERE[item.key] || []).length ? `<details class="item-where"><summary>Where to get base items</summary>${whereHTML(item.key)}</details>` : ''}
       <div class="item-actions">
         <button class="btn small" type="button" data-action="open-picker">Change item</button>
         ${item.key !== 'custom' ? `<button class="btn small ghost" type="button" data-action="compare-pick">Compare</button>` : ''}
@@ -4627,7 +4637,8 @@ __SOLVER_JS__
     login: ['#7ee07a', 'M1 1h6v6H1zM2 3v3h4V3z'],
     free: ['#ffd23a', 'M3 0h2v3h3v2H5v3H3V5H0V3h3z'],
   };
-  const srcRow = (kind, title, sub, links) => `<div class="ip-src"><svg class="ip-glyph" viewBox="0 0 8 8" shape-rendering="crispEdges"><path fill="${SRC_GLYPH[kind][0]}" d="${SRC_GLYPH[kind][1]}"/></svg><div><b>${esc(title)}</b><small>${sub}</small>${links ? `<span class="ip-links">${links}</span>` : ''}</div></div>`;
+  const PLACE_KINDS = new Set(['mob', 'find', 'enc', 'mine', 'chest', 'shop', 'boss']);
+  const srcRow = (kind, title, sub, links) => `<div class="ip-src"><svg class="ip-glyph" viewBox="0 0 8 8" shape-rendering="crispEdges"><path fill="${SRC_GLYPH[kind][0]}" d="${SRC_GLYPH[kind][1]}"/></svg><div>${PLACE_KINDS.has(kind) ? `<button type="button" class="ip-place" data-action="inv-place" data-q="${esc(title)}" title="Everything from ${esc(title)}">${esc(title)}</button>` : `<b>${esc(title)}</b>`}<small>${sub}</small>${links ? `<span class="ip-links">${links}</span>` : ''}</div></div>`;
   function whereHTML(key) {
     const list = (WHERE[key] || []).slice().sort((a, b) => (SRC_ORDER[a[0]] - SRC_ORDER[b[0]]) || ((typeof b[2] === 'number' ? b[2] : 0) - (typeof a[2] === 'number' ? a[2] : 0)));
     if (!list.length) return '';
@@ -4772,7 +4783,8 @@ __SOLVER_JS__
       case 'close-charms': closeCharms(); break;
       case 'inv-tab': invTab = el.dataset.tab; invSel = null; haptic(6); renderCharms(); break;   // the category icons at the bottom
       case 'inv-sel': invSel = invSel === el.dataset.key ? null : el.dataset.key; haptic(6); invRenderGrid(); break;
-      case 'inv-go': invSel = el.dataset.key; haptic(6); invRenderGrid(); { const cd = document.querySelector('#invPop .ip-card'); if (cd) cd.scrollTop = 0; } break;   // an item named inside a card
+      case 'inv-place': invQ = el.dataset.q; invSel = null; haptic(6); if (ui.charmsSheet.hidden) tabGo('inventory'); else renderCharms(); toast(`Everything from ${el.dataset.q}`); break;
+      case 'inv-go': invSel = el.dataset.key; haptic(6); if (ui.charmsSheet.hidden) { tabGo('inventory'); break; } invRenderGrid(); { const cd = document.querySelector('#invPop .ip-card'); if (cd) cd.scrollTop = 0; } break;   // an item named inside a card
       case 'inv-pop-close': if (el.id === 'invPop' && e.target !== el) break; invSel = null; invRenderGrid(); break;   // the × or a tap beside the card (not inside it)
       case 'inv-gear': invGear = !invGear; try { localStorage.setItem('pore.invgear.v1', invGear ? '1' : '0'); } catch (err) { /* ignore */ } haptic(6); renderCharms(); toast(invGear ? 'Gear only' : 'Everything'); break;
       case 'inv-view': invView = el.dataset.view; try { localStorage.setItem('pore.invview.v1', invView); } catch (err) { /* ignore */ } renderCharms(); break;
