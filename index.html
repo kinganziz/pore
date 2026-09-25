@@ -2531,6 +2531,20 @@ function createSolver() {
     }
     return out.sort((a, b) => b.y - a.y || a.mi - b.mi);
   }
+  // How many tries (fights, encounters, finds, buys, swings at a node) a number of an item takes, from its best
+  // source: an encounter giving 7 at 65% averages 4.5 a try; a monster dropping it at 10% takes 10 fights for one
+  // (a crafted item counts the tries for its ingredients, through every recipe, if that is fewer)
+  function triesFor(key, n, depth = 0) {
+    let best = 0;
+    for (const e of WHERE[key] || []) {
+      const y = e[0] === 'enc' ? (+e[2] || 0) / 100 * (+e[3] || 1) : e[0] === 'mob' || e[0] === 'find' ? (+e[2] || 0) / 100 : ['shop', 'mine'].includes(e[0]) ? 1 : 0;
+      best = Math.max(best, y);
+    }
+    let t = best ? n / best : Infinity;
+    const r = depth < 6 && recipeOf(key);
+    if (r) { let c = 0; for (const [ik, m] of r) { const ti = triesFor(ik, n * m, depth + 1); if (ti == null) { c = Infinity; break; } c += ti; } t = Math.min(t, c); }
+    return Number.isFinite(t) ? Math.round(t) : null;
+  }
   const mapLink = m => m ? `<button type="button" class="ip-map" data-action="inv-place" data-q="${esc(m)}">${esc(m)}</button>` : '';
   const bestBetHTML = (key, always) => { const b = bestSources(key); if (!b.length || (!always && b.length < 2)) return '';
     return `<div class="ip-best"><span>Best bet</span> ${esc(b[0].text)}${b[0].map ? ` in ${mapLink(b[0].map)}` : ''}</div>`; };
@@ -4495,7 +4509,7 @@ function createSolver() {
             Choose an item
           </button>
           ${projects[0] ? `<button type="button" class="home-continue" data-action="project-open" data-id="${esc(projects[0].id)}">Continue: <b>${esc(projects[0].name)} → P${projects[0].L}</b>${projects[0].total ? ` · ${projects[0].done || 0}/${projects[0].total} steps` : ''} ›</button>` : ''}
-          ${(() => { const n = projects.reduce((t, pr) => t + (pr.saved || 0), 0); return n > 0 ? `<p class="home-saved"><b>${fmt(n)}</b> base items spared so far</p>` : ''; })()}
+          ${(() => { const n = projects.reduce((t, pr) => t + (pr.saved || 0), 0); const tries = triesSaved(); return n > 0 ? `<p class="home-saved"><b>${fmt(n)}</b> base items spared${tries ? ` · ~${fmt(tries)} tries skipped` : ' so far'}</p>` : ''; })()}
         </div>
       </section>`;
     const dealRow = deals.length ? `<section class="card home-panel home-deals">
@@ -5319,9 +5333,10 @@ function createSolver() {
     openGuide();   // a project goes straight to the guide at the next step (back returns to the plan)
   }
   // what PORE has spared you across your projects: base items you never have to gather
+  function triesSaved() { return projects.reduce((t, pr) => t + ((pr.saved && pr.key && triesFor(pr.key, pr.saved)) || 0), 0); }
   function savedTotalHTML() {
-    const n = projects.reduce((t, pr) => t + (pr.saved || 0), 0);
-    return n > 0 ? `<p class="proj-saved"><b>${fmt(n)}</b> base items you won't have to gather across your projects. Less grind, more life.</p>` : '';
+    const n = projects.reduce((t, pr) => t + (pr.saved || 0), 0), tries = triesSaved();
+    return n > 0 ? `<p class="proj-saved"><b>${fmt(n)}</b> base items you won't have to gather across your projects${tries ? `: about <b>${fmt(tries)}</b> fights, encounters and finds you skip` : ''}. Less grind, more life.</p>` : '';
   }
   // Everything your projects still need, added up, minus what you own, each with the quickest way to get it
   function shoppingHTML() {
