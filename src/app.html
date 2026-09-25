@@ -1629,12 +1629,14 @@
   @keyframes mq-ph { 0%, 18% { text-indent: 0; } 82%, 100% { text-indent: var(--mq); } }
   @media (prefers-reduced-motion: reduce) { .mq > .mq-in, input.mq-ph { animation: none; } }
   .ie-acts button.armed { background: var(--bad, #e2343e) !important; color: #fff !important; }
-  /* icons only: no names under them, so as many columns as fit (about 7 on a phone) */
-  .slots:not(.named) { grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap: 6px; }
-  /* the title card gets a soft glass panel so its text reads over any scene (lighthouse, boats, trees) */
-  .hb-carousel { padding: 10px 0 8px; border-radius: 16px; background: rgba(8, 10, 28, .42); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08), 3px 3px 0 rgba(0, 0, 0, .25);
-    -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
-  :root[data-sky="day"] .hb-carousel { background: rgba(255, 255, 255, .5); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .6), 3px 3px 0 rgba(0, 0, 0, .12); }
+  /* icons only: icons keep the size they have with names (about 39px on a phone); the cells lose their spare
+     room instead, so more fit on a row (7 on a phone) */
+  .slots:not(.named) { grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 4px; max-width: none; }
+  .slots:not(.named) .slot.slot .pixel, .slots:not(.named) .slot.slot > svg { width: 39px; }
+  @media (min-width: 480px) {
+    .slots:not(.named) { grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); }
+    .slots:not(.named) .slot.slot .pixel, .slots:not(.named) .slot.slot > svg { width: 52px; }
+  }
   .map-head { display: grid; grid-template-columns: 112px 1fr; gap: 12px; align-items: start; margin: 0 2px 14px; }
   .map-head .map-pic { width: 112px; height: 80px; }
   .map-head small { color: var(--gold); font-size: 13px; }
@@ -1648,6 +1650,8 @@
   @media (hover: hover) { .proj-new:hover { background: color-mix(in srgb, var(--gold) 8%, transparent); } }
   .gm-opts button { white-space: nowrap; }   /* "1 min" stays on one line */
   .gm-opts { flex: 0 0 auto; }
+  .ip-map { display: inline; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+  @media (hover: hover) { .ip-map:hover { color: var(--gold); } }
 </style>
 </head>
 <body>
@@ -4957,9 +4961,13 @@ __SOLVER_JS__
         .forEach(it => {
           const gear = ITEM_BY_KEY.has(it.key);
           rows.push({ key: it.key, icon: iconSVG(it.key), n: has(it) ? invQty(inv.items[it.key]) : '', cls: has(it) ? '' : 'off', glow: gear ? '#3aa84a' : '#4aa8ff', label: it.name, lv: gear && has(it) ? 'I' : '',
-            ch: mc && mc.get(it.key)[0] ? chanceShort(mc.get(it.key)) : '',
+            ch: mc && mc.get(it.key)[0] ? chanceShort(mc.get(it.key)) : '', cv: mc ? mc.get(it.key)[0] : null,
             sub: (mc && mc.get(it.key)[0] ? chanceTxt(mc.get(it.key)) + ' · ' : '') + (gear ? `${TYPE_SINGULAR[it.type] || ''} · ${statsLine(it)}` : `${GOOD_SINGULAR[it.type] || ''}${it.rarity ? ' · ' + it.rarity : ''}${it.desc ? ' · ' + it.desc : ''}`) });
         });
+    }
+    if (onMap) {   // charms join the items: everything on a map in order of its chance there
+      for (const r of rows) if (r.cv == null) { const c = mapChance(r.key, invMap); r.cv = c[0]; if (c[0]) { r.ch = chanceShort(c); r.sub = chanceTxt(c) + ' · ' + r.sub; } }
+      rows.sort((a, b) => b.cv - a.cv);
     }
     const sel = r => invSel === r.key ? 'sel' : '';
     let html;
@@ -4998,7 +5006,8 @@ __SOLVER_JS__
   function whereHTML(key) {
     const list = (WHERE[key] || []).slice().sort((a, b) => (SRC_ORDER[a[0]] - SRC_ORDER[b[0]]) || ((typeof b[2] === 'number' ? b[2] : 0) - (typeof a[2] === 'number' ? a[2] : 0)));
     if (!list.length) return '';
-    const at = locs => locs && locs.length ? ' · ' + locs.map(esc).join(', ') : '';
+    // map names open that map's page
+    const at = locs => locs && locs.length ? ' · ' + locs.map(l => MAP_KEYS.has(l) ? `<button type="button" class="ip-map" data-action="inv-place" data-q="${esc(l)}">${esc(l)}</button>` : esc(l)).join(', ') : '';
     const rows = list.map(e => {
       switch (e[0]) {
         case 'mob': return srcRow('mob', e[1], `monster · drops it ${e[2]}%${at(e[3])}`);
