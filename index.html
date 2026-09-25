@@ -19,7 +19,7 @@
     var d = document.documentElement, g = function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } };
     var t = g('pore.theme') || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
     d.setAttribute('data-theme', t);
-    var sk = g('pore.skin'); if (sk === 'test') sk = 'retro';
+    var sk = g('pore.skin.chosen') ? g('pore.skin') : 'pixel'; if (sk === 'test') sk = 'retro';   // Pixel (the PORE look) unless someone picked another
     d.setAttribute('data-skin', 'modern');
     if (sk === 'retro' || sk === 'pixel' || sk === 'game') { d.setAttribute('data-flavor', sk); d.setAttribute('data-finish', 'retro'); }
     d.setAttribute('data-font', g('pore.font') === 'jersey' ? 'jersey' : 'vt323');   // VT323 is the default reading font
@@ -2307,7 +2307,7 @@ function createSolver() {
   let skin = 'modern';
   function setSkin(next) {
     if (next === 'test') next = 'retro';
-    skin = SKINS[next] ? next : 'modern';
+    skin = SKINS[next] ? next : 'pixel';
     const d = document.documentElement;
     d.setAttribute('data-skin', 'modern');
     if (skin === 'modern') { d.removeAttribute('data-flavor'); d.removeAttribute('data-finish'); }
@@ -4375,8 +4375,8 @@ function createSolver() {
     const act = el.dataset.action;
     switch (act) {
       case 'home': e.preventDefault(); if (ui.pickerSheet.hidden && ui.infoSheet.hidden && ui.guideSheet.hidden) goHome(); else closeSheets(); break;
-      case 'skin': setSkin({ modern: 'retro', retro: 'pixel', pixel: 'game', game: 'modern' }[skin]); toast(SKINS[skin]); break;
-      case 'skin-pick': setSkin(el.dataset.skin); toast(SKINS[skin]); break;
+      case 'skin': try { localStorage.setItem('pore.skin.chosen', '1'); } catch (e) { /* ignore */ } setSkin({ modern: 'retro', retro: 'pixel', pixel: 'game', game: 'modern' }[skin]); toast(SKINS[skin]); break;
+      case 'skin-pick': try { localStorage.setItem('pore.skin.chosen', '1'); } catch (e) { /* ignore */ } setSkin(el.dataset.skin); toast(SKINS[skin]); break;
       case 'bg-pick': setBg(el.dataset.bg); toast(`Background: ${BG_NAMES[bgPref]}${bgPref === 'auto' ? ' (a new one each time you open PORE)' : ''}`); break;
       case 'bg-motion': setBgMotion(el.dataset.motion === 'on'); toast(bgMotion ? 'Background moves' : 'Background still: saves battery'); break;
       case 'icon-style': setIconStyle(iconStyle === 'modern' ? 'pixelhd' : 'modern'); toast(ICON_STYLES[iconStyle].label); break;
@@ -4732,7 +4732,8 @@ function createSolver() {
     setTheme(theme);
     try { const saved = localStorage.getItem(STORAGE.icons); iconStyle = ICON_STYLES[saved] ? saved : DEFAULT_ICONS; } catch (e) { /* ignore */ }
     applyLook();
-    try { setSkin(localStorage.getItem(STORAGE.skin)); } catch (e) { setSkin('modern'); }
+    // Pixel is PORE's own look and the default; a look someone picked themselves is kept
+    try { setSkin(localStorage.getItem('pore.skin.chosen') ? localStorage.getItem(STORAGE.skin) : 'pixel'); } catch (e) { setSkin('pixel'); }
     bgLoad(); syncBgPicker();
     try { setFont(localStorage.getItem(STORAGE.font)); } catch (e) { setFont('vt323'); }
     ui.catGrid.innerHTML = Object.values(CATS).map(c => `<div><span>${c.label} <b>${c.pct}</b></span><small>${c.who}</small></div>`).join('');
