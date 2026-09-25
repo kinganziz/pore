@@ -303,7 +303,7 @@ def sword_extra(ic, kind: str, cx, T, B, w) -> str:
         out += [dot(cx + w * 0.3, T + 16, 2.4, "#d9253a"), dot(cx - w * 0.4, T + 24, 1.6, "#d9253a"), dot(cx + w * 0.5, T + 30, 1.2, "#d9253a")]
     elif kind.startswith("glow"):
         color = kind.split(":", 1)[1] if ":" in kind else "#bff4ff"
-        out += [sparkle(cx + w + 6, T + 10, 4, color), sparkle(cx - w - 5, T + 26, 3, color)]
+        out.append(sparkle(cx + w * 0.15, T + w * 2.6, w * 0.6, color))   # a glint on the blade, never floating (stray pixels at 20x20)
     elif kind == "maw":   # a mouth down the blade: dark slit, fangs from both sides, an eye near the guard
         top, bot = T + 13, B - 9
         out.append(f'<path d="M{f(cx)} {f(top)} C{f(cx + w * 0.75)} {f(top + 9)} {f(cx + w * 0.75)} {f(bot - 9)} {f(cx)} {f(bot)} '
@@ -338,7 +338,7 @@ def dagger(ic, blade, *args, **kw):
 
 def axe(ic, head, handle=None, kind="crescent", double=False, edge=None):
     handle = handle or PAL["wood"]
-    s = tube(ic, "M32 8 L32 70", handle, 5)
+    s = tube(ic, "M32 15 L32 70", handle, 5)   # the top end hides inside the socket
     heads = {
         "crescent": "M33 7 L20 4 C10 6 4 16 4 27 C4 35 8 41 12 43 C14 34 22 29 33 28 Z",
         "wedge": "M33 8 L16 3 C11 12 9 22 11 33 L33 27 Z",
@@ -349,8 +349,9 @@ def axe(ic, head, handle=None, kind="crescent", double=False, edge=None):
     s.append(shape(ic, d, head, ic.lg(head, 0, 0, 1, 1)))
     if double:
         s.append(shape(ic, mirror_x(d), head, ic.lg(head, 1, 0, 0, 1)))
-    s.append(line("M8 26 C10 16 14 10 20 7", edge or HL, 2.2, 0.7) if kind != "cleaver" else line("M10 30 L10 10", edge or HL, 2.2, 0.7))
-    s.append(f'<rect x="28.5" y="4" width="7" height="26" rx="2" fill="{ic.lg(PAL["slate"], 0, 0, 1, 0)}" stroke="{PAL["slate"][3]}" stroke-width="1.4"/>')
+    edges = {"wedge": "M13.6 29 C12.6 20 13.6 12 17 6.5", "cleaver": "M11 30 L11 10"}   # just inside the cutting edge
+    s.append(line(edges.get(kind, "M8 26 C10 16 14 10 20 7"), edge or HL, 2.2, 0.7))
+    s.append(f'<rect x="28.5" y="9" width="7" height="19" rx="2" fill="{ic.lg(PAL["slate"], 0, 0, 1, 0)}" stroke="{PAL["slate"][3]}" stroke-width="1.4"/>')   # inside the head
     s.append(circle(ic, 32, 72, 3.4, handle, sw=1.4))
     return rot(s, -40)
 
@@ -392,8 +393,6 @@ def staff(ic, shaft, top="orb", gem_=None, accent=None, thin=False, rings=True):
     elif top == "coil":    # a glowing spiral around a star orb
         s += tube(ic, "M32 24 C22 24 17 14 23 7 C29 0 42 2 43 11 C44 18 36 21 32 17 C29 14 31 10 35 10", accent, 3.2)
         s += gem(ic, 34, 12.5, 4.4, gem_)
-        s.append(sparkle(19, 5, 3.4, "#fff4b0"))
-        s.append(sparkle(46, 21, 2.8, "#bff4ff"))
     elif top == "sprout":  # roots cup an earth orb, two leaves on top
         s += tube(ic, "M32 25 C24 23 21 17 23 10", shaft, 3.2) + tube(ic, "M32 25 C40 23 43 17 41 10", shaft, 3.2)
         s += gem(ic, 32, 14, 7.5, gem_)
@@ -886,30 +885,29 @@ def boot(ic, pal, trim=None, pattern=None, kind="boot", gem_=None):
         if trim:
             s.append(line("M24 38 C20 40 14 42 9 46", trim[1], 2.2))
         s.append(line("M29 15 L29 36", HL, 2.2, 0.45))
-    elif kind == "loafer":
-        s.append(shape(ic, "M6 44 C6 36 16 32 26 32 C34 32 38 26 46 26 C54 26 58 32 58 40 L58 50 C58 54 56 56 52 56 L10 56 C7 56 6 54 6 50 Z", pal))
-        s.append(f'<path d="M30 34 C36 32 42 30 50 32 C48 38 40 40 32 40 Z" fill="{pal[3]}" opacity=".55"/>')
+    elif kind == "loafer":   # a low shoe from the side: sole with a heel block, foot opening, strap with a gem
+        upper = "M5 45 C5 39 11 35.5 19 34.5 L29 33 C33 32.4 36 29.6 38.6 26.6 L53 24.2 C56.6 23.8 58.6 26.4 58.6 30 L58.6 46 L5 46 Z"
+        s.append(shape(ic, upper, pal, ic.lg(pal, 0, 0, 0, 1)))
+        sole = PAL["darkwood"]
+        s.append(shape(ic, "M4 45.5 L59.6 45.5 L59.6 50 C59.6 52 58 53 56 53 L52 53 L52 57 L43 57 L43 53 L9 53 C6 53 4 51.4 4 49 Z", sole, ic.lg(sole, 0, 0, 0, 1), 1.8))
+        s.append(f'<path d="M39.6 28.2 C44 24.4 52 23.4 56.6 26.4 C55.4 30.6 48 32.8 42 32.2 C40.4 31.9 39.3 30.2 39.6 28.2 Z" fill="{pal[3]}"/>')
+        s += tube(ic, "M27 34 C28.6 38 29.6 41.8 30 45", PAL["gold"], 3.4)
         if gem_:
-            s += gem(ic, 22, 38, 3.4, gem_)
-        s.append(line("M12 40 C16 36 22 34 28 34", HL, 2, 0.6))
+            s += gem(ic, 28.8, 38.8, 3.6, gem_)
+        s.append(line("M10 40 C14 37 20 35.6 26 35", HL, 2.2, 0.6))
     elif kind == "sandal":   # seen from above: a foot-shaped sole, a thong strap, an ankle strap
         sole = "M32 3 C44 3 48 13 47 24 C46 34 45 44 45 51 C45 57 39.5 61 32 61 C24.5 61 19 57 19 51 C19 44 18 34 17 24 C16 13 20 3 32 3 Z"
         s.append(shape(ic, sole, PAL["sand"], ic.lg(PAL["sand"], 0, 0, 0, 1)))
         s += tube(ic, "M17.6 30 L32 12.8 L46.4 30", pal, 4.8)
         s += tube(ic, "M19.2 46 C25 50.5 39 50.5 44.8 46", pal, 4.8)
         s.append(circle(ic, 32, 12.8, 3.2, pal, sw=1.4))
-    elif kind == "clog":   # a Dutch clog from the side: upturned toe, tall heel, opening on top, painted flower
-        body = "M3 31 C6 31 10 32 16 31 L31 25 C34 24 37 23.5 40 23.5 L56 21 C60 20.5 62 24 62 29 L62 46 C62 53 58 57 51 57 L22 57 C13 57 8 51 5.5 43 C4 39 2.6 35 3 31 Z"
-        s.append(shape(ic, body, pal, ic.lg(pal, 0, 0, 0.6, 1)))
-        s.append(f'<path d="M36.5 25.5 C43 22.5 52 21.5 58 23.2 C57.5 28.5 49 31 39.5 30 C37.5 29.4 36.3 27.6 36.5 25.5 Z" fill="{pal[3]}" stroke="{pal[3]}" stroke-width="1.4"/>')
-        s.append(f'<path d="M40 26.8 C45 25 51 24.6 55.5 25.4" fill="none" stroke="{pal[2]}" stroke-width="1.6" stroke-linecap="round" opacity=".8"/>')
-        for d in ("M12 40 C22 37 36 36 58 38", "M14 47 C26 45 40 45 59 46"):   # grain
-            s.append(line(d, pal[2], 1.4, 0.55))
-        for k in range(5):   # painted flower on the toe
-            a = k * 2 * math.pi / 5 - math.pi / 2
-            s.append(dot(21 + 3.2 * math.cos(a), 39.5 + 3.2 * math.sin(a), 2.2, "#e2343e"))
-        s.append(dot(21, 39.5, 1.8, "#fff2a6"))
-        s.append(line("M8 34 C14 34.5 22 32 30 28.5", HL, 2.2, 0.6))
+    elif kind == "clog":   # a Dutch clog from the side: toe curving up to a point, flat sole, tall rounded heel
+        body = ("M58 20 C62 30 62 46 57 55 L22 55 C12 55 6 47 4.2 38 C3.5 33 4 28 6 23.5 C12 27.5 20 29.6 28 28.8 "
+                "C32 28.3 34.5 26.6 37 24.6 L51 18.6 C54.5 17.8 57 18 58 20 Z")
+        s.append(shape(ic, body, pal, ic.lg(pal, 0, 0, 0, 1)))
+        s.append(f'<path d="M38 24.5 C43 17.5 53 15.4 57.4 19.2 C56 25.4 47 28.8 40.2 27.8 C38.5 27.3 37.6 26 38 24.5 Z" fill="{pal[3]}" stroke="{pal[3]}" stroke-width="1.2"/>')
+        s.append(line("M9 45 C18 48.5 34 49.5 58 47", pal[2], 1.8, 0.6))
+        s.append(line("M8.4 29 C14 32 22 33 31 31", HL, 2.4, 0.65))
     elif kind == "shackle":
         s.append(f'<ellipse cx="32" cy="30" rx="24" ry="18" fill="none" stroke="#141216" stroke-width="12"/>')
         s.append(f'<ellipse cx="32" cy="30" rx="24" ry="18" fill="none" stroke="{ic.lgu(PAL["slate"])}" stroke-width="8"/>')
@@ -1320,7 +1318,7 @@ SPECS = {
     "Volcanic Boots": lambda ic: boot(ic, P["volcanic"], pattern="cracks"),
     "Warm Boots": lambda ic: boot(ic, P["copper"], trim=P["cream"]),
     "Windguard Shoes": lambda ic: boot(ic, P["magenta"], pattern="streaks"),
-    "Wooden Shoes": lambda ic: boot(ic, P["wood"], kind="clog"),
+    "Wooden Shoes": lambda ic: boot(ic, C("#ffe6b8", "#e9b46e", "#a86a36", "#2c180c"), kind="clog"),
 
     # ---------------------------------------------------------------- shields
     "Ancient Shield": lambda ic: shield(ic, "tower", C("#b8c8b8", "#6e8278", "#3a4a42", "#141c18"), P["slate"], emblem="sun"),
