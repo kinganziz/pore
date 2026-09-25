@@ -1227,7 +1227,7 @@
   /* ---------- background pictures (title screen and help page) ---------- */
   .bg-strip { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; }
   /* title screen: one small button in the corner; the pictures slide out beside it */
-  .bg-switch { position: absolute; top: 4px; left: 0; z-index: 3; display: flex; align-items: center; gap: 8px; }
+  .bg-switch { position: absolute; top: 2px; left: 2px; z-index: 3; display: flex; align-items: center; gap: 8px; }
   .bg-cur { width: 36px; height: 36px; padding: 0; border-radius: 50%; overflow: hidden; border: 2px solid rgba(255, 255, 255, .55); background: rgba(0, 0, 0, .35);
     display: grid; place-items: center; color: #fff; cursor: pointer; box-shadow: 2px 2px 0 rgba(0, 0, 0, .35); transition: transform .15s; }
   .bg-cur img { width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
@@ -1247,6 +1247,15 @@
   .in-help { flex-wrap: nowrap; }
   .in-help .bg-thumb { flex: 1 1 0; width: auto; min-width: 0; max-width: 60px; height: 40px; }   /* one row: the pictures share the width */
   .in-help .bg-thumb.icon { color: var(--text); background: var(--surface-2); }
+  /* ---------- the start screen is only the title screen, filling the space between the bars ---------- */
+  body:not(.has-item) .fresh > .home-hero { min-height: calc(100svh - var(--topbar-h, 62px) - var(--tabbar-h) - 34px); display: grid; align-content: center; }
+  .tab-icon { position: relative; }
+  .tab-badge { position: absolute; top: -4px; right: -8px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--accent); color: var(--on-accent, #fff);
+    font: 700 11px/16px var(--font); font-style: normal; text-align: center; box-shadow: 1px 1px 0 rgba(0, 0, 0, .4); }
+  .list-title small { font-weight: 400; color: var(--soft); text-transform: none; letter-spacing: 0; margin-left: 6px; }
+  #projectsBody .projects > .section-title { display: none; }   /* the sheet already says My projects */
+  .proj-empty { padding: 24px 8px; text-align: center; display: grid; gap: 8px; justify-items: center; }
+  .settings-body > .app-actions { margin-top: 4px; }
 </style>
 </head>
 <body>
@@ -1334,15 +1343,23 @@
     <div class="sheet-body" id="guideBody"></div>
   </div>
 </div>
-<div class="sheet-backdrop" id="infoSheet" hidden>
-  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="infoTitle">
+<div class="sheet-backdrop" id="projectsSheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="projectsTitle">
     <div class="sheet-head">
-      <h2 id="infoTitle">How PORE works</h2>
-      <button class="icon-btn" type="button" data-action="close-info" aria-label="Close">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
-      </button>
+      <h2 id="projectsTitle">My projects</h2>
+      <button class="icon-btn" type="button" data-action="close-projects" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
-    <div class="sheet-body info-body">
+    <div class="sheet-body" id="projectsBody"></div>
+  </div>
+</div>
+
+<div class="sheet-backdrop" id="settingsSheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <div class="sheet-head">
+      <h2 id="settingsTitle">Settings</h2>
+      <button class="icon-btn" type="button" data-action="close-settings" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="sheet-body info-body settings-body">
       <div class="app-actions">
         <button class="btn small" type="button" data-action="reload"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg>Reload app</button>
         <button class="btn small" type="button" data-action="check-update"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Check for update</button>
@@ -1364,6 +1381,19 @@
         <button class="btn small ghost" type="button" data-action="backup-paste">Paste code</button>
         <button class="btn small ghost" type="button" data-action="intro-replay" style="grid-column: 1 / -1">Replay the intro</button>
       </div><input type="file" id="backupFile" accept=".json,application/json" hidden></div>
+    </div>
+  </div>
+</div>
+
+<div class="sheet-backdrop" id="infoSheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="infoTitle">
+    <div class="sheet-head">
+      <h2 id="infoTitle">How PORE works</h2>
+      <button class="icon-btn" type="button" data-action="close-info" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body info-body">
       <p>Refining combines two copies of the same item. The <b>base</b> item goes up one level and gains stats from the <b>material</b> item. A "perfect" refine uses two identical items, so a perfect P10 normally eats 512 base items (1 → 2 → 4 → … → 512).</p>
       <p><b>World boss weapons</b> can only be refined up to <b>P5</b> (16 base items the standard way), so PORE lists them in their own group and caps their plans at P5. Their refining fees are paid in world boss tokens (WB) instead of gold: 125 at P2, 250 at P3, 375 at P4 and 500 at P5.</p>
       <p>PORE searches every other way to combine items. Because stat gains are rounded down and every refine adds at least +2, weaker materials often reach the very same stats. The planner keeps only the cheapest way to reach each stat combination at each level and builds up to your target, so the answer is the cheapest plan under the chosen formula.</p>
@@ -1909,7 +1939,7 @@ function createSolver() {
   /* ================= state ================= */
   const state = { item: null, custom: null, L: 10, w: 0, wl: 0, t: {}, o: [], k: {}, stock: 0, view: 'up', m: 'exact', cf: 0, ch: {} };
   const ui = {};
-  ['tabbar', 'itemBody', 'itemHint', 'targetCard', 'targetBody', 'targetHint', 'ownedCard', 'ownedBody', 'resultsBody', 'pickerSheet', 'pickerBody', 'filters', 'searchInput', 'infoSheet', 'guideSheet', 'guideBody', 'toast', 'fx', 'themeBtn', 'infoBtn', 'catGrid', 'dataDate']
+  ['projectsSheet', 'projectsBody', 'settingsSheet', 'tabbar', 'itemBody', 'itemHint', 'targetCard', 'targetBody', 'targetHint', 'ownedCard', 'ownedBody', 'resultsBody', 'pickerSheet', 'pickerBody', 'filters', 'searchInput', 'infoSheet', 'guideSheet', 'guideBody', 'toast', 'fx', 'themeBtn', 'infoBtn', 'catGrid', 'dataDate']
     .forEach(id => ui[id] = document.getElementById(id));
   const picker = { q: '', type: 'ALL', sort: 'name', view: 'grid' };   // views: list, grid (icon + name + cost), icons
   try { const v = localStorage.getItem('pore.pickerview'); if (['list', 'grid', 'icons'].includes(v)) picker.view = v; } catch (e) { /* ignore */ }
@@ -2023,6 +2053,8 @@ function createSolver() {
     if (st.sheet !== 'picker') closePicker({ fromHistory: true });
     if (st.sheet !== 'info') closeInfo({ fromHistory: true });
     if (st.sheet !== 'guide') closeGuide({ fromHistory: true });
+    if (st.sheet !== 'projects') closeProjects({ fromHistory: true });
+    if (st.sheet !== 'settings') closeSettings({ fromHistory: true });
     const m = /[#&]s=([A-Za-z0-9_-]+)/.exec(location.hash);
     const want = m ? m[1] : '';
     const have = state.item ? b64url(JSON.stringify(encodeState(true))) : '';
@@ -3258,21 +3290,26 @@ function createSolver() {
     resetPlan(); pendingScroll = lastPlanY; lastPlanY = null;   // back where you were on the page
     jumpTo(0); renderAll(); scheduleSolve(0);
   }
+  const TAB_PROJECTS = '<svg class="tab-glyph" viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M3 1h10v14H3v-1H2V2h1zM4 3v10h8V3zM5 4h6v1H5zM5 6h6v1H5zM5 8h4v1H5zM5 10h5v1H5z"/></svg>';
+  const TAB_SETTINGS = '<svg class="tab-glyph" viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M7 0h2v2h1V1h2v2h1v2h2v2h-1v2h1v2h-2v2h-1v1h-2v-1H9v2H7v-2H6v1H4v-2H3v-2H1V9h1V7H1V5h2V3h1V1h2v1h1zM7 5v1H6v1H5v2h1v1h1v1h2v-1h1V9h1V7h-1V6H9V5z"/></svg>';
   function renderTabbar() {
-    const t = planTarget();
-    const planIcon = t && t.key ? iconSVG(t.key) : iconSVG((ITEMS.find(it => it.name === 'Telescope') || ITEMS[0]).key);
-    const lock = !t;
-    const tab = (id, icon, label, needsPlan) => `<button class="tab ${needsPlan && lock ? 'locked' : ''}" type="button" data-action="tab" data-tab="${id}"${needsPlan && lock ? ' aria-disabled="true" title="Open an item first"' : ''}><span class="tab-icon">${icon}</span><span class="tab-label">${label}</span></button>`;
+    const tab = (id, icon, label, badge) => `<button class="tab" type="button" data-action="tab" data-tab="${id}"><span class="tab-icon">${icon}${badge ? `<i class="tab-badge">${badge}</i>` : ''}</span><span class="tab-label">${label}</span></button>`;
     ui.tabbar.innerHTML = tab('home', TAB_HOME, 'Home') +
       tab('items', iconSVG((ITEMS.find(it => it.name === 'Iron Sword') || ITEMS[0]).key), 'Items') +
-      tab('plan', planIcon, 'Plan', true) +
-      tab('guide', '<img src="icons/app/anz.png?v=3" alt="" width="124" height="128" draggable="false">', 'Guide', true) +
+      tab('projects', TAB_PROJECTS, 'Projects', projects.length || '') +
+      tab('settings', TAB_SETTINGS, 'Settings') +
       tab('help', TAB_HELP, 'Help');
+    renderProjects();
     syncTabbar();
+  }
+  // which tab a screen belongs to: an open plan (and its guide) lives under Projects
+  function currentTab() {
+    return !ui.pickerSheet.hidden ? 'items' : !ui.infoSheet.hidden ? 'help' : !ui.projectsSheet.hidden ? 'projects' : !ui.settingsSheet.hidden ? 'settings'
+      : (state.item || !ui.guideSheet.hidden) ? 'projects' : 'home';
   }
   function syncTabbar() {
     if (!ui.tabbar) return;
-    const on = !ui.guideSheet.hidden ? 'guide' : !ui.pickerSheet.hidden ? 'items' : !ui.infoSheet.hidden ? 'help' : state.item ? 'plan' : 'home';
+    const on = currentTab();
     ui.tabbar.querySelectorAll('.tab').forEach(b => {
       const was = b.classList.contains('on'), now = b.dataset.tab === on;
       b.classList.toggle('on', now); b.setAttribute('aria-current', now ? 'page' : 'false');
@@ -3283,17 +3320,15 @@ function createSolver() {
   function replaceEntry(extra, url) { try { history.replaceState(navEntry(extra), '', url || location.href); } catch (e) { /* ignore */ } }
   function tabGo(id) {
     haptic(8);
-    const open = { items: !ui.pickerSheet.hidden, help: !ui.infoSheet.hidden, guide: !ui.guideSheet.hidden };
+    const open = { items: !ui.pickerSheet.hidden, help: !ui.infoSheet.hidden, projects: !ui.projectsSheet.hidden, settings: !ui.settingsSheet.hidden, guide: !ui.guideSheet.hidden };
     if (open[id]) return;
     if (id === 'home') bgNext();   // Auto background: a new scene on every Home tap
-    const t = planTarget();
-    if ((id === 'plan' || id === 'guide') && !t) { toast('Open an item first: Plan and Guide follow it'); return; }
     const inSheet = Object.values(open).some(Boolean);
-    // leaving a sheet for the screen right under it (the plan, or the start screen) is a plain Back
-    if (inSheet && ((id === 'plan' && state.item) || (id === 'home' && !state.item))) { closeSheets(); return; }
+    // leaving a sheet for the start screen right under it is a plain Back
+    if (inSheet && id === 'home' && !state.item) { closeSheets(); return; }
     // anything else switches in place: the sheet is hidden without stepping back in history and the next screen
-    // takes over its history entry, so the item screen underneath never flashes up in between
-    if (inSheet) { closePicker({ fromHistory: true }); closeInfo({ fromHistory: true }); closeGuide({ fromHistory: true }); }
+    // takes over its history entry, so the screen underneath never flashes up in between
+    if (inSheet) { closePicker({ fromHistory: true }); closeInfo({ fromHistory: true }); closeGuide({ fromHistory: true }); closeProjects({ fromHistory: true }); closeSettings({ fromHistory: true }); }
     const sheet = (name, openFn) => { openFn({ fromHistory: inSheet }); if (inSheet) replaceEntry({ sheet: name }); };
     if (id === 'home') {
       if (!state.item) window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
@@ -3301,19 +3336,15 @@ function createSolver() {
       else { pushScreen({}, location.pathname + location.search); showHome(); }   // always the start screen, whatever came before
     }
     else if (id === 'items') sheet('picker', openPicker);
+    else if (id === 'projects') sheet('projects', openProjects);
+    else if (id === 'settings') sheet('settings', openSettings);
     else if (id === 'help') sheet('info', openInfo);
-    else if (id === 'plan') {
-      if (!state.item) openPlan(t.snap);
-    } else if (id === 'guide') {
-      if (state.item) { upsertProject({}); sheet('guide', openGuide); }
-      else { openPlan(t.snap); upsertProject({}); openGuide(); }
-    }
   }
 
-  // Swipe sideways on an empty part of any screen to move between the tab pages (Home, Items, Plan, Guide, Help).
+  // Swipe sideways on an empty part of any screen to move between the tab pages (Home, Items, Projects, Settings, Help).
   // Ignored where something scrolls sideways already, on inputs, at the screen edges (the phone's own back
   // gesture) and for mostly vertical moves.
-  const TAB_ORDER = ['home', 'items', 'plan', 'guide', 'help'];
+  const TAB_ORDER = ['home', 'items', 'projects', 'settings', 'help'];
   let swipe = null;
   function swipeBlocked(el) {
     for (let n = el; n && n !== document.body; n = n.parentElement) {
@@ -3331,13 +3362,8 @@ function createSolver() {
     const t = e.changedTouches[0], dx = t.clientX - swipe.x, dy = t.clientY - swipe.y, quick = performance.now() - swipe.at < 700;
     swipe = null;
     if (!quick || Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.8) return;
-    const now = !ui.guideSheet.hidden ? 'guide' : !ui.pickerSheet.hidden ? 'items' : !ui.infoSheet.hidden ? 'help' : state.item ? 'plan' : 'home';
-    const step = dx < 0 ? 1 : -1, open = planTarget();
-    for (let i = TAB_ORDER.indexOf(now) + step; i >= 0 && i < TAB_ORDER.length; i += step) {
-      const id = TAB_ORDER[i];
-      if ((id === 'plan' || id === 'guide') && !open) continue;   // locked until an item has been opened
-      tabGo(id); break;
-    }
+    const i = TAB_ORDER.indexOf(currentTab()) + (dx < 0 ? 1 : -1);
+    if (i >= 0 && i < TAB_ORDER.length) tabGo(TAB_ORDER[i]);
   }, { passive: true });
 
   /* ================= home screen ================= */
@@ -3362,11 +3388,11 @@ function createSolver() {
     const std = it => Math.pow(2, maxOf(it) - 1);
     const pct = it => Math.round((1 - badges[it.key] / std(it)) * 100);
     const hero = `<section class="home-hero">
+        <div class="bg-switch">
+          <button class="bg-cur" type="button" data-action="bg-toggle" aria-expanded="false" aria-label="Change background" title="Background">${bgCurHTML()}</button>
+          <div class="bg-strip" role="group" aria-label="Background">${bgStripHTML(false)}</div>
+        </div>
         <div class="home-copy">
-          <div class="bg-switch">
-            <button class="bg-cur" type="button" data-action="bg-toggle" aria-expanded="false" aria-label="Change background" title="Background">${bgCurHTML()}</button>
-            <div class="bg-strip" role="group" aria-label="Background">${bgStripHTML(false)}</div>
-          </div>
           <span class="home-kicker">~ Pixel Odyssey ~</span>
           <h1 class="home-title ${titleDrop ? 'drop' : ''}"><i class="tw" style="--i:0">Max</i> <i class="tw" style="--i:1">your</i> <i class="tw" style="--i:2">gear</i><br><span>for a fraction.</span></h1>
           <p class="home-sub">A perfect P10 normally eats <b>512</b> base items. PORE finds the cheapest path, step by step.</p>
@@ -3400,7 +3426,7 @@ function createSolver() {
         <div class="section-title"><h3>Browse</h3><span class="hint">by type</span></div>
         <div class="type-grid">${types}<button class="type-tile" type="button" data-action="browse" data-type="CUSTOM">${filterIcon('CUSTOM')}<span>Custom</span></button></div>
       </section>`;
-    return hero + projectsHTML() + dealRow + browse + tipHTML();
+    return hero;   // just the title screen: projects, deals and settings live in their own tabs
   }
   let titleDrop = true, homeAuto = 0;   // the title drops in once per visit; the item cards turn by themselves until touched
   function countUpHome() {
@@ -3959,10 +3985,13 @@ function createSolver() {
     const box = icons ? 'icon-grid' : grid ? 'tile-grid' : 'list';
     const viewSeg = `<div class="seg view-seg" role="group" aria-label="View"><button type="button" class="${grid || icons ? '' : 'on'}" data-action="picker-view" data-view="list" aria-label="List view" title="List"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg></button><button type="button" class="${grid ? 'on' : ''}" data-action="picker-view" data-view="grid" aria-label="Icon view" title="Icons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg></button><button type="button" class="${icons ? 'on' : ''}" data-action="picker-view" data-view="icons" aria-label="Icons only" title="Icons only"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="3.5" y="3.5" width="4.5" height="4.5" rx="1"/><rect x="9.75" y="3.5" width="4.5" height="4.5" rx="1"/><rect x="16" y="3.5" width="4.5" height="4.5" rx="1"/><rect x="3.5" y="9.75" width="4.5" height="4.5" rx="1"/><rect x="9.75" y="9.75" width="4.5" height="4.5" rx="1"/><rect x="16" y="9.75" width="4.5" height="4.5" rx="1"/><rect x="3.5" y="16" width="4.5" height="4.5" rx="1"/><rect x="9.75" y="16" width="4.5" height="4.5" rx="1"/><rect x="16" y="16" width="4.5" height="4.5" rx="1"/></svg></button></div>`;
     let html = `<div class="sort-row"><span>${list.length} item${list.length === 1 ? '' : 's'}</span><div class="sort-tools">${viewSeg}<div class="seg"><button type="button" class="${picker.sort === 'name' ? 'on' : ''}" data-action="sort" data-sort="name">A–Z</button><button type="button" class="${picker.sort === 'cost' ? 'on' : ''}" data-action="sort" data-sort="cost">Cheapest<span class="p10"> ${picker.type === 'BOSS' ? 'P5' : picker.type === 'ALL' ? 'max' : 'P10'}</span></button></div></div></div>`;
-    if (!q && picker.type === 'ALL' && recent.length) {
+    if (!q && picker.type === 'ALL') {   // shelves above the full list: the best deals, then what you opened lately
+      const deals = homeDeals();
       let rec = recent.map(k => ITEM_BY_KEY.get(k)).filter(Boolean);
       if (picker.sort === 'cost') rec = rec.slice().sort(byCost);
-      if (rec.length) html += `<div class="list-title">Recent</div><div class="${box}">${rec.map(cell).join('')}</div><div class="list-title">All items</div>`;
+      if (deals.length) html += `<div class="list-title">Best deals <small>cheapest to max</small></div><div class="${box}">${deals.map(cell).join('')}</div>`;
+      if (rec.length) html += `<div class="list-title">Recent</div><div class="${box}">${rec.map(cell).join('')}</div>`;
+      if (deals.length || rec.length) html += `<div class="list-title">All items</div>`;
     }
     html += list.length ? `<div class="${box}">${list.map(cell).join('')}</div>` : '<div class="empty-note" style="padding:20px;text-align:center">No items match. Try a stat name like "crit" or pick Custom.</div>';
     setWithImages(ui.pickerBody, html);
@@ -4149,7 +4178,7 @@ function createSolver() {
   function removeProject(id) { projects = projects.filter(x => x.id !== id); saveProjects(); }
   function openProject(id) {
     const pr = projects.find(x => x.id === id); if (!pr) return;
-    closePicker({ keepHistory: true });
+    closePicker({ keepHistory: true }); closeProjects({ fromHistory: true });
     pushScreen({}, location.pathname + location.search + '#s=');
     try { applyState(JSON.parse(pr.snap)); } catch (e) { return; }
     resetPlan(); pendingScroll = null; revealResults = true;
@@ -4446,7 +4475,27 @@ function createSolver() {
   }
   function renderAll() { renderItem(); renderTarget(); renderOwned(); renderResults(); persist(); renderTabbar(); }
   function afterChange() { renderTarget(); renderOwned(); persist(); scheduleSolve(); }
-  function closeSheets() { closePicker(); closeInfo(); closeGuide(); }
+  function closeSheets() { closePicker(); closeInfo(); closeGuide(); closeProjects(); closeSettings(); }
+  // Projects and Settings: plain sheets with a history entry each, like Help
+  function openPlainSheet(name, el, opts) {
+    if (!el.hidden) return;
+    if (!(opts && opts.fromHistory)) pushScreen({ sheet: name });
+    el.hidden = false; document.body.classList.add('locked');
+  }
+  function closePlainSheet(name, el, opts) {
+    if (el.hidden) return;
+    if (!(opts && opts.fromHistory) && sheetOnTop(name)) { history.back(); return; }
+    el.hidden = true; document.body.classList.remove('locked');
+  }
+  function openProjects(opts) { renderProjects(true); openPlainSheet('projects', ui.projectsSheet, opts); }
+  function closeProjects(opts) { closePlainSheet('projects', ui.projectsSheet, opts); }
+  function openSettings(opts) { refreshBgStrips(); syncBgPicker(); openPlainSheet('settings', ui.settingsSheet, opts); }
+  function closeSettings(opts) { closePlainSheet('settings', ui.settingsSheet, opts); }
+  function renderProjects(force) {
+    if (!ui.projectsBody || (!force && ui.projectsSheet.hidden)) return;
+    ui.projectsBody.innerHTML = projectsHTML() || `<div class="empty-note proj-empty"><p>No projects yet.</p><p>Open an item and start its plan: it lands here, with your progress, so you can pick it up again any time.</p>
+      <button class="btn primary" type="button" data-action="open-picker">Choose an item</button></div>`;
+  }
   function openInfo(opts) {
     if (!ui.infoSheet.hidden) return;
     if (!(opts && opts.fromHistory)) pushScreen({ sheet: 'info' });
@@ -4503,6 +4552,8 @@ function createSolver() {
       case 'browse': picker.type = el.dataset.type; picker.q = ''; openPicker(); break;
       case 'close-picker': closePicker(); break;
       case 'close-info': closeInfo(); break;
+      case 'close-projects': closeProjects(); break;
+      case 'close-settings': closeSettings(); break;
       case 'clear-search': picker.q = ''; ui.searchInput.value = ''; el.hidden = true; renderPickerList(); ui.searchInput.focus(); break;
       case 'filter': picker.type = el.dataset.type; renderFilters(); renderPickerList(); break;
       case 'sort': picker.sort = el.dataset.sort; renderPickerList(); break;
@@ -4599,7 +4650,7 @@ function createSolver() {
         try { restoreBackup(JSON.parse(decodeURIComponent(escape(atob(code.trim()))))); } catch (err) { toast('That code is not a PORE backup'); }
         break;
       }
-      case 'project-remove': removeProject(el.dataset.id); renderResults(); toast('Removed from my projects'); break;
+      case 'project-remove': removeProject(el.dataset.id); renderResults(); renderProjects(); renderTabbar(); toast('Removed from my projects'); break;
       case 'project-toggle': {
         if (currentProject()) { removeProject(projectId()); toast('Removed from my projects'); }
         else { upsertProject({ star: true }); toast('Added to my projects'); burst('star', el); }
