@@ -1885,6 +1885,18 @@ __SOLVER_JS__
   const MAP_FINDS = new Map(MAPS.map(m => [m.name, []]));
   for (const [k, list] of Object.entries(WHERE)) for (const e of list) if (e[0] === 'find' && MAP_FINDS.has(e[1])) MAP_FINDS.get(e[1]).push([k, e[2]]);
   for (const l of MAP_FINDS.values()) l.sort((a, b) => b[1] - a[1]);
+  // how you get an item on one map, best chance first: [chance %, how] (ore nodes and shops count as sure things)
+  function mapChance(key, map) {
+    let best = [0, ''];
+    for (const e of WHERE[key] || []) {
+      const c = e[0] === 'find' && e[1] === map ? [e[2], 'found'] : e[0] === 'mob' && (e[3] || []).includes(map) ? [e[2], e[1]] :
+        e[0] === 'enc' && (e[4] || []).includes(map) ? [e[2], e[1]] : e[0] === 'mine' && (e[3] || []).includes(map) ? [100, 'mined'] :
+        e[0] === 'shop' && (e[3] || []).includes(map) ? [100, 'sold by ' + e[1]] : null;
+      if (c && +c[0] > best[0]) best = [+c[0], c[1]];
+    }
+    return best;
+  }
+  const chanceTxt = ([c, how]) => how === 'found' ? `found ${c}%` : how === 'mined' || how.startsWith('sold') ? how : `${how} ${c}%`;
   const mapArt = {};
   function mapPic(m) {
     if (mapArt[m.name]) return mapArt[m.name];
@@ -4929,11 +4941,12 @@ __SOLVER_JS__
       const pool = [...(show('items') ? ITEMS.filter(it => it.key !== 'custom').sort((a, b) => a.name.localeCompare(b.name)) : []), ...(show('goods') && !invGear ? GOODS : [])]
         .filter(it => hit(it.name, it.key) && typeOk(it));
       const at = new Map(pool.map((it, i) => [it.key, i]));
-      pool.sort((a, b) => (has(b) - has(a)) || (has(a) ? (inv.added[b.key] || 0) - (inv.added[a.key] || 0) : 0) || at.get(a.key) - at.get(b.key))
+      const mc = onMap ? new Map(pool.map(it => [it.key, mapChance(it.key, invMap)])) : null;   // on a map: likeliest first
+      pool.sort((a, b) => (mc ? mc.get(b.key)[0] - mc.get(a.key)[0] : 0) || (has(b) - has(a)) || (has(a) ? (inv.added[b.key] || 0) - (inv.added[a.key] || 0) : 0) || at.get(a.key) - at.get(b.key))
         .forEach(it => {
           const gear = ITEM_BY_KEY.has(it.key);
           rows.push({ key: it.key, icon: iconSVG(it.key), n: has(it) ? invQty(inv.items[it.key]) : '', cls: has(it) ? '' : 'off', glow: gear ? '#3aa84a' : '#4aa8ff', label: it.name, lv: gear && has(it) ? 'I' : '',
-            sub: gear ? `${TYPE_SINGULAR[it.type] || ''} · ${statsLine(it)}` : `${GOOD_SINGULAR[it.type] || ''}${it.rarity ? ' · ' + it.rarity : ''}${it.desc ? ' · ' + it.desc : ''}` });
+            sub: (mc && mc.get(it.key)[0] ? chanceTxt(mc.get(it.key)) + ' · ' : '') + (gear ? `${TYPE_SINGULAR[it.type] || ''} · ${statsLine(it)}` : `${GOOD_SINGULAR[it.type] || ''}${it.rarity ? ' · ' + it.rarity : ''}${it.desc ? ' · ' + it.desc : ''}`) });
         });
     }
     const sel = r => invSel === r.key ? 'sel' : '';
