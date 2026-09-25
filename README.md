@@ -6,8 +6,7 @@ than any item in them, so PORE does the slow parts for players of
 base items (a perfect P10 normally costs 512: 1 → 2 → 4 → … → 512), shows where every item comes from
 and what it is used for, and keeps count of what you own.
 
-PORE used to stand for "Pixel Odyssey Refinement Engine". It now stands for **Plan Once, Reclaim
-Evenings**.
+PORE stands for **Plan Once, Reclaim Evenings**.
 
 Live app: the repository root is a static site — enable GitHub Pages on the `main` branch (root)
 and open `index.html`.
