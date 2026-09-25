@@ -1206,8 +1206,8 @@
   @keyframes tl-pop { from { transform: scale(.2) rotate(-4deg); opacity: 0; } to { transform: none; opacity: 1; } }
   .home-best .hb-icon .pixel { animation: hb-bob 1.6s steps(4, jump-none) infinite alternate; }
   @keyframes hb-bob { from { transform: translateY(1px); } to { transform: translateY(-3px); } }
-  .tab.hop .tab-icon { animation: tab-hop .46s cubic-bezier(.3, 1.6, .5, 1); }
-  @keyframes tab-hop { 0% { transform: none; } 40% { transform: translateY(-7px) scale(1.14); } 100% { transform: none; } }
+  .tab.hop .tab-icon { animation: tab-hop .3s ease-out; }   /* a press: the icon squeezes in and springs back */
+  @keyframes tab-hop { 0% { transform: none; } 35% { transform: scale(.82); } 100% { transform: none; } }
   @media (prefers-reduced-motion: reduce) { .home-title.drop .tw, .home-title.drop span, .home-best .hb-icon .pixel, .tab.hop .tab-icon { animation: none; } }
   /* ---------- title card: one item at a time, swiped or stepped with the arrows (no peek at the next one) ---------- */
   .hb-carousel { position: relative; }
@@ -1245,7 +1245,10 @@
   .in-help .bg-thumb { flex: 1 1 0; width: auto; min-width: 0; max-width: 60px; height: 40px; }   /* one row: the pictures share the width */
   .in-help .bg-thumb.icon { color: var(--text); background: var(--surface-2); }
   /* ---------- the start screen is only the title screen, filling the space between the bars ---------- */
-  body:not(.has-item) .home-hero { min-height: calc(100svh - var(--tabbar-h) - 56px - var(--safe-b, 0px)); display: grid; align-content: center; }   /* Home: centred between the top and the tab bar */
+  /* Home: exactly the space above the tab bar, content centred, nothing to scroll */
+  body:not(.has-item) { padding-bottom: 0; }
+  body:not(.has-item) main.app { padding-top: 0; padding-bottom: 0; }
+  body:not(.has-item) .home-hero { box-sizing: border-box; min-height: calc(100svh - var(--tabbar-h)); display: grid; align-content: center; }
   .tab-icon { position: relative; }
   .tab-badge { position: absolute; top: -4px; right: -8px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--accent); color: var(--on-accent, #fff);
     font: 700 11px/16px var(--font); font-style: normal; text-align: center; box-shadow: 1px 1px 0 rgba(0, 0, 0, .4); }
@@ -2859,6 +2862,15 @@ __SOLVER_JS__
   }
   for (const t of ['pointerdown', 'keydown', 'wheel', 'touchmove']) document.addEventListener(t, saverWake, { capture: true, passive: t === 'wheel' || t === 'touchmove' });
   document.addEventListener('visibilitychange', () => { if (!document.hidden) saverWake(); });
+  function saverStart() { clearTimeout(saverT); document.body.classList.add('saver'); sceneHide(); sceneShow(); saverTick(); }
+  // a tap on empty space on Home (not on a button, the carousel or the text) starts the screensaver right away
+  document.addEventListener('click', e => {
+    if (saverOn() || document.body.classList.contains('has-item') || document.body.classList.contains('locked') || document.body.classList.contains('menu-open')) return;
+    const t = e.target;
+    if (!t || t.closest('button, a, input, textarea, select, label, [data-action], .hb-track, .home-copy > *, .bg-switch, .tabbar, .topbar, .toast')) return;
+    if (!(t.closest('main') || t === document.body || t === document.documentElement || t.id === 'scene')) return;
+    saverStart();
+  });
   function setSaver(secs) {
     saverSecs = secs;
     try { localStorage.setItem('pore.saver.v1', String(secs)); } catch (e) { /* ignore */ }
@@ -2973,7 +2985,7 @@ __SOLVER_JS__
       st.farTrees = Array.from({ length: 40 }, (_, i) => ({ x: i * 9 + r() * 5, r: 3 + Math.floor(r() * 3) }));
       st.trees = Array.from({ length: 28 }, (_, i) => ({ x: i * 13 + r() * 8, h: 5 + Math.floor(r() * 9), r: 6 + Math.floor(r() * 6), c: Math.floor(r() * 3) }));
       st.bushes = Array.from({ length: 12 }, (_, i) => ({ x: i * 30 + r() * 16, r: 3 + Math.floor(r() * 3) }));
-      st.leaves = Array.from({ length: 34 }, () => ({ x: r() * W, y: r() * H, s: 0.4 + r() * 0.8, p: r() * 6.28, c: Math.floor(r() * 3) }));
+      st.leaves = Array.from({ length: 40 }, (_, i) => ({ t: i % st.trees.length, dx: (r() - 0.5) * 2, fall: r() * 30, s: 0.4 + r() * 0.8, p: r() * 6.28 }));   // each leaf belongs to a tree
     } else if (key === 'cave') {
       st.crystals = Array.from({ length: 12 }, (_, i) => ({ x: i * 30 + r() * 14, h: 7 + Math.floor(r() * 7), c: Math.floor(r() * 3), p: r() * 6.28 }));
       st.crystals2 = Array.from({ length: 8 }, (_, i) => ({ x: i * 45 + r() * 20, h: 14 + Math.floor(r() * 12), c: Math.floor(r() * 3), p: r() * 6.28 }));
@@ -2986,7 +2998,7 @@ __SOLVER_JS__
       st.spores = Array.from({ length: 40 }, () => ({ x: r() * W, y: r() * H, s: 0.1 + r() * 0.25, p: r() * 6.28 }));
     } else if (key === 'town') {
       st.far = []; for (let x = 0; x < P;) { const w = 8 + Math.floor(r() * 12); st.far.push({ x, w, h: 20 + Math.floor(r() * 34), wins: r() }); x += w + 1; }
-      st.houses = []; for (let x = 0; x < P;) { const w = 16 + Math.floor(r() * 14); st.houses.push({ x, w, h: 14 + Math.floor(r() * 14), roof: r() < 0.7, chim: r() < 0.5, seed: Math.floor(r() * 9999) }); x += w + 2 + Math.floor(r() * 6); }
+      st.houses = []; for (let x = 0; x < P;) { const w = 16 + Math.floor(r() * 14); st.houses.push({ x, w, h: 34 + Math.floor(r() * 24), roof: r() < 0.7, chim: r() < 0.5, seed: Math.floor(r() * 9999) }); x += w + 2 + Math.floor(r() * 6); }
       st.bats = Array.from({ length: 4 }, () => ({ x: r() * W, y: 0.18 + r() * 0.2, s: 0.5 + r() * 0.6, p: r() * 6.28 }));
     }
     return st;
@@ -3082,11 +3094,15 @@ __SOLVER_JS__
     g.fillStyle = col;
     for (let k = 0; k <= r; k++) { const w = Math.round(Math.sqrt(r * r - (r - k) * (r - k))); g.fillRect(cx - w, top + k, w * 2 + 1, 1); }
   }
-  function crystal(g, x, b, h, col, hi, glow) {   // a glowing cluster of three shards standing on the ground at (x, b)
+  function crystal(g, x, bAt, h, col, hi, glow) {   // a glowing cluster of three shards; bAt(x) is the ground height there
+    const b = bAt(x);
     g.globalAlpha = 0.08 * glow; blob(g, x, b - Math.round(h / 2), Math.round(h * 0.8) + 3, col);   // a soft round glow
     g.globalAlpha = 0.12 * glow; blob(g, x, b - Math.round(h / 2), Math.round(h * 0.5) + 2, col);
     g.globalAlpha = 1;
-    const shard = (sx, sh) => { for (let k = 0; k < sh; k++) { const w = k < 2 ? 1 : 2; g.fillStyle = col; g.fillRect(sx - (w - 1), b - sh + k, w * 2, 1); g.fillStyle = hi; g.fillRect(sx - (w - 1), b - sh + k, 1, 1); } };
+    const shard = (sx, sh) => {   // each shard stands on the ground right under it, sunk in a little: never floating on a slope
+      const sb = Math.max(bAt(sx - 1), bAt(sx), bAt(sx + 1)) + 2;
+      for (let k = 0; k < sh; k++) { const w = k < 2 ? 1 : 2; g.fillStyle = col; g.fillRect(sx - (w - 1), sb - sh + k, w * 2, 1); g.fillStyle = hi; g.fillRect(sx - (w - 1), sb - sh + k, 1, 1); }
+    };
     shard(x - 3, Math.round(h * 0.6)); shard(x + 4, Math.round(h * 0.7)); shard(x, h);
   }
 
@@ -3108,12 +3124,17 @@ __SOLVER_JS__
       const nearA = [[0.015, 3, 0.9], [0.008, 9, 0.2]];
       drawRidge(g, W, H, 1.0, 0.87, nearA, pal.near);
       each(scene.st.bushes, 1.0, 8, W, (bu, x, o) => blob(g, x, Math.round(ridge(x + o, P, 0.87, nearA, H)) - bu.r + 2, bu.r, pal.bush));
-      for (const l of scene.st.leaves) {   // leaves drifting down
-        l.y += dt * l.s * 0.012; l.x += Math.sin(now * 1.3 + l.p) * 0.12 - dt * 0.004;
-        if (l.y > H) { l.y = -3; l.x = Math.random() * W; }
-        if (l.x < -3) l.x += W + 6;
-        const flat = Math.sin(now * 3 + l.p) > 0;
-        g.fillStyle = pal.leafHi[l.c]; g.fillRect(Math.round(l.x), Math.round(l.y), flat ? 2 : 1, flat ? 1 : 2);
+      const o5 = off(0.5);
+      for (const l of scene.st.leaves) {   // leaves fall from under their own tree's crown down to the ground below it
+        const t = scene.st.trees[l.t], lx = t.x + 1 + l.dx * t.r;
+        const sx = ((Math.round(lx) - o5) % P + P) % P, b = Math.round(ridge(sx + o5, P, 0.68, midA, H)), crown = b - t.h - t.r + 3;
+        l.fall += dt * l.s * 0.006;
+        const y = crown + Math.round(t.r * 0.6) + l.fall, drift = Math.round(2 * Math.sin(now * 1.3 + l.p));
+        if (y > b + 1) { l.fall = 0; l.dx = (Math.random() - 0.5) * 2; continue; }
+        for (let x = sx + drift; x <= W + 3; x += P) if (x >= -3) {
+          const flat = Math.sin(now * 3 + l.p) > 0;
+          g.fillStyle = pal.leafHi[t.c]; g.fillRect(x, Math.round(y), flat ? 2 : 1, flat ? 1 : 2);
+        }
       }
     },
     cave(g, W, H, pal, now, dt) {
@@ -3130,11 +3151,11 @@ __SOLVER_JS__
       ceil(0.2, 0.12, 18, pal.far);
       const farA = [[0.05, 2, 0.4], [0.03, 5, 1.2]];
       drawRidge(g, W, H, 0.2, 0.56, farA, pal.far);
-      each(scene.st.crystals, 0.2, 12, W, (c, x, o) => crystal(g, x, Math.round(ridge(x + o, P, 0.56, farA, H)) + 1, c.h, pal.cry[c.c], pal.cryHi[c.c], 0.6 + 0.4 * Math.sin(now * 1.2 + c.p)));
+      each(scene.st.crystals, 0.2, 12, W, (c, x, o) => crystal(g, x, sx => Math.round(ridge(sx + o, P, 0.56, farA, H)), c.h, pal.cry[c.c], pal.cryHi[c.c], 0.6 + 0.4 * Math.sin(now * 1.2 + c.p)));
       ceil(0.5, 0.05, 22, pal.mid);
       const midA = [[0.03, 3, 1.4], [0.02, 7, 0.2]];
       drawRidge(g, W, H, 0.5, 0.72, midA, pal.mid);
-      each(scene.st.crystals2, 0.5, 16, W, (c, x, o) => crystal(g, x, Math.round(ridge(x + o, P, 0.72, midA, H)) + 1, c.h, pal.cry[c.c], pal.cryHi[c.c], 0.6 + 0.4 * Math.sin(now * 0.9 + c.p)));
+      each(scene.st.crystals2, 0.5, 16, W, (c, x, o) => crystal(g, x, sx => Math.round(ridge(sx + o, P, 0.72, midA, H)), c.h, pal.cry[c.c], pal.cryHi[c.c], 0.6 + 0.4 * Math.sin(now * 0.9 + c.p)));
       g.fillStyle = pal.drop;
       for (const d of scene.st.drops) {   // water dripping from the ceiling
         d.y += dt * d.s * 0.05;
