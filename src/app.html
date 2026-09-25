@@ -1757,6 +1757,8 @@
   .craft-calc .cc-qty b { min-width: 44px; text-align: center; font-size: 18px; color: var(--gold); }
   .craft-calc .cc-list { display: flex; flex-wrap: wrap; gap: 6px; }
   .craft-calc .cc-made { margin-top: 6px; font-size: 12px; color: var(--soft); }
+  .shop-route { margin: 0 0 8px; padding: 8px 10px; border-radius: 10px; background: color-mix(in srgb, var(--gold) 12%, transparent); font-size: 13px; }
+  .shop-route > span { color: var(--gold); font-weight: 700; margin-right: 4px; } .shop-route i { color: var(--soft); font-style: normal; }
 </style>
 </head>
 <body>
@@ -4850,10 +4852,11 @@ __SOLVER_JS__
       gold += pr.need.gold || 0; wb += pr.need.wb || 0;
       for (const [k, v] of Object.entries(pr.need.charms || {})) charms[k] = (charms[k] || 0) + v;
     }
-    const rows = [];
+    const rows = [], wanted = [];   // wanted: the items still to get, for the route
     const row = (icon, name, need, have, fmtN, key) => {
       const miss = have == null ? null : Math.max(0, need - have);
       if (miss === 0) return;   // already have enough
+      if (key) wanted.push(key);
       rows.push(`<div class="shop-line"><span class="sl-ic">${icon}</span><span class="sl-main"><b>${esc(name)}</b>` +
         `<small>${miss == null ? `${fmtN(need)} needed` : `<b class="sl-short">${fmtN(miss)} to get</b> · ${fmtN(need)} needed, ${fmtN(have)} owned`}</small>` +
         (key ? bestBetHTML(key, true) : '') + `</span></div>`);
@@ -4863,7 +4866,11 @@ __SOLVER_JS__
     if (gold) row(iconSVG('u-gold'), 'Gold', gold, inv.gold != null ? inv.gold : null, v => fmtGold(v));
     if (wb) row(iconSVG('u-wb'), 'WB tokens', wb, inv.wb != null ? inv.wb : null, fmt);
     if (!rows.length && !stale) return '';
-    return `<div class="card shop-list"><div class="section-title"><h3>Still to gather</h3><span class="hint">all projects</span></div>` +
+    // the route: the maps that give the most of what is still to get, the one you unlock first on a tie
+    const route = wanted.length > 1 ? MAPS.map(m => ({ m, got: wanted.filter(k => MAP_KEYS.get(m.name).has(k)) })).filter(r => r.got.length > 1)
+      .sort((a, b) => b.got.length - a.got.length || mapAt(a.m.name) - mapAt(b.m.name)).slice(0, 2) : [];
+    const routeHTML = route.length ? `<div class="shop-route"><span>Go first</span> ${route.map(r => `${mapLink(r.m.name)} <i>${r.got.length} of ${wanted.length} things you need</i>`).join(' · then ')}</div>` : '';
+    return `<div class="card shop-list"><div class="section-title"><h3>Still to gather</h3><span class="hint">all projects</span></div>` + routeHTML +
       (rows.length ? rows.join('') : stale ? '' : '<p class="empty-note">You have everything your projects need.</p>') +
       (stale ? `<p class="empty-note">${stale} project${stale === 1 ? '' : 's'} not counted yet: open ${stale === 1 ? 'it' : 'them'} once to add ${stale === 1 ? 'its' : 'their'} needs.</p>` : '') +
       `<p class="empty-note">Counts you set in Inventory are taken off. "Best bet" is the quickest way PORE knows to get each one.</p></div>`;
