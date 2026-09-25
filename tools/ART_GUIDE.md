@@ -35,6 +35,7 @@ reference (scratch only) -> describe it -> HD drawing (SVG, 64x64, from a kit) -
 | `tools/npc_icons.py` | NPC portraits, using the skin kit | `n-<name>` |
 | `tools/boss_icons.py` | world boss portraits: the monster kit | `b-<name>` |
 | `tools/ui_icons.py` | tab bar, coins, map | `u-<name>` |
+| `tools/library_icons.py` | Library: spell and talent rune tiles, obol coins, books | `l-<name>` |
 
 Shared helpers (`modern_icons.py`): `shape` (a filled outlined path with a gradient), `circle`, `dot`, `line`,
 `tube`; colour ramps (`skin_icons.ramp`: highlight, mid, shadow, outline from one colour).
@@ -80,7 +81,9 @@ Shared helpers (`modern_icons.py`): `shape` (a filled outlined path with a gradi
 
 - HD drawings: `icons/modern/<key>.svg`; pixel sources: `icons/pixel-src/<key>.txt`; pixel icons:
   `icons/pixel/<key>.svg` and the sprite `icons/sprite-pixel.svg`.
-- Keys: `i<id>` / `c<id>` items and charms, `n-<name>` NPCs, `b-<name>` world bosses, `u-<name>` interface.
+- Keys: `i<id>` / `c<id>` items and charms, `n-<name>` NPCs, `m-<name>` monsters, `b-<name>` world bosses,
+  `l-<name>` Library entries, `u-<name>` interface. `n-`, `m-`, `b-` and `l-` go to the second sheet,
+  `icons/sprite-portraits.svg`.
 - Old kits and reference-free backups live outside the repository in `D:\data\pore-resources`.
 
 Copyright (c) 2026 anz. All rights reserved (see LICENSE).

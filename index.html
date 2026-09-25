@@ -7,7 +7,7 @@
 <meta name="description" content="Less grind, more life. PORE saves Pixel Odyssey players time: the cheapest way to refine gear, where every item comes from, and what you already own.">
 <meta name="theme-color" content="#0a0c12">
 <meta name="color-scheme" content="dark light">
-<link rel="preload" href="icons/sprite-pixel.svg?v=b8bcd1b422" as="fetch" crossorigin="anonymous">
+<link rel="preload" href="icons/sprite-pixel.svg?v=4ef70ba381" as="fetch" crossorigin="anonymous">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/app/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1762,7 +1762,9 @@
   .lib-h { margin: 14px 2px 6px; font-size: 14px; color: var(--gold); letter-spacing: 1px; text-transform: uppercase; } .lib-h small { color: var(--soft); font-size: 12px; }
   .lib-h:first-child { margin-top: 0; }
   .lib-row { border-radius: 10px; margin-bottom: 4px; background: color-mix(in srgb, var(--bg-2) 60%, transparent); }
-  .lib-row summary { list-style: none; cursor: pointer; padding: 8px 12px; display: grid; gap: 1px; }
+  .lib-row summary { list-style: none; cursor: pointer; padding: 6px 12px 6px 8px; display: grid; grid-template-columns: 40px 1fr; column-gap: 10px; row-gap: 1px; align-items: center; }
+  .lib-row summary .lib-ic { grid-row: span 2; width: 40px; height: 40px; }
+  .lib-row summary b { align-self: end; } .lib-row summary small { align-self: start; }
   .lib-row summary::-webkit-details-marker { display: none; }
   .lib-row summary b { font-size: 15px; } .lib-row summary small { color: var(--soft); font-size: 12px; }
   .lib-row[open] summary b { color: var(--gold); }
@@ -2988,7 +2990,7 @@ function createSolver() {
   let iconStyle = DEFAULT_ICONS;
   // HD images load eagerly and decode synchronously: a re-rendered list (e.g. a new group filter) then paints its
   // already-cached icons in the same frame instead of flashing empty tiles.
-  const ICONS_V = 'b8bcd1b422';
+  const ICONS_V = '4ef70ba381';
   // Re-rendering a list would create fresh <img> elements that flash empty while they load, even from cache.
   // Loaded HD images are kept in a pool and moved into the new markup instead, so they paint at once.
   const imgPool = new Map();   // src -> [loaded <img>]
@@ -3009,7 +3011,7 @@ function createSolver() {
   // Each is fetched once (the first one already started in <head>) and put into the page; icons point at it from
   // the start and fill in the moment it arrives (only if loading fails do they fall back to the files).
   const failed = {};
-  const sheetOf = key => /^[nmb]-/.test(key) ? 'sprite-portraits' : ICON_STYLES.pixelhd.sprite;
+  const sheetOf = key => /^[nmbl]-/.test(key) ? 'sprite-portraits' : ICON_STYLES.pixelhd.sprite;
   (function inlineSprites() {
     const load = sheet => fetch(`icons/${sheet}.svg?v=${ICONS_V}`).then(r => r.ok ? r.text() : Promise.reject()).then(t => {
       const box = document.createElement('div'); box.innerHTML = t;
@@ -5783,8 +5785,9 @@ function createSolver() {
     if (invTab === 'library') {   // spells, talents, obols and books: reference lists, each entry opens in place
       const L = ITEM_DB.library || {}, has = t => !q || t.toLowerCase().includes(q);
       const sec = (title, list) => list.length ? `<h3 class="lib-h">${title} <small>${list.length}</small></h3>${list.join('')}` : '';
-      const entry = (name, sub, body) => `<details class="lib-row"><summary><b>${esc(name)}</b><small>${sub}</small></summary><div class="lib-body">${body}</div></details>`;
-      const spells = (L.spells || []).filter(x => has(`${x.name} ${x.element}`)).map(x => entry(x.name, `${esc(ELEMENT(x.element))} · ${x.mana} mana · ${x.cooldown}s cooldown`,
+      const libKey = n => 'l-' + n.toLowerCase().replace(/'/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');   // tools/library_icons.py names them the same way
+      const entry = (name, sub, body) => `<details class="lib-row"><summary>${iconSVG(libKey(name), 'lib-ic')}<b>${esc(name)}</b><small>${sub}</small></summary><div class="lib-body">${body}</div></details>`;
+      const spells = (L.spells || []).filter(x => has(`${x.name} ${x.element}`)).map(x => entry(x.name, `${x.element ? esc(ELEMENT(x.element)) + ' · ' : ''}${x.mana} mana · ${x.cooldown}s cooldown`,
         `<ol>${x.levels.map(l => `<li>${esc(l)}</li>`).join('')}</ol>` + (x.sold.length ? `<p>Sold by ${x.sold.map(([n, pr]) => `${NPCS.has(n) ? `<button type="button" class="ip-map" data-action="inv-place" data-q="${esc(n)}">${esc(n)}</button>` : esc(n)} for ${fmtGold(pr)} gold`).join(', ')}</p>` : '')));
       const talents = (L.talents || []).filter(x => has(x.name)).map(x => entry(x.name, x.level ? `unlocks at level ${x.level}` : 'from the start', `<p>${esc(x.desc)}</p>`));
       const obols = (L.obols || []).filter(x => has(`${x.name} ${x.stat}`)).map(x => entry(x.name, `+${x.value} ${esc(x.stat)} · ${esc(x.tier)}`, `<p>An obol adds +${x.value} ${esc(x.stat)}.</p>`));
