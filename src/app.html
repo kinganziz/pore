@@ -461,8 +461,8 @@
   .obs-inputs label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); font-weight: 600; }
   .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px 4px 6px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); font-size: 13px; line-height: 1.2; max-width: 100%; }
   .chip span { min-width: 0; overflow-wrap: anywhere; }
-  .chip b { font-family: var(--display); font-weight: 800; padding: 1px 6px; border-radius: 6px; background: var(--surface-3); }
-  .chip.perfect b { background: linear-gradient(135deg, #f6c453, #ff9d3c); color: var(--gold-ink); }
+  .chip b { font-family: var(--display); font-weight: 800; padding: 1px 6px; border-radius: 6px; background: var(--surface-3); white-space: nowrap; flex: 0 0 auto; }
+  .chip.perfect b { background: linear-gradient(135deg, #f6c453, #ff9d3c); color: #1a1200; }
   .chip.perfect { border-color: rgba(246, 196, 83, .45); }
   .chip.result { border-color: rgba(139, 124, 255, .55); background: rgba(139, 124, 255, .1); }
   .chip.owned { border-color: rgba(55, 211, 154, .5); background: rgba(55, 211, 154, .09); }
@@ -470,6 +470,7 @@
   .chip.owned i { color: var(--good); }
   .chip i.obs { color: var(--info); }
   .chip span { color: var(--muted); }
+  .chip b span { color: inherit; }   /* the level label (P7, L7) takes the badge colour, not the grey of the stats */
   .chip.base { border-color: rgba(95, 178, 255, .45); }
 
   .shop { display: grid; gap: 8px; }
