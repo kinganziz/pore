@@ -605,6 +605,9 @@ def pattern_marks(kind: str, x0, y0, x1, y1) -> str:
         return (line(f"M{x0 + 6} {y0 + 16} L{x0 + 12} {y0 + 22} L{x0 + 9} {y0 + 30} L{x0 + 16} {y0 + 38}", "#ff7a2a", 1.8)
                 + line(f"M{x1 - 6} {y0 + 12} L{x1 - 12} {y0 + 20} L{x1 - 8} {y0 + 28}", "#ffb03a", 1.6)
                 + line(f"M{x1 - 10} {y1 - 8} L{x1 - 16} {y1 - 14}", "#ff7a2a", 1.4))
+    if kind == "vines" and x1 - x0 < 30:   # a narrow area (a boot shaft): one vine, two crossing ones read as a letter
+        return (line(f"M{x0 + 5} {y1 - 4} C{x0 + 16} {y1 - 14} {x0 + 6} {y0 + 16} {x0 + 17} {y0 + 5}", "#5ce06a", 2)
+                + dot(x0 + 11, y0 + 22, 1.9, "#9dff6a"))
     if kind == "vines":
         return (line(f"M{x0 + 3} {y1 - 6} C{x0 + 14} {y1 - 16} {x0 + 4} {y0 + 18} {x0 + 14} {y0 + 8}", "#5ce06a", 2)
                 + line(f"M{x1 - 3} {y1 - 10} C{x1 - 12} {y0 + 24} {x1 - 4} {y0 + 16} {x1 - 12} {y0 + 6}", "#2ec8a0", 2)
@@ -878,8 +881,8 @@ def boot(ic, pal, trim=None, pattern=None, kind="boot", gem_=None):
     if kind == "boot":
         d = "M24 6 L50 6 L51 40 L53 52 C53 56 51 58 48 58 L10 58 C7 58 5 56 5 53 C5 45 12 41 21 40 L24 38 Z"
         s.append(shape(ic, d, pal, ic.lg(pal, 0, 0, 1, 0.5)))
-        if pattern:
-            s.append(pattern_marks(pattern, 10, 6, 52, 56))
+        if pattern:   # on the shaft only: across the whole L-shaped boot the marks ran outside it
+            s.append(pattern_marks(pattern, 25, 12, 50, 50))
         s.append(f'<rect x="22" y="4" width="30" height="8" rx="3" fill="{ic.lg(trim or pal, 0, 0, 0, 1)}" stroke="{(trim or pal)[3]}" stroke-width="1.6"/>')
         s.append(f'<path d="M6 51 L53 51 L53 54 C53 56.5 51 58 48 58 L10 58 C7 58 5.5 56.5 5.5 54 Z" fill="{pal[3]}" opacity=".7"/>')
         if trim:
