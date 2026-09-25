@@ -1676,6 +1676,10 @@
   .npc-head { margin: 0 2px 12px; } .npc-head small { color: var(--gold); font-size: 13px; }
   #saverClock small { font-size: .38em; margin-left: .25em; letter-spacing: 0; }
   .ip-warn { margin: 6px 0 2px; color: var(--bad, #e2343e); font-weight: 700; font-size: 15px; }
+  .fuse-grid { display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 2px 10px; padding: 6px 4px 2px; font-size: 13px; }
+  .fuse-grid span { color: var(--soft); } .fuse-grid b { color: var(--gold); text-align: right; }
+  .ip-head b, .ip-head small { white-space: normal; overflow: visible; text-overflow: clip; }
+  :is(#pickerSheet, #projectsSheet, #charmsSheet, #settingsSheet) .sheet-head [data-action^="close-"] { display: none !important; }
 </style>
 </head>
 <body>
@@ -3691,7 +3695,7 @@ __SOLVER_JS__
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('menu-open')) poreMenu(false); });
   // Text that does not fit its one-line box drifts slowly to its end and back (instead of being cut with "…"),
   // and so does a search box's hint text while the box is empty.
-  const MQ_SEL = '.inv-row .ir-main b, .inv-row .ir-main small, .map-row b, .map-row .ir-main > small:not(.map-desc), .ip-head b, .ip-head small, .proj-main b, .inv-nm, .rec-label, .pore-menu .brand p span';
+  const MQ_SEL = '.inv-row .ir-main b, .inv-row .ir-main small, .map-row b, .map-row .ir-main > small:not(.map-desc), .proj-main b, .inv-nm, .rec-label, .pore-menu .brand p span';
   let mqT = 0;
   function marquee() {
     if (reduced) return;
@@ -5103,9 +5107,23 @@ __SOLVER_JS__
   };
   const PLACE_KINDS = new Set(['mob', 'find', 'enc', 'mine', 'chest', 'shop', 'boss']);
   const srcRow = (kind, title, sub, links) => `<div class="ip-src"><svg class="ip-glyph" viewBox="0 0 8 8" shape-rendering="crispEdges"><path fill="${SRC_GLYPH[kind][0]}" d="${SRC_GLYPH[kind][1]}"/></svg><div>${PLACE_KINDS.has(kind) ? `<button type="button" class="ip-place" data-action="inv-place" data-q="${esc(title)}" title="Everything from ${esc(title)}">${esc(title)}</button>` : `<b>${esc(title)}</b>`}<small>${sub}</small>${links ? `<span class="ip-links">${links}</span>` : ''}</div></div>`;
+  // Super foods are fused from mushrooms (Super Shroom) or berries (Super Berry); every fuse costs more than the last
+  const FUSE_COST = [4, 14, 41, 141, 414, 1414, 4141, 14141, 41414, 141414, 414141];
+  const FUSE = new Map([['Super Shroom', 'mushrooms', g => g.type === 'MUSHROOM'], ['Super Berry', 'berries', g => /Berries$/.test(g.name)]]
+    .map(([name, from, isSrc]) => [(GOODS.find(g => g.name === name) || {}).key, { from, isSrc }]).filter(([k]) => k));
+  const fusesInto = key => { const g = GOOD_BY_KEY.get(key); return g ? [...FUSE].filter(([, f]) => f.isSrc(g)).map(([k]) => k) : []; };
+  function fuseHTML(key) {
+    const f = FUSE.get(key); if (!f) return '';
+    const ord = n => n + (n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th');
+    return srcRow('craft', 'Fuse it', `from any ${f.from}: 4 for the 1st, then 14, 41, 141… each fuse costs more`) +
+      `<details class="ip-more"><summary>Every fuse</summary><div class="fuse-grid">${FUSE_COST.map((c, i) => `<span>${ord(i + 1)}</span><b>${fmt(c)}</b>`).join('')}</div></details>` +
+      srcRow('free', 'Lifetime tasks', 'a reward for some lifetime tasks') +
+      '<p class="ip-desc">Each one eaten adds +0.5 to its stats for good.</p>';
+  }
   function whereHTML(key) {
+    const fuse = fuseHTML(key);
     const list = (WHERE[key] || []).slice().sort((a, b) => (SRC_ORDER[a[0]] - SRC_ORDER[b[0]]) || ((typeof b[2] === 'number' ? b[2] : 0) - (typeof a[2] === 'number' ? a[2] : 0)));
-    if (!list.length) return '';
+    if (!list.length && !fuse) return '';
     // map names open that map's page
     const at = locs => locs && locs.length ? ' · ' + locs.map(l => MAP_KEYS.has(l) ? `<button type="button" class="ip-map" data-action="inv-place" data-q="${esc(l)}">${esc(l)}</button>` : esc(l)).join(', ') : '';
     const rows = list.map(e => {
@@ -5127,12 +5145,12 @@ __SOLVER_JS__
       return '';
     });
     const first = rows.slice(0, 6).join(''), more = rows.slice(6);
-    return `<div class="ip-sec"><div class="ip-lab">Where to get it</div>${first}${more.length ? `<details class="ip-more"><summary>${more.length} more</summary>${more.join('')}</details>` : ''}</div>`;
+    return `<div class="ip-sec"><div class="ip-lab">Where to get it</div>${fuse}${first}${more.length ? `<details class="ip-more"><summary>${more.length} more</summary>${more.join('')}</details>` : ''}</div>`;
   }
   function usesHTML(key) {
-    const u = USES[key] || []; if (!u.length) return '';
+    const u = (USES[key] || []).concat(fusesInto(key).map(k => ['fuse', k])); if (!u.length) return '';
     const keys = u.filter(x => x[0] === 'key').map(x => `<span class="ip-chip">opens the ${esc(x[1])}</span>`).join('');
-    const crafts = u.filter(x => x[0] === 'craft').map(x => itemLink(x[1], '', x[2] + ' needed'));
+    const crafts = u.filter(x => x[0] === 'fuse').map(x => itemLink(x[1], '', 'fuse 4, 14, 41…')).concat(u.filter(x => x[0] === 'craft').map(x => itemLink(x[1], '', x[2] + ' needed')));
     const more = crafts.length > 6 ? `<details class="ip-more"><summary>${crafts.length - 5} more</summary><div class="ip-links">${crafts.slice(5).join('')}</div></details>` : '';
     return `<div class="ip-sec"><div class="ip-lab">Used for</div><div class="ip-links">${keys}${crafts.slice(0, more ? 5 : 6).join('')}</div>${more}</div>`;
   }
