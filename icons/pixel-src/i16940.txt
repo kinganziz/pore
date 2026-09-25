@@ -10,19 +10,26 @@ g #bcbfc7
 h #c0c2c9
 i #909ab1
 j #9c9ea7
-k #141216
-l #72e7ff
-m #4ae0ff
-n #37a6bd
-o #c3c5ca
-p #252a30
-q #aeb1b9
-r #525e73
-s #d8dce3
-t #c9cfd9
-u #bbc3ce
-v #939eb0
-w #65748c
+k #484649
+l #141216
+m #0d0c10
+n #0c0b10
+o #72e7ff
+p #4ae0ff
+q #100e14
+r #0f0d10
+s #3b393e
+t #37a6bd
+u #323036
+v #c3c5ca
+w #252a30
+x #aeb1b9
+y #525e73
+z #d8dce3
+A #c9cfd9
+B #bbc3ce
+C #939eb0
+D #65748c
 --
 ................................
 ................................
@@ -34,15 +41,15 @@ w #65748c
 ..abcccbbbbbbbbbbbbbccccccdffa..
 ..abbcbbcbcbcbcbcbcbdcdcdcddfa..
 ..abccbggggghhhggggggiiiiddffa..
-..abbcjkkkkkkkkkkkkkkkkkkjcdfa..
-..abcikkkkkkkkkkkkkkkkkkkkgdfa..
-..abcikkklllmkkkkkklllmkkkgdfa..
-..abcikkllmlmmkkkkllmlmmkkgdfa..
-..abcikkmmnmnnkkkkmmnmnnkkgdfa..
-..abcikkkmnnnkkkkkkmnnnkkkgdfa..
-..abcikkkkkkkkkkkkkkkkkkkkgdfa..
-..abcdjkkkkkkkkkkkkkkkkkkjdffa..
-..abbcbhhhooooooohhhhhhhgdddfa..
+..abbcjkkkkkkkkkkkkkkkkkljcdfa..
+..abcikklmmmmllklklmmmmlllgdfa..
+..abciklnooopqklllnooopqlrgdfa..
+..abcikmoopoppsklmoopoppsrgdfa..
+..abcikmpptpttslrmpptpttsrgdfa..
+..abciklqptttulllrqptttulrgdfa..
+..abcilllsssslrlrllsssslrrgdfa..
+..abcdjlrrrrrrrrrrrrrrrrrjdffa..
+..abbcbhhhvvvvvvvhhhhhhhgdddfa..
 ..abcccbcbcbcbcbcbcbcbcbdddffa..
 ..acbcccccccdcdcdcdcdccdddddfa..
 ..acdcccccciiiiiiiiiicdddddffa..
@@ -52,7 +59,7 @@ w #65748c
 ..addddddddcdcdcdcdcdddddffffa..
 ...addfdfdfdfdfdfdfdfdffffffa...
 ....adfffffffffffffffffffffa....
-.....apqaaaaaaaaaaaaaaaarpa.....
-......pstststtututvuvuvwwp......
-.....pssututuuvuvuwvwvwwwp......
-.....pstuuuuuvvvvvwwwwwwwwp.....
+.....awxaaaaaaaaaaaaaaaaywa.....
+......wzAzAzAABABACBCBCDDw......
+.....wzzBABABBCBCBDCDCDDDw......
+.....wzABBBBBCCCCCDDDDDDDDw.....

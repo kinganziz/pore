@@ -203,6 +203,7 @@ export function pixelKit(options = {}) {
       if (stroke && o.sw > 0) {
         const dark = lum(stroke.mid) < 0.3;
         if (fill && dark) return;                                   // a shape's outline: redrawn later
+        if (!fill && dark && ops.slice(0, i).some(q => q.d === o.d && q.fill && q.fill !== 'none')) return;   // the same, drawn as its own stroke
         const next = ops[i + 1];
         if (!fill && dark && next && next.d === o.d && next.stroke !== 'none') {   // the dark rim of a tube
           return;
@@ -289,12 +290,17 @@ export function pixelKit(options = {}) {
     if (comps.some(c => c.length > 2)) for (const c of comps) if (c.length <= 2) for (const [x, y] of c) own[y][x] = -1;
     // shade each layer's region by its rim: light top/left, shadow bottom/right
     const col = Array.from({ length: N }, () => Array(N).fill(null));
-    const size = {};
+    const size = {}, inner = {};   // pixels per part, and how many of them are surrounded by the same part
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (own[y][x] >= 0) size[own[y][x]] = (size[own[y][x]] || 0) + 1;
+    for (let y = 1; y < N - 1; y++) for (let x = 1; x < N - 1; x++) {
+      const li = own[y][x];
+      if (li >= 0 && own[y - 1][x] === li && own[y + 1][x] === li && own[y][x - 1] === li && own[y][x + 1] === li) inner[li] = (inner[li] || 0) + 1;
+    }
+    const thinDark = li => lum(layers[li].ramp.mid) < 0.22 && (inner[li] || 0) < size[li] * 0.3;   // a dark ring or border, not a dark body
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
       const li = own[y][x]; if (li < 0) continue;
       const L = layers[li], R = L.ramp;
-      if (size[li] < 5 || lum(R.mid) < 0.22) { col[y][x] = R.mid; continue; }   // specks and dark rings stay flat
+      if (size[li] < 5 || thinDark(li)) { col[y][x] = R.mid; continue; }   // specks and thin dark rings stay flat
       const same = (dx, dy) => { const nx = x + dx, ny = y + dy; return nx >= 0 && ny >= 0 && nx < N && ny < N && own[ny][nx] === li; };
       const light = !same(0, -1) || !same(-1, 0), dark = !same(0, 1) || !same(1, 0);
       // the second ring in from each rim: half its pixels (a checkerboard) take the rim's step too
@@ -315,7 +321,7 @@ export function pixelKit(options = {}) {
     // ambient occlusion: a part lying under another part darkens where that part sits on it
     const occ = col.map(r => r.slice());
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-      const li = own[y][x]; if (li < 0 || !col[y][x] || size[li] < 5 || lum(layers[li].ramp.mid) < 0.22) continue;
+      const li = own[y][x]; if (li < 0 || !col[y][x] || size[li] < 5 || thinDark(li)) continue;
       let over = 0;
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
         const nx = x + dx, ny = y + dy;
