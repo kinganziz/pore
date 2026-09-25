@@ -24,7 +24,7 @@ def icons_version() -> str:
     """Content hash of every icon file the app loads. It goes into the icon URLs (?v=...), so a deploy that
     changes icons never shows stale cached copies. Line endings are normalised so CI and Windows agree."""
     h = hashlib.sha1()
-    files = sorted((ROOT / "icons" / "modern").glob("*.svg")) + [ROOT / "icons" / "sprite-pixel.svg"]
+    files = sorted((ROOT / "icons" / "modern").glob("*.svg")) + [ROOT / "icons" / "sprite-pixel.svg", ROOT / "icons" / "sprite-portraits.svg"]
     for path in files:
         h.update(path.name.encode())
         h.update(path.read_bytes().replace(b"\r\n", b"\n"))
@@ -34,7 +34,8 @@ def icons_version() -> str:
 def main() -> None:
     template = SRC.read_text(encoding="utf-8")
     for placeholder in (DATA_PLACEHOLDER, SOLVER_PLACEHOLDER, ICONS_PLACEHOLDER):
-        if template.count(placeholder) != 1:
+        n = template.count(placeholder)
+        if n != 1 and not (placeholder == ICONS_PLACEHOLDER and n > 1):   # the icon version may appear in several URLs
             raise SystemExit(f"expected exactly one {placeholder} in {SRC}")
     data = json.loads(DATA.read_text(encoding="utf-8"))
     badges = ROOT / "data" / "badges.json"

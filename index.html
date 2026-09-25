@@ -7,6 +7,7 @@
 <meta name="description" content="Less grind, more life. PORE saves Pixel Odyssey players time: the cheapest way to refine gear, where every item comes from, and what you already own.">
 <meta name="theme-color" content="#0a0c12">
 <meta name="color-scheme" content="dark light">
+<link rel="preload" href="icons/sprite-pixel.svg?v=ac0518cddf" as="fetch" crossorigin="anonymous">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/app/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2883,7 +2884,7 @@ function createSolver() {
   let iconStyle = DEFAULT_ICONS;
   // HD images load eagerly and decode synchronously: a re-rendered list (e.g. a new group filter) then paints its
   // already-cached icons in the same frame instead of flashing empty tiles.
-  const ICONS_V = 'a88ae16b61';
+  const ICONS_V = 'ac0518cddf';
   // Re-rendering a list would create fresh <img> elements that flash empty while they load, even from cache.
   // Loaded HD images are kept in a pool and moved into the new markup instead, so they paint at once.
   const imgPool = new Map();   // src -> [loaded <img>]
@@ -2900,21 +2901,29 @@ function createSolver() {
       if (old) { old.className = img.className; img.replaceWith(old); }
     });
   }   // content hash of the icon files (tools/build.py): new icons never come from a stale cache
-  let spriteInline = false;
-  (function inlineSprite() {
-    const sprite = ICON_STYLES.pixelhd.sprite;
-    fetch(`icons/${sprite}.svg?v=${ICONS_V}`).then(r => r.ok ? r.text() : Promise.reject()).then(t => {
+  // Two icon sheets: the item icons, and the NPC / monster / boss portraits (a second sheet, so items show sooner).
+  // Each is fetched once (the first one already started in <head>) and put into the page; icons point at it from
+  // the start and fill in the moment it arrives (only if loading fails do they fall back to the files).
+  const failed = {};
+  const sheetOf = key => /^[nmb]-/.test(key) ? 'sprite-portraits' : ICON_STYLES.pixelhd.sprite;
+  (function inlineSprites() {
+    const load = sheet => fetch(`icons/${sheet}.svg?v=${ICONS_V}`).then(r => r.ok ? r.text() : Promise.reject()).then(t => {
       const box = document.createElement('div'); box.innerHTML = t;
       const svg = box.firstElementChild; if (!svg) return;
       svg.setAttribute('aria-hidden', 'true'); svg.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden';
-      document.body.prepend(svg); spriteInline = true;
-      document.querySelectorAll('svg.pixel use').forEach(u => { const h = u.getAttribute('href') || ''; const i = h.indexOf('#'); if (i > 0) u.setAttribute('href', h.slice(i)); });
-    }).catch(() => { /* the file references keep working */ });
+      document.body.prepend(svg);
+      document.querySelectorAll('svg.pixel use').forEach(u => u.setAttribute('href', u.getAttribute('href')));   // redraw the ones already on screen
+    }).catch(() => {   // no sheet in the page: point every icon of it at the file instead
+      failed[sheet] = true;
+      document.querySelectorAll('svg.pixel use').forEach(u => { const k = (u.getAttribute('href') || '').replace(/^#/, ''); if (k && sheetOf(k) === sheet) u.setAttribute('href', `icons/${sheet}.svg?v=${ICONS_V}#${k}`); });
+    });
+    load(ICON_STYLES.pixelhd.sprite).finally(() => load('sprite-portraits'));
   })();
   function iconSVG(key, cls) {
     const sprite = ICON_STYLES[iconStyle].sprite;
     if (!sprite) return `<img class="pixel ${cls || ''}" src="icons/modern/${key}.svg?v=${ICONS_V}" alt="" decoding="sync" draggable="false">`;
-    return `<svg class="pixel ${cls || ''}" aria-hidden="true"><use href="${spriteInline ? '' : `icons/${sprite}.svg?v=${ICONS_V}`}#${key}"/></svg>`;
+    const sheet = sheetOf(key);
+    return `<svg class="pixel ${cls || ''}" aria-hidden="true"><use href="${failed[sheet] ? `icons/${sheet}.svg?v=${ICONS_V}` : ''}#${key}"/></svg>`;
   }
   function applyLook() {
     document.documentElement.setAttribute('data-icons', iconStyle);
@@ -5491,6 +5500,9 @@ function createSolver() {
   try { invGear = localStorage.getItem('pore.invgear.v1') === '1'; } catch (e) { /* ignore */ }
   let invView = 'grid';   // like the item list: 'grid' (tiles with names), 'list' (rows) or 'icons'
   try { invView = localStorage.getItem('pore.invview.v2') || 'grid'; } catch (e) { /* ignore */ }
+  // Maps, NPCs, Monsters and World bosses keep their own view: a list by default, which shows the most about each
+  let placeView = 'list';
+  try { placeView = localStorage.getItem('pore.placeview.v1') || 'list'; } catch (e) { /* ignore */ }
   const INV_VIEW_SVG = {
     list: '<svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M1 2h3v3H1zM6 3h9v1H6zM1 7h3v3H1zM6 8h9v1H6zM1 12h3v3H1zM6 13h9v1H6z"/></svg>',
     grid: '<svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M1 1h6v4H1zM1 6h6v1H1zM9 1h6v4H9zM9 6h6v1H9zM1 9h6v4H1zM1 14h6v1H1zM9 9h6v4H9zM9 14h6v1H9z"/></svg>',
@@ -5508,7 +5520,7 @@ function createSolver() {
     const mapList = (invTab === 'maps' && !invMap) || (invTab === 'npcs' && !invNpc) || (invTab === 'monsters' && !invMob) || invTab === 'bosses';   // the list of maps: no gear filter or item views to pick
     ui.charmsBody.innerHTML = `<label class="inv-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></svg><input type="search" placeholder="${mapList ? (invTab === 'npcs' ? 'Search NPCs' : invTab === 'monsters' ? 'Search monsters' : invTab === 'bosses' ? 'Search bosses' : 'Search maps') : 'Search items or places'}" value="${esc(invQ)}" data-field="inv-q" aria-label="Search the inventory">` +
       (mapList || detail ? '' : `<button type="button" class="inv-gear ${invGear ? 'on' : ''}" data-action="inv-gear" aria-pressed="${invGear}" aria-label="Gear only: hide what you cannot equip" title="Gear only">${iconSVG((ITEMS.find(it => it.name === 'Iron Sword') || ITEMS[0]).key)}</button>`) +
-      (detail ? '</label>' : `<span class="inv-views" role="group" aria-label="View">${['grid', 'list', 'icons'].map(v => `<button type="button" class="${invView === v ? 'on' : ''}" data-action="inv-view" data-view="${v}" aria-label="${v === 'grid' ? 'Tiles with names' : v === 'list' ? 'List' : 'Icons only'}" title="${v === 'grid' ? 'Tiles' : v === 'list' ? 'List' : 'Icons'}">${INV_VIEW_SVG[v]}</button>`).join('')}</span></label>`) +
+      (detail ? '</label>' : `<span class="inv-views" role="group" aria-label="View">${['grid', 'list', 'icons'].map(v => `<button type="button" class="${(mapList ? placeView : invView) === v ? 'on' : ''}" data-action="inv-view" data-view="${v}" aria-label="${v === 'grid' ? 'Tiles with names' : v === 'list' ? 'List' : 'Icons only'}" title="${v === 'grid' ? 'Tiles' : v === 'list' ? 'List' : 'Icons'}">${INV_VIEW_SVG[v]}</button>`).join('')}</span></label>`) +
       `<div id="invGrid"></div>`;
     // the category icons: a fixed strip at the foot of the sheet, right above the tab bar (like the game)
     const goodArt = t => { const g = GOODS.find(x => x.name === (GOOD_TYPES.find(y => y[0] === t) || [])[3]) || GOODS.find(x => x.type === t); return g ? iconSVG(g.key) : ''; };
@@ -5537,9 +5549,9 @@ function createSolver() {
     const onMob = invTab === 'monsters' && invMob && MOBS.has(invMob) && new Set(MOBS.get(invMob).drops.keys());
     const onSet = onMap || onNpc || onMob, placeOf = k => onMap ? mapChance(k, invMap) : onMob ? mobDrop(k, invMob) : npcDeal(k, invNpc);
     // Maps, NPCs and World bosses: rows (picture, name, details), tiles (picture and name) or pictures only
-    const placeList = list => invView === 'list'
+    const placeList = list => placeView === 'list'
       ? `<div class="map-list">${list.map(e => `<button type="button" class="map-row" ${e.attrs}>${e.pic}<span class="ir-main"><b class="${e.face ? 'npc-name' : ''}">${esc(e.name)}${e.face || ''}</b><small>${e.sub}</small>${e.desc ? `<small class="map-desc">${e.desc}</small>` : ''}</span><span class="map-go">›</span></button>`).join('')}</div>`
-      : `<div class="place-grid ${invView === 'icons' ? 'bare' : ''}">${list.map(e => `<button type="button" class="place-tile" ${e.attrs} title="${esc(e.name)}"><span class="pt-pic">${e.big}</span>${invView === 'icons' ? '' : `<span class="pt-name">${esc(e.name)}</span>`}</button>`).join('')}</div>`;
+      : `<div class="place-grid ${placeView === 'icons' ? 'bare' : ''}">${list.map(e => `<button type="button" class="place-tile" ${e.attrs} title="${esc(e.name)}"><span class="pt-pic">${e.big}</span>${placeView === 'icons' ? '' : `<span class="pt-name">${esc(e.name)}</span>`}</button>`).join('')}</div>`;
     if (invTab === 'bosses') {
       const statRow = b => [['HP', b.hp], ['Attack', b.atk], ['Defense', b.def], ['Speed', b.spd], ['Luck', b.luck], ['Mana', b.mana]].filter(x => x[1]);
       if (invBoss && BOSS_BY.has(invBoss)) {   // one boss: what it is, its fight stats, and the weapon it drops
@@ -5848,7 +5860,10 @@ function createSolver() {
       case 'inv-go': invSel = el.dataset.key; haptic(6); if (ui.charmsSheet.hidden) { tabGo('inventory'); break; } invRenderGrid(); { const cd = document.querySelector('#invPop .ip-card'); if (cd) cd.scrollTop = 0; } break;   // an item named inside a card
       case 'inv-pop-close': if (el.id === 'invPop' && e.target !== el) break; invSel = null; invRenderGrid(); break;   // the × or a tap beside the card (not inside it)
       case 'inv-gear': invGear = !invGear; try { localStorage.setItem('pore.invgear.v1', invGear ? '1' : '0'); } catch (err) { /* ignore */ } haptic(6); renderCharms(); toast(invGear ? 'Gear only' : 'Everything'); break;
-      case 'inv-view': invView = el.dataset.view; try { localStorage.setItem('pore.invview.v2', invView); } catch (err) { /* ignore */ } renderCharms(); break;
+      case 'inv-view':
+        if (['maps', 'npcs', 'monsters', 'bosses'].includes(invTab)) { placeView = el.dataset.view; try { localStorage.setItem('pore.placeview.v1', placeView); } catch (err) { /* ignore */ } }
+        else { invView = el.dataset.view; try { localStorage.setItem('pore.invview.v2', invView); } catch (err) { /* ignore */ } }
+        renderCharms(); break;
       case 'inv-step': {
         const k = el.dataset.key, d = Number(el.dataset.d);
         if (el.dataset.field === 'inv-item') { invSetItem(k, Math.max(0, (inv.items[k] || 0) + d)); invSave(); if (state.item === k) { state.stock = inv.items[k]; persist(); renderResults(); } }
