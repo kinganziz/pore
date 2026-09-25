@@ -1720,6 +1720,20 @@
   body.has-item:not(.locked):not(.saver)::after { content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
     background: color-mix(in srgb, var(--bg-2) var(--sheet-a, 50%), transparent); }
   :root[data-nobg] body.has-item::after { display: none; }
+  /* Home: a search that finds anything, the card's unit, the way back into your latest project */
+  .home-search { display: flex; align-items: center; gap: 8px; width: min(100%, 340px); justify-self: center; margin: 2px auto 0; padding: 0 14px; height: 42px; border-radius: 12px;
+    background: rgba(8, 10, 28, .55); border: 2px solid color-mix(in srgb, var(--gold) 40%, transparent); box-shadow: 3px 3px 0 rgba(0, 0, 0, .35); }
+  .home-search svg { width: 18px; height: 18px; color: var(--gold); flex: 0 0 auto; }
+  .home-search input { flex: 1 1 auto; min-width: 0; border: 0; outline: 0; background: none; color: #fff; font: inherit; font-size: 15px; }
+  .home-search input::placeholder { color: rgba(255, 255, 255, .6); }
+  :root[data-sky="day"] .home-search { background: rgba(255, 255, 255, .75); }
+  :root[data-sky="day"] .home-search input { color: #1b1f33; } :root[data-sky="day"] .home-search input::placeholder { color: #5a6078; }
+  .home-best .hb-unit { font-size: 13px; font-weight: 400; opacity: .9; }
+  .home-hero .home-best .hb-text > b { white-space: nowrap; }
+  .home-best .hb-was { font-size: 14px; font-weight: 400; opacity: .6; text-decoration-thickness: 2px; margin-right: 2px; }
+  .home-continue { border: 0; background: none; padding: 2px 6px; font: inherit; font-size: 14px; color: #ffe08a; cursor: pointer; text-shadow: 1px 1px 0 rgba(0, 0, 0, .7); }
+  .home-continue b { color: #fff; }
+  :root[data-sky="day"] .home-continue { color: #9a4a00; text-shadow: 0 0 8px rgba(255, 255, 255, .8); } :root[data-sky="day"] .home-continue b { color: #1b1f33; }
 </style>
 </head>
 <body>
@@ -3804,6 +3818,13 @@ __SOLVER_JS__
   new MutationObserver(marqueeSoon).observe(document.body, { childList: true, subtree: true });
   addEventListener('resize', marqueeSoon);
   document.addEventListener('focusin', marqueeSoon); document.addEventListener('focusout', marqueeSoon); document.addEventListener('input', marqueeSoon);
+  document.addEventListener('submit', e => {
+    const f = e.target.closest && e.target.closest('[data-home-search]'); if (!f) return;
+    e.preventDefault();
+    const q = (f.elements.q.value || '').trim(); if (!q) return;
+    invTab = 'all'; invMap = null; invNpc = null; invMob = null; invBoss = null; invSel = null; invQ = q;
+    f.elements.q.blur(); tabGo('inventory');
+  });
   function tabGo(id) {
     haptic(8);
     poreMenu(false);
@@ -3909,20 +3930,22 @@ __SOLVER_JS__
         <div class="home-copy">
           <span class="home-kicker">~ Your time matters ~</span>
           <h1 class="home-title ${titleDrop ? 'drop' : ''}"><i class="tw" style="--i:0">Less</i> <i class="tw" style="--i:1">grind.</i><br><span>More life.</span></h1>
-          <p class="home-sub">PORE does the slow parts of the game for you, so you spend <b>less time</b> gathering and searching. <button type="button" class="home-why" data-action="tab" data-tab="help">Why?</button></p>
+          <p class="home-sub">PORE does the slow parts, so you <b>grind less</b>. <button type="button" class="home-why" data-action="tab" data-tab="help">Why?</button></p>
           ${spots.length ? `<div class="hb-carousel">
             <div class="hb-track">${spots.map((it, i) => `<button class="home-best" type="button" data-action="pick" data-key="${it.key}" aria-label="${fmt(badges[it.key])} items for a perfect P${maxOf(it)} ${esc(it.name)}, ${pct(it)}% less" title="${esc(it.name)} · perfect P${maxOf(it)} · ${pct(it)}% less">
               <span class="hb-icon">${iconSVG(it.key)}</span>
-              <span class="hb-text"><b><span class="hb-num" data-count="${badges[it.key]}">${fmt(i ? badges[it.key] : std(it))}</span> items</b><small class="hb-name">${esc(it.name)}</small></span>
+              <span class="hb-text"><b><s class="hb-was" title="the standard way">${fmt(std(it))}</s> <span class="hb-num" data-count="${badges[it.key]}">${fmt(i ? badges[it.key] : std(it))}</span> <small class="hb-unit">base items</small></b><small class="hb-name">${esc(it.name)}</small></span>
             </button>`).join('')}</div>
             ${spots.length > 1 ? `<button class="hb-arrow prev" type="button" data-action="hb-step" data-dir="-1" aria-label="Previous item"><svg viewBox="0 0 8 12" shape-rendering="crispEdges"><path fill="currentColor" d="M5 0h2v2H5zM3 2h2v2H3zM1 4h2v4H1zM3 8h2v2H3zM5 10h2v2H5z"/></svg></button>
             <button class="hb-arrow next" type="button" data-action="hb-step" data-dir="1" aria-label="Next item"><svg viewBox="0 0 8 12" shape-rendering="crispEdges"><path fill="currentColor" d="M1 0h2v2H1zM3 2h2v2H3zM5 4h2v4H5zM3 8h2v2H3zM1 10h2v2H1z"/></svg></button>
             <div class="hb-dots" aria-hidden="true">${spots.map((_, i) => `<i class="${i ? '' : 'on'}"></i>`).join('')}</div>` : ''}
           </div>` : ''}
+          <form class="home-search" data-home-search role="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></svg><input type="search" name="q" placeholder="Search items, monsters, places" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search" aria-label="Search items, monsters, NPCs, bosses and maps"></form>
           <button class="btn primary home-cta" type="button" data-action="open-picker">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></svg>
             Choose an item
           </button>
+          ${projects[0] ? `<button type="button" class="home-continue" data-action="project-open" data-id="${esc(projects[0].id)}">Continue: <b>${esc(projects[0].name)} → P${projects[0].L}</b>${projects[0].total ? ` · ${projects[0].done || 0}/${projects[0].total} steps` : ''} ›</button>` : ''}
           ${(() => { const n = projects.reduce((t, pr) => t + (pr.saved || 0), 0); return n > 0 ? `<p class="home-saved"><b>${fmt(n)}</b> base items spared so far</p>` : ''; })()}
         </div>
       </section>`;
