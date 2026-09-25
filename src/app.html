@@ -1077,14 +1077,7 @@
   body { padding-bottom: var(--tabbar-h); }
   /* the bar stays on top like the game's; sheets end just above it */
   .tabbar { z-index: 55; }
-  .sheet-backdrop { top: calc(var(--topbar-h, 62px) - 1px); bottom: var(--tabbar-h); transition: top .25s ease; }
-  /* the top bar hides while you scroll down and comes back when you scroll up (more room on phones) */
-  .topbar { transition: transform .25s ease; }
-  body.bar-off .topbar { transform: translateY(-100%); }
-  body.bar-off .sheet-backdrop { top: 0; }
-  body.bar-off .lvl-head { top: -1px; }
-  .lvl-head { transition: top .25s ease; }
-  @media (prefers-reduced-motion: reduce) { .topbar, .sheet-backdrop, .lvl-head { transition: none; } }
+  .sheet-backdrop { top: calc(var(--topbar-h, 62px) - 1px); bottom: var(--tabbar-h); }
   .topbar { z-index: 56; }   /* above the sheets, which tuck 1px under it: no gap between the bar and a sheet */
   @media (max-width: 719px) { .sheet { height: 100%; padding-top: 0; } }
   @media (min-width: 720px) { .sheet { height: min(100%, 900px); } }
@@ -3259,35 +3252,8 @@ __SOLVER_JS__
     syncTabbar.ready = true;
   }
   function replaceEntry(extra, url) { try { history.replaceState(navEntry(extra), '', url || location.href); } catch (e) { /* ignore */ } }
-  // Auto-hiding top bar: down hides it, up (or back near the top) shows it. Listens to every scroll on the page
-  // (window and the screens' own lists), vertical only, so side-scrolling strips and carousels never trigger it.
-  // Hiding the bar makes a screen taller, which can nudge its scroll position (at the end of a list it snaps
-  // back): those layout moves must not count as scrolling, or the bar flips back and forth and shakes. So:
-  // right after a flip the scroll position is only re-read, a flip needs a real 24px scroll the other way,
-  // and the snap-back at the end of a list never shows the bar.
-  const barY = new WeakMap();
-  let barCalm = 0;
-  function setBar(off) {
-    if (document.body.classList.contains('bar-off') === off) return;
-    document.body.classList.toggle('bar-off', off);
-    barCalm = performance.now() + 400;   // the length of the slide, plus a little
-  }
-  function showBar() { setBar(false); }
-  document.addEventListener('scroll', e => {
-    const el = e.target === document ? document.scrollingElement : e.target;
-    if (!el || el.closest && el.closest('.inv-pop')) return;
-    const y = el.scrollTop;
-    if (performance.now() < barCalm) { barY.set(el, y); return; }
-    if (y < 40) { setBar(false); barY.set(el, y); return; }
-    const last = barY.has(el) ? barY.get(el) : 0, d = y - last, off = document.body.classList.contains('bar-off');
-    if ((off && d > 0) || (!off && d < 0)) { barY.set(el, y); return; }   // moving the way the bar already is: follow
-    const atEnd = y + el.clientHeight >= el.scrollHeight - 4;
-    if (!off && d > 24 && el.scrollHeight - el.clientHeight > 160) { setBar(true); barY.set(el, y); }
-    else if (off && d < -24 && !atEnd) { setBar(false); barY.set(el, y); }
-  }, { capture: true, passive: true });
   function tabGo(id) {
     haptic(8);
-    showBar();
     const open = { items: !ui.pickerSheet.hidden, help: !ui.infoSheet.hidden, projects: !ui.projectsSheet.hidden, inventory: !ui.charmsSheet.hidden, settings: !ui.settingsSheet.hidden, guide: !ui.guideSheet.hidden };
     if (open[id]) return;
     if (id === 'home') bgNext();   // Auto background: a new scene on every Home tap
