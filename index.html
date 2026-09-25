@@ -1247,6 +1247,7 @@
   /* ---------- the start screen is only the title screen, filling the space between the bars ---------- */
   /* Home: exactly the space above the tab bar, content centred, nothing to scroll */
   body:not(.has-item) { padding-bottom: 0; }
+  html.home-lock { overflow-y: hidden; overscroll-behavior: none; }
   body:not(.has-item) main.app { padding-top: 0; padding-bottom: 0; }
   body:not(.has-item) .home-hero { box-sizing: border-box; min-height: calc(100svh - var(--tabbar-h)); display: grid; align-content: center; }
   .tab-icon { position: relative; }
@@ -1290,10 +1291,10 @@
   #projectsBody .proj-x:hover, #projectsBody .proj-x:focus-visible { opacity: 1; color: var(--bad); }
   @media (prefers-reduced-motion: reduce) { #projectsBody .proj-open::before { animation: none; } }
   /* ---------- Charms: a frameless inventory, like Projects ---------- */
-  #charmsSheet .sheet, #charmsSheet .sheet-head .icon-btn { border: 0 !important; box-shadow: none !important; }
-  #charmsSheet .sheet-head .icon-btn { background: none !important; position: absolute; right: 10px; color: var(--muted); }
-  #charmsSheet .sheet-head { justify-content: center; position: relative; padding-top: 18px; }
-  #charmsSheet .sheet-head h2 { flex: 0 1 auto; text-align: center; font-size: 24px; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); text-shadow: 2px 2px 0 rgba(0, 0, 0, .55); }
+  :is(#charmsSheet, #pickerSheet) .sheet, :is(#charmsSheet, #pickerSheet) .sheet-head .icon-btn { border: 0 !important; box-shadow: none !important; }
+  :is(#charmsSheet, #pickerSheet) .sheet-head .icon-btn { background: none !important; position: absolute; right: 10px; color: var(--muted); }
+  :is(#charmsSheet, #pickerSheet) .sheet-head { justify-content: center; position: relative; padding-top: 18px; }
+  :is(#charmsSheet, #pickerSheet) .sheet-head h2 { flex: 0 1 auto; text-align: center; font-size: 24px; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); text-shadow: 2px 2px 0 rgba(0, 0, 0, .55); }
   .charms-intro { margin: 0 4px 14px; text-align: center; color: var(--muted); font-size: 14px; }
   .charm-inv { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 14px 8px; }
   .ci { display: grid; justify-items: center; gap: 6px; }
@@ -1602,6 +1603,13 @@
   #saverClock { position: fixed; z-index: 2; left: 0; right: 0; top: 16vh; text-align: center; font-family: var(--display); font-size: clamp(48px, 16vw, 96px); color: #fff;
     text-shadow: 4px 4px 0 rgba(0, 0, 0, .45); letter-spacing: 2px; opacity: 0; pointer-events: none; transition: opacity .8s ease; }
   body.saver #saverClock { opacity: .85; }
+  /* the Items screen in the bag's style */
+  .pick-search { margin: 0 16px; }
+  .pick-search .clear { flex: 0 0 auto; width: 28px; height: 28px; border: 0; background: none; color: var(--soft); font-size: 22px; line-height: 1; cursor: pointer; }
+  #pickerBody .slots, #pickerBody .inv-list { margin-bottom: 8px; }
+  .slot .qty.hot, .inv-row .ir-n.hot { color: #7ee07a; }
+  .inv-row .ir-n small { display: block; font-size: 11px; color: var(--soft); text-align: right; }
+  .inv-row.sel { background: linear-gradient(90deg, color-mix(in srgb, var(--gold) 16%, transparent), transparent 85%); }
 </style>
 </head>
 <body>
@@ -1661,18 +1669,19 @@
 <div class="sheet-backdrop" id="pickerSheet" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="pickerTitle">
     <div class="sheet-head">
-      <h2 id="pickerTitle">Choose an item</h2>
+      <h2 id="pickerTitle">Items<small class="inv-cat-name" id="pickCatName"></small></h2>
       <button class="icon-btn" type="button" data-action="close-picker" aria-label="Close">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
     </div>
-    <div class="search">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-      <input id="searchInput" type="search" placeholder="Search items or stats, e.g. atk 10+" autocomplete="off" autocorrect="off" spellcheck="false">
+    <label class="inv-search pick-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></svg>
+      <input id="searchInput" type="search" placeholder="Search, e.g. crit or atk 10+" autocomplete="off" autocorrect="off" spellcheck="false">
       <button class="clear" type="button" data-action="clear-search" aria-label="Clear search" hidden>×</button>
-    </div>
-    <div class="filters" id="filters"></div>
+      <span class="inv-views" id="pickViews" role="group" aria-label="View"></span>
+    </label>
     <div class="sheet-body" id="pickerBody"></div>
+    <div class="inv-cats" id="filters" role="tablist"></div>
   </div>
 </div>
 
@@ -2745,6 +2754,7 @@ function createSolver() {
     const item = resolveItem();
     ui.itemHint.textContent = item ? '' : `${ITEMS.length} items from the wiki`;
     document.body.classList.toggle('has-item', !!item);
+    document.documentElement.classList.toggle('home-lock', !item);   // Home never scrolls (its content fits above the tab bar)
     const brandLink = document.querySelector('a.brand');
     if (brandLink) brandLink.setAttribute('aria-label', item ? 'PORE home: choose another item' : 'Refresh PORE');
     if (!item) {
@@ -3618,14 +3628,14 @@ function createSolver() {
       drawMoon(g, pal, W, H, pal.far); drawClouds(g, pal, W, H, 0.15);
       const farA = [[0.04, 1, 0.6], [0.02, 4, 1.8]];
       each(scene.st.farCaps, 0.2, 8, W, (m, x, o) => {
-        const b = Math.round(ridge(x + o, P, 0.56, farA, H));
+        const b = ground(x - 1, x + 1, o, 0.56, farA, H) + 1;   // stems stand on the lowest ground under them, sunk in: never hovering on a slope
         g.fillStyle = pal.far; g.fillRect(x, b - m.h, 1, m.h + 1); dome(g, x, b - m.h - m.r, m.r, pal.far);
       });
       drawRidge(g, W, H, 0.2, 0.56, farA, pal.far);
       const midA = [[0.03, 2, 0.3], [0.015, 6, 1.4]];
       drawRidge(g, W, H, 0.5, 0.74, midA, pal.mid);
       each(scene.st.giants, 0.5, 24, W, (m, x, o) => {   // giant mushrooms with glowing spots
-        const b = Math.round(ridge(x + o, P, 0.74, midA, H)), top = b - m.h - m.r;
+        const b = ground(x - 2, x + 2, o, 0.74, midA, H) + 2, top = b - m.h - m.r;
         g.fillStyle = pal.stem; g.fillRect(x - 2, b - m.h, 5, m.h + 1); g.fillStyle = pal.stemSh; g.fillRect(x + 2, b - m.h, 1, m.h + 1);
         dome(g, x, top, m.r, pal.cap[m.c]); dome(g, x - 1, top + 1, m.r - 3, pal.capHi[m.c]);
         g.fillStyle = pal.spot;
@@ -3637,7 +3647,7 @@ function createSolver() {
       const nearA = [[0.015, 3, 0.9], [0.008, 9, 0.2]];
       drawRidge(g, W, H, 1.0, 0.88, nearA, pal.near);
       each(scene.st.smalls, 1.0, 8, W, (m, x, o) => {
-        const b = Math.round(ridge(x + o, P, 0.88, nearA, H));
+        const b = ground(x - 1, x + 1, o, 0.88, nearA, H) + 1;
         g.fillStyle = pal.stem; g.fillRect(x, b - m.h, 1, m.h + 1); dome(g, x, b - m.h - m.r, m.r, pal.cap[m.c]);
       });
       g.fillStyle = pal.spore;
@@ -3828,9 +3838,10 @@ function createSolver() {
       g.fillStyle = pal.ground; g.fillRect(0, gy, W, H - gy);
       // street lamps with a glow
       each([{ x: 30 }, { x: 110 }, { x: 190 }, { x: 270 }], 0.6, 10, W, (l, x) => {
-        g.fillStyle = pal.house; g.fillRect(x, gy - 14, 1, 14); g.fillRect(x - 1, gy - 15, 3, 1);
-        g.fillStyle = pal.lamp; g.fillRect(x - 1, gy - 17, 3, 2);
-        if (pal.star) { g.globalAlpha = 0.14; for (let r = 1; r < 7; r++) g.fillRect(x - r, gy - 16 - Math.floor(r / 2), r * 2 + 1, r); g.globalAlpha = 1; }
+        // a street lamp in front of the buildings: a dark post (it used to take the wall colour and vanish), and at night a cone of light down onto the street
+        if (pal.star) { g.fillStyle = pal.lamp; for (let y = gy - 14; y < gy; y++) { const k = y - (gy - 14); g.globalAlpha = 0.05 + 0.006 * k; g.fillRect(x - 1 - Math.floor(k / 2), y, 3 + Math.floor(k / 2) * 2, 1); } g.globalAlpha = 1; }
+        g.fillStyle = pal.star ? '#06050f' : '#4a4a58'; g.fillRect(x, gy - 15, 1, 15); g.fillRect(x - 1, gy - 16, 3, 1);
+        g.fillStyle = pal.lamp; g.fillRect(x - 1, gy - 18, 3, 2);
       });
       if (pal.star) {   // bats at night
         g.fillStyle = pal.bat;
@@ -4636,7 +4647,11 @@ function createSolver() {
   }
   function renderFilters() {
     const all = [['ALL', 'All'], ...TYPES.map(t => [t[0], t[1]]), ['CUSTOM', 'Custom']];
-    ui.filters.innerHTML = all.map(([k, label]) => `<button class="filter ${picker.type === k ? 'on' : ''}" type="button" data-action="filter" data-type="${k}">${filterIcon(k)}<span>${label}</span></button>`).join('');
+    const quad = () => `<span class="cat-quad">${['Iron Sword', 'Fire Platinum Ring', 'Wooden Shield', 'Mining Helmet'].map(n => { const x = ITEMS.find(i => i.name === n); return x ? iconSVG(x.key) : ''; }).join('')}</span>`;
+    const sx = ui.filters.scrollLeft;
+    ui.filters.innerHTML = all.map(([k, label]) => `<button class="inv-cat ${picker.type === k ? 'on' : ''}" type="button" role="tab" data-action="filter" data-type="${k}" aria-selected="${picker.type === k}" aria-label="${label}" title="${label}">${k === 'ALL' ? quad() : filterIcon(k)}</button>`).join('');
+    ui.filters.scrollLeft = sx;   // stays where the player left it
+    const nm = document.getElementById('pickCatName'); if (nm) nm.textContent = picker.type === 'ALL' ? '' : (all.find(a => a[0] === picker.type) || [0, ''])[1];
   }
   function statsLine(it) { return Object.entries(it.stats).map(([n, v]) => `${v} ${metaFor(n).short}`).join(' · '); }
   function renderPickerList() {
@@ -4649,21 +4664,22 @@ function createSolver() {
     const byCost = (x, y) => costShare(x) - costShare(y) || x.name.localeCompare(y.name);
     if (picker.sort === 'cost') list = list.slice().sort(byCost);
     else list = list.slice().sort((x, y) => x.name.localeCompare(y.name));
-    const row = it => `<button class="row ${state.item === it.key ? 'on' : ''}" type="button" data-action="pick" data-key="${it.key}">
-        <div class="icon-frame sm">${iconSVG(it.key)}</div>
-        <div style="min-width:0"><div class="nm">${esc(it.name)}</div><div class="st">${esc(TYPE_SINGULAR[it.type])}${it.boss ? ' · max P' + maxOf(it) : ''}${it.affinity ? ' · ' + esc(AFF_LABEL(it.affinity)) : ''} · ${statsLine(it)}</div></div>
-        <div class="badge">${badges[it.key] != null ? `<b class="${isHot(it) ? 'hot' : ''}">${fmt(badges[it.key])}</b>${noShortcut(it) ? 'no shortcut' : `P${maxOf(it)} cost`}` : `<b>·</b>`}</div>
-      </button>`;
-    const tile = it => `<button class="tile-item ${state.item === it.key ? 'on' : ''}" type="button" data-action="pick" data-key="${it.key}" title="${esc(it.name)} · ${esc(statsLine(it))}">
-        ${iconSVG(it.key)}<span class="tn">${esc(it.name)}</span>${badges[it.key] != null ? `<span class="tc ${isHot(it) ? 'hot' : ''}">P${maxOf(it)} · ${noShortcut(it) ? 'no shortcut' : fmt(badges[it.key])}</span>` : ''}
-      </button>`;
-    // icons only: the name is in the tooltip / screen-reader label
-    const bare = it => `<button class="icon-only ${state.item === it.key ? 'on' : ''}" type="button" data-action="pick" data-key="${it.key}" aria-label="${esc(it.name)}" title="${esc(it.name)} · ${esc(statsLine(it))}${badges[it.key] != null ? ` · P${maxOf(it)} ${fmt(badges[it.key])}` : ''}">${iconSVG(it.key)}</button>`;
+    const on = it => state.item === it.key ? 'sel' : '';
+    const cost = it => badges[it.key] != null ? (noShortcut(it) ? '—' : fmt(badges[it.key])) : '';
+    const hot = it => badges[it.key] != null && isHot(it) ? 'hot' : '';
+    const tip = it => `${esc(it.name)} · ${esc(statsLine(it))}${badges[it.key] != null ? ` · perfect P${maxOf(it)}: ${noShortcut(it) ? 'no shortcut' : fmt(badges[it.key]) + ' base items'}` : ''}`;
+    // like the bag: frameless tiles with the name under them (the P10 cost in the corner), rows, or icons only
+    const tile = it => `<div class="named-slot"><button class="slot ${on(it)}" type="button" data-action="pick" data-key="${it.key}" title="${tip(it)}">${iconSVG(it.key)}${cost(it) ? `<i class="qty ${hot(it)}">${cost(it)}</i>` : ''}</button><span class="ns-name">${esc(it.name)}</span></div>`;
+    const row = it => `<button class="inv-row ${on(it)}" type="button" data-action="pick" data-key="${it.key}" title="${tip(it)}"><span class="ir-ic">${iconSVG(it.key)}</span>` +
+      `<span class="ir-main"><b>${esc(it.name)}</b><small>${esc(TYPE_SINGULAR[it.type])}${it.boss ? ' · max P' + maxOf(it) : ''}${it.affinity ? ' · ' + esc(AFF_LABEL(it.affinity)) : ''} · ${statsLine(it)}</small></span>` +
+      `<span class="ir-n ${hot(it)}">${cost(it) ? `${cost(it)}<small>P${maxOf(it)}</small>` : ''}</span></button>`;
+    const bare = it => `<button class="slot ${on(it)}" type="button" data-action="pick" data-key="${it.key}" aria-label="${esc(it.name)}" title="${tip(it)}">${iconSVG(it.key)}</button>`;
     const grid = picker.view === 'grid', icons = picker.view === 'icons';
     const cell = icons ? bare : grid ? tile : row;
-    const box = icons ? 'icon-grid' : grid ? 'tile-grid' : 'list';
-    const viewSeg = `<div class="seg view-seg" role="group" aria-label="View"><button type="button" class="${grid || icons ? '' : 'on'}" data-action="picker-view" data-view="list" aria-label="List view" title="List"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg></button><button type="button" class="${grid ? 'on' : ''}" data-action="picker-view" data-view="grid" aria-label="Icon view" title="Icons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg></button><button type="button" class="${icons ? 'on' : ''}" data-action="picker-view" data-view="icons" aria-label="Icons only" title="Icons only"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="3.5" y="3.5" width="4.5" height="4.5" rx="1"/><rect x="9.75" y="3.5" width="4.5" height="4.5" rx="1"/><rect x="16" y="3.5" width="4.5" height="4.5" rx="1"/><rect x="3.5" y="9.75" width="4.5" height="4.5" rx="1"/><rect x="9.75" y="9.75" width="4.5" height="4.5" rx="1"/><rect x="16" y="9.75" width="4.5" height="4.5" rx="1"/><rect x="3.5" y="16" width="4.5" height="4.5" rx="1"/><rect x="9.75" y="16" width="4.5" height="4.5" rx="1"/><rect x="16" y="16" width="4.5" height="4.5" rx="1"/></svg></button></div>`;
-    let html = `<div class="sort-row"><span>${list.length} item${list.length === 1 ? '' : 's'}</span><div class="sort-tools">${viewSeg}<div class="seg"><button type="button" class="${picker.sort === 'name' ? 'on' : ''}" data-action="sort" data-sort="name">A–Z</button><button type="button" class="${picker.sort === 'cost' ? 'on' : ''}" data-action="sort" data-sort="cost">Cheapest<span class="p10"> ${picker.type === 'BOSS' ? 'P5' : picker.type === 'ALL' ? 'max' : 'P10'}</span></button></div></div></div>`;
+    const box = icons ? 'slots' : grid ? 'slots named' : 'inv-list';
+    const pv = document.getElementById('pickViews');
+    if (pv) pv.innerHTML = ['grid', 'list', 'icons'].map(v => `<button type="button" class="${(v === 'list' ? !grid && !icons : picker.view === v) ? 'on' : ''}" data-action="picker-view" data-view="${v}" aria-label="${v === 'grid' ? 'Tiles with names' : v === 'list' ? 'List' : 'Icons only'}" title="${v === 'grid' ? 'Tiles' : v === 'list' ? 'List' : 'Icons'}">${INV_VIEW_SVG[v]}</button>`).join('');
+    let html = `<div class="sort-row"><span>${list.length} item${list.length === 1 ? '' : 's'}</span><div class="sort-tools"><div class="seg"><button type="button" class="${picker.sort === 'name' ? 'on' : ''}" data-action="sort" data-sort="name">A–Z</button><button type="button" class="${picker.sort === 'cost' ? 'on' : ''}" data-action="sort" data-sort="cost">Cheapest<span class="p10"> ${picker.type === 'BOSS' ? 'P5' : picker.type === 'ALL' ? 'max' : 'P10'}</span></button></div></div></div>`;
     if (!q && picker.type === 'ALL') {   // shelves above the full list: the best deals, then what you opened lately
       const deals = homeDeals();
       let rec = recent.map(k => ITEM_BY_KEY.get(k)).filter(Boolean);
