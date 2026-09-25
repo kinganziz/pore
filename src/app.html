@@ -1537,7 +1537,7 @@
   .ip-more { display: grid; gap: 6px; }
   .ip-more[open] { display: grid; }
   /* ---------- the PORE menu: a gem in the top-left corner opens a menu from the left; the screens get the full height ---------- */
-  .topbar.topbar { position: fixed; top: 0; left: 0; right: auto; z-index: 60; display: block; width: auto; padding: calc(env(safe-area-inset-top, 0px) + 8px) 0 0 10px;
+  .topbar.topbar { position: fixed; top: 0; left: 0; right: auto; z-index: 63;   /* above the scrim (61): the menu lives inside this layer */ display: block; width: auto; padding: calc(env(safe-area-inset-top, 0px) + 8px) 0 0 10px;
     background: none; border: 0; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; pointer-events: none; }
   .pore-gem { pointer-events: auto; display: grid; place-items: center; padding: 0; border: 0; background: none; cursor: pointer; filter: drop-shadow(2px 3px 0 rgba(0, 0, 0, .45)); }
   .pore-gem .logo { width: 38px; height: 38px; }
