@@ -1751,6 +1751,12 @@
   .shop-line .ip-best { margin: 4px 0 0; }
   .enc-desc { margin: -4px 2px 12px; color: var(--soft); font-size: 13px; line-height: 1.35; }
   .place-tile .npc-pic.pt-face { width: 64px; height: 64px; }
+  .craft-calc .cc-qty { display: flex; align-items: center; gap: 6px; margin: 2px 0 8px; }
+  .craft-calc .cc-qty span { color: var(--soft); font-size: 13px; margin-right: 4px; }
+  .craft-calc .cc-qty button { min-width: 34px; height: 30px; border: 0; border-radius: 8px; background: rgba(255, 255, 255, .08); color: var(--text); font: inherit; cursor: pointer; }
+  .craft-calc .cc-qty b { min-width: 44px; text-align: center; font-size: 18px; color: var(--gold); }
+  .craft-calc .cc-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .craft-calc .cc-made { margin-top: 6px; font-size: 12px; color: var(--soft); }
 </style>
 </head>
 <body>
@@ -5859,6 +5865,35 @@ function createSolver() {
       srcRow('free', 'Lifetime tasks', 'a reward for some lifetime tasks') +
       '<p class="ip-desc">Each one eaten adds +0.5 to its stats for good.</p>';
   }
+  // Craft calculator: how many of an item you want, worked down through every recipe to the raw materials.
+  // What you already own is used first at every level (ingots before the ores they are made from).
+  const craftQty = {};
+  const recipeOf = key => { const e = (WHERE[key] || []).find(x => x[0] === 'craft'); return e ? e[1] : null; };
+  function craftNeeds(key, qty) {
+    const stock = {}, raw = new Map(), made = new Map();
+    const own = k => (k in stock ? stock[k] : (stock[k] = inv.items[k] || 0));
+    const need = (k, n, top, depth) => {   // depth: a guard against recipes that loop
+      if (!top) { const use = Math.min(own(k), n); stock[k] -= use; n -= use; }
+      if (n <= 0) return;
+      const r = depth < 8 && recipeOf(k);
+      if (r) { if (!top) made.set(k, (made.get(k) || 0) + n); for (const [ik, m] of r) need(ik, n * m, false, depth + 1); }
+      else raw.set(k, (raw.get(k) || 0) + n);
+    };
+    need(key, qty, true, 0);
+    return { raw, made };
+  }
+  function craftCalcHTML(key) {
+    if (!recipeOf(key)) return '';
+    const q = craftQty[key] || 1, { raw, made } = craftNeeds(key, q);
+    const line = (k, n, note) => { const it = anyItem(k); if (!it) return '';
+      return `<button type="button" class="ip-link cc-line" data-action="inv-go" data-key="${k}">${iconSVG(k)}<span><b>${fmt(n)}</b> ${esc(it.name)}${note ? ` <i>${note}</i>` : ''}</span></button>`; };
+    return `<div class="ip-sec craft-calc"><div class="ip-lab">Craft calculator</div>` +
+      `<div class="cc-qty"><span>Make</span><button type="button" data-action="craft-qty" data-key="${key}" data-d="-10">−10</button><button type="button" data-action="craft-qty" data-key="${key}" data-d="-1">−</button>` +
+      `<b>${fmt(q)}</b><button type="button" data-action="craft-qty" data-key="${key}" data-d="1">+</button><button type="button" data-action="craft-qty" data-key="${key}" data-d="10">+10</button></div>` +
+      (raw.size ? `<div class="cc-list">${[...raw].map(([k, n]) => line(k, n, 'to gather')).join('')}</div>` : '<p class="ip-desc">You own everything it takes.</p>') +
+      (made.size ? `<div class="cc-made">Made on the way: ${[...made].map(([k, n]) => `${fmt(n)} ${esc((anyItem(k) || {}).name || '')}`).join(', ')}</div>` : '') +
+      '<p class="ip-desc">Counts you set in Inventory are used first, at every step.</p></div>';
+  }
   function whereHTML(key) {
     const fuse = fuseHTML(key);
     const list = (WHERE[key] || []).slice().sort((a, b) => (SRC_ORDER[a[0]] - SRC_ORDER[b[0]]) || ((typeof b[2] === 'number' ? b[2] : 0) - (typeof a[2] === 'number' ? a[2] : 0)));
@@ -5906,7 +5941,7 @@ function createSolver() {
       head = `${iconSVG(g.key)}<div><b>${esc(g.name)}</b><small>${esc(GOOD_SINGULAR[g.type] || '')}${g.rarity ? ` · <span class="rar ${g.rarity}">${esc(g.rarity[0].toUpperCase() + g.rarity.slice(1))}</span>` : ''}</small></div>`;
       details = (g.desc ? `<p class="ip-desc">${esc(g.desc)}</p>` : '') +
         (g.pct ? Object.entries(g.pct).map(([n, v]) => `<div class="ip-row"><span>${esc(n)}</span><b class="${v < 0 ? 'neg' : 'pos'}">${v > 0 ? '+' : ''}${v}%</b></div>`).join('') : '');
-      const extra = whereHTML(g.key) + usesHTML(g.key);
+      const extra = whereHTML(g.key) + craftCalcHTML(g.key) + usesHTML(g.key);
       details += extra || '<p class="ip-desc">The wiki does not say where this one comes from yet.</p>';
       controls = `<div class="ip-lab">You own</div>${invStepper('inv-item', g.key, inv.items[g.key] || 0, g.name + ' you own')}` +
         (inv.items[g.key] ? `<div class="ie-acts"><button type="button" class="danger" data-action="inv-del" data-key="${g.key}">Clear</button></div>` : '');
@@ -5916,7 +5951,7 @@ function createSolver() {
       details = Object.entries(it.stats).map(([n, v]) => `<div class="ip-row"><span>${esc(n)}</span><b>${v}</b></div>`).join('') +
         `<div class="ip-row"><span>Refines up to</span><b>P${maxL}</b></div>` +
         (cost != null ? `<div class="ip-row"><span>Perfect P${maxL} with PORE</span><b>${fmt(cost)} base items</b></div><div class="ip-row dim"><span>the standard way</span><b>${fmt(std)}</b></div>` : '') +
-        whereHTML(it.key) + usesHTML(it.key);
+        whereHTML(it.key) + craftCalcHTML(it.key) + usesHTML(it.key);
       controls = `<div class="ip-lab">Base (P1) copies you own</div>${invStepper('inv-item', it.key, inv.items[it.key] || 0, it.name + ' base copies')}` +
         `<div class="ie-acts"><button type="button" data-action="pick" data-key="${it.key}">Plan it ›</button>${inv.items[it.key] ? `<button type="button" class="danger" data-action="inv-del" data-key="${it.key}">Clear</button>` : ''}</div>`;
     } else if (c) {
@@ -6057,6 +6092,9 @@ function createSolver() {
         if (['maps', 'npcs', 'monsters', 'bosses', 'chests', 'encounters'].includes(invTab)) { placeView = el.dataset.view; try { localStorage.setItem('pore.placeview.v1', placeView); } catch (err) { /* ignore */ } }
         else { invView = el.dataset.view; try { localStorage.setItem('pore.invview.v2', invView); } catch (err) { /* ignore */ } }
         renderCharms(); break;
+      case 'craft-qty': { const k = el.dataset.key; craftQty[k] = Math.max(1, Math.min(99999, (craftQty[k] || 1) + Number(el.dataset.d))); haptic(4);
+        const pop = document.getElementById('invPop'); const card = pop && pop.querySelector('.ip-card'); const y = card ? card.scrollTop : 0;
+        invRenderPop(); const c2 = document.querySelector('#invPop .ip-card'); if (c2) { c2.scrollTop = y; c2.classList.add('still'); } break; }
       case 'inv-step': {
         const k = el.dataset.key, d = Number(el.dataset.d);
         if (el.dataset.field === 'inv-item') { invSetItem(k, Math.max(0, (inv.items[k] || 0) + d)); invSave(); if (state.item === k) { state.stock = inv.items[k]; persist(); renderResults(); } }
