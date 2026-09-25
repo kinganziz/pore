@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>PORE · Pixel Odyssey Refinement Engine</title>
-<meta name="description" content="Find the cheapest refinement path for any Pixel Odyssey item. PORE plans refines that reach the same stats with far fewer base items.">
+<meta name="description" content="Less grind, more life. PORE saves Pixel Odyssey players time: the cheapest way to refine gear, where every item comes from, and what you already own.">
 <meta name="theme-color" content="#0a0c12">
 <meta name="color-scheme" content="dark light">
 <link rel="manifest" href="manifest.webmanifest">
@@ -5414,7 +5414,7 @@ function createSolver() {
       pool.sort((a, b) => (mc ? mc.get(b.key)[0] - mc.get(a.key)[0] : 0) || (has(b) - has(a)) || (has(a) ? (inv.added[b.key] || 0) - (inv.added[a.key] || 0) : 0) || at.get(a.key) - at.get(b.key))
         .forEach(it => {
           const gear = ITEM_BY_KEY.has(it.key);
-          rows.push({ key: it.key, icon: iconSVG(it.key), n: has(it) ? invQty(inv.items[it.key]) : '', cls: has(it) ? '' : 'off', glow: gear ? '#3aa84a' : '#4aa8ff', label: it.name, lv: gear && has(it) ? 'I' : '',
+          rows.push({ key: it.key, icon: iconSVG(it.key), n: has(it) ? invQty(inv.items[it.key]) : '', cls: '', glow: gear ? '#3aa84a' : '#4aa8ff', label: it.name, lv: gear && has(it) ? 'I' : '',
             ch: mc && mc.get(it.key)[0] ? chanceShort(mc.get(it.key)) : '', cv: mc ? mc.get(it.key)[0] : null,
             sub: (mc && mc.get(it.key)[0] ? chanceTxt(mc.get(it.key)) + ' · ' : '') + (gear ? `${TYPE_SINGULAR[it.type] || ''} · ${statsLine(it)}` : `${GOOD_SINGULAR[it.type] || ''}${it.rarity ? ' · ' + it.rarity : ''}${it.desc ? ' · ' + it.desc : ''}`) });
         });
