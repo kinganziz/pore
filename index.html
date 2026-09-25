@@ -1192,6 +1192,8 @@
     -webkit-backdrop-filter: none !important; justify-content: center; padding: 6px 0; text-shadow: 1px 1px 0 rgba(0, 0, 0, .65), 0 0 12px rgba(0, 0, 0, .45); }
   :root .home-hero .home-best .hb-icon { background: none !important; box-shadow: none !important; filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, .45)); }
   :root .home-hero .home-best .hb-icon .pixel { width: 52px; height: 52px; }
+  :root .home-hero .home-best b { font-size: 20px; }
+  :root .home-hero .home-best .hb-num { font-size: 34px; }   /* just the icon and the count: bigger number */
   :root .home-hero .home-best small { color: rgba(255, 255, 255, .82); }
   :root .home-hero .btn.home-cta.home-cta.home-cta { background: none !important; border: 0 !important; box-shadow: none !important; color: #fff !important;
     font-size: 22px; padding: 10px 14px; text-shadow: 2px 2px 0 rgba(0, 0, 0, .6), 0 0 16px rgba(0, 0, 0, .4); animation: cta-breathe 2.4s ease-in-out infinite; }
@@ -3230,9 +3232,9 @@ function createSolver() {
           <h1 class="home-title ${titleDrop ? 'drop' : ''}"><i class="tw" style="--i:0">Max</i> <i class="tw" style="--i:1">your</i> <i class="tw" style="--i:2">gear</i><br><span>for a fraction.</span></h1>
           <p class="home-sub">A perfect P10 normally eats <b>512</b> base items. PORE finds the cheapest path, step by step.</p>
           ${spots.length ? `<div class="hb-carousel">
-            <div class="hb-track">${spots.map((it, i) => `<button class="home-best" type="button" data-action="pick" data-key="${it.key}">
+            <div class="hb-track">${spots.map((it, i) => `<button class="home-best" type="button" data-action="pick" data-key="${it.key}" aria-label="${fmt(badges[it.key])} items for a perfect P${maxOf(it)} ${esc(it.name)}, ${pct(it)}% less" title="${esc(it.name)} · perfect P${maxOf(it)} · ${pct(it)}% less">
               <span class="hb-icon">${iconSVG(it.key)}</span>
-              <span class="hb-text"><b><span class="hb-num" data-count="${badges[it.key]}">${fmt(i ? badges[it.key] : std(it))}</span> items</b> for a perfect P${maxOf(it)}<small>${esc(it.name)} · ${pct(it)}% less</small></span>
+              <span class="hb-text"><b><span class="hb-num" data-count="${badges[it.key]}">${fmt(i ? badges[it.key] : std(it))}</span> items</b></span>
             </button>`).join('')}</div>
             ${spots.length > 1 ? `<div class="hb-dots" aria-hidden="true">${spots.map((_, i) => `<i class="${i ? '' : 'on'}"></i>`).join('')}</div>` : ''}
           </div>` : ''}
