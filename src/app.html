@@ -1734,6 +1734,10 @@
   .home-continue { border: 0; background: none; padding: 2px 6px; font: inherit; font-size: 14px; color: #ffe08a; cursor: pointer; text-shadow: 1px 1px 0 rgba(0, 0, 0, .7); }
   .home-continue b { color: #fff; }
   :root[data-sky="day"] .home-continue { color: #9a4a00; text-shadow: 0 0 8px rgba(255, 255, 255, .8); } :root[data-sky="day"] .home-continue b { color: #1b1f33; }
+  /* the chosen tab: a dark pressed-in well with a gold bar and gold label, like the rest of the interface (not a raised coral block) */
+  :root .tabbar .tab.tab.on, :root[data-finish="retro"] .tabbar .tab.tab.tab.on { background: rgba(0, 0, 0, .34) !important; color: var(--gold) !important;
+    box-shadow: inset 2px 2px 0 rgba(0, 0, 0, .45), inset -1px -1px 0 rgba(255, 255, 255, .06), inset 0 -3px 0 var(--gold) !important; }
+  :root .tabbar .tab.on .tab-label { color: var(--gold) !important; }
 </style>
 </head>
 <body>
