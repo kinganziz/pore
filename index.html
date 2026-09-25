@@ -21,7 +21,7 @@
     d.setAttribute('data-theme', t);
     var sk = g('pore.skin');
     d.setAttribute('data-skin', sk === 'pixel' || sk === 'game' ? 'pixel' : 'modern');
-    if (sk === 'game') d.setAttribute('data-flavor', 'game');
+    if (sk === 'game' || sk === 'test') d.setAttribute('data-flavor', sk);
     d.setAttribute('data-font', g('pore.font') === 'jersey' ? 'jersey' : 'vt323');   // VT323 is the default reading font
   })();
 </script>
@@ -417,7 +417,7 @@
   .progress .track { flex: 1; height: 8px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
   .progress .fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--good), var(--accent)); transition: width .5s var(--ease); }
   .lvl-group { margin-top: 14px; }
-  .lvl-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 -16px; padding: 10px 16px; position: sticky; top: var(--topbar-h, 62px); z-index: 2; background: color-mix(in srgb, var(--bg) 94%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .lvl-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 -16px; padding: 10px 16px; position: sticky; top: calc(var(--topbar-h, 62px) - 1px); z-index: 2; background: color-mix(in srgb, var(--bg) 94%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
   @media (min-width: 980px) { .lvl-head { position: static; background: var(--surface); backdrop-filter: none; border-radius: 12px; margin: 0; padding: 8px 12px; border: 1px solid var(--line); } }
   .lvl-head { flex-direction: column; justify-content: center; text-align: center; gap: 6px; }
   .lvl-head .facts { justify-content: center; }
@@ -1053,7 +1053,7 @@
   :root[data-flavor="game"] .chip-btn .lvr { font-size: 15px; }
   .theme-pick button { font-family: inherit !important; }
   /* ---------- home as a game title screen over an animated landscape ---------- */
-  #scene { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; display: none; image-rendering: pixelated; pointer-events: none; }
+  #scene { position: fixed; left: 0; top: 0; width: 100%; height: 100vh; height: 100lvh; z-index: 0; display: none; image-rendering: pixelated; pointer-events: none; }   /* lvh: still full screen when the phone's address bar slides away */
   body:not(.has-item) #scene { display: block; }
   body:not(.has-item) { background: #07061a; }
   .home-hero.home-hero, :root[data-skin="pixel"] .home-hero.home-hero, :root[data-flavor="game"] .home-hero.home-hero {
@@ -1094,7 +1094,8 @@
   body { padding-bottom: var(--tabbar-h); }
   /* the bar stays on top like the game's; sheets end just above it */
   .tabbar { z-index: 55; }
-  .sheet-backdrop { top: var(--topbar-h, 62px); bottom: var(--tabbar-h); }
+  .sheet-backdrop { top: calc(var(--topbar-h, 62px) - 1px); bottom: var(--tabbar-h); }
+  .topbar { z-index: 56; }   /* above the sheets, which tuck 1px under it: no gap between the bar and a sheet */
   @media (max-width: 719px) { .sheet { height: 100%; padding-top: 0; } }
   @media (min-width: 720px) { .sheet { height: min(100%, 900px); } }
   :root[data-skin="pixel"] .tabbar { background: var(--bg-2); border-top: var(--px-w) solid var(--line); box-shadow: none; }
@@ -1169,6 +1170,26 @@
   /* top bar and tab bar: a little see-through, so the world shows behind them too */
   .topbar, :root[data-skin="pixel"] .topbar, .tabbar, :root[data-skin="pixel"] .tabbar {
     background: color-mix(in srgb, var(--bg-2) 72%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }   /* blur: page text sliding under stays unreadable */
+  /* ---------- test look: the modern look with a pixel finish (same sizes, borders, radii, colours) ---------- */
+  :root[data-flavor="test"] .glow { display: none; }
+  :root[data-flavor="test"] .px-only { display: block; }
+  :root[data-flavor="test"] .hd-only { display: none; }
+  :root[data-flavor="test"] .logo svg.px-only { width: 24px; height: 20px; }
+  :root[data-flavor="test"] img, :root[data-flavor="test"] canvas, :root[data-flavor="test"] svg.pixel { image-rendering: pixelated; }
+  /* hard pixel drop shadows instead of soft glows */
+  :root[data-flavor="test"] :is(.card, .home-best, .deal, .proj-open, .proj-x, .coach-bubble, .talk, .tip, .icon-btn, .btn:not(.ghost), .chip-btn, .tile-item, .icon-only, .charm-chip, .row) {
+    box-shadow: 3px 3px 0 rgba(0, 0, 0, .4); }
+  /* filled highlights: flat colour with a pixel bevel (light top edge, dark bottom edge) */
+  :root[data-flavor="test"] :is(.btn.primary, .chip-btn.on, .seg.accent button.on, .step-num, .logo, .skin-btn[aria-pressed="true"], .hd-btn[aria-pressed="true"], .toast.tappable, .tab.on, .home-cta, .guide-cta) {
+    background: var(--accent) !important;
+    box-shadow: inset 0 3px 0 rgba(255, 255, 255, .22), inset 0 -3px 0 rgba(0, 0, 0, .28), 3px 3px 0 rgba(0, 0, 0, .45) !important; }
+  :root[data-flavor="test"] .chip-btn.on.gold { background: #f6b73c !important; }
+  :root[data-flavor="test"] .chip.perfect b { background: #f6b73c; box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .25); }
+  :root[data-flavor="test"] .home-cta { animation: none; }
+  :root[data-flavor="test"] :is(.btn, .icon-btn, .chip-btn, .tile-item, .icon-only, .charm-chip, .row, .deal, .home-best):active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(0, 0, 0, .4) !important; }
+  :root[data-flavor="test"] .ring svg { filter: none !important; }
+  :root[data-flavor="test"] .ring circle { stroke-linecap: butt; }
+  :root[data-flavor="test"] .brand h1 { text-shadow: 2px 2px 0 rgba(0, 0, 0, .45); }
 </style>
 </head>
 <body>
@@ -1270,7 +1291,7 @@
         <button class="btn small" type="button" data-action="check-update"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Check for update</button>
       </div>
       <div class="font-pick theme-pick"><span>Look</span><div class="seg" role="group" aria-label="Look">
-        <button type="button" data-action="skin-pick" data-skin="modern">Modern</button><button type="button" data-action="skin-pick" data-skin="pixel">Pixel</button><button type="button" data-action="skin-pick" data-skin="game">Game</button>
+        <button type="button" data-action="skin-pick" data-skin="modern">Modern</button><button type="button" data-action="skin-pick" data-skin="pixel">Pixel</button><button type="button" data-action="skin-pick" data-skin="game">Game</button><button type="button" data-action="skin-pick" data-skin="test">Test</button>
       </div></div>
       <div class="font-pick"><span>Font</span><div class="seg" role="group" aria-label="Font">
         <button type="button" data-action="font" data-font="jersey">Jersey 15</button><button type="button" data-action="font" data-font="vt323">VT323</button>
@@ -2216,7 +2237,7 @@ function createSolver() {
   // pinned level headers sit exactly under the top bar, whatever its height (theme, fonts, phone width)
   function syncTopbar() {
     const topbar = document.querySelector('.topbar');
-    if (topbar) document.documentElement.style.setProperty('--topbar-h', Math.round(topbar.getBoundingClientRect().height) + 'px');
+    if (topbar) document.documentElement.style.setProperty('--topbar-h', topbar.getBoundingClientRect().height + 'px');   // exact: a rounded value left a hairline gap
   }
   let readFont = 'vt323';   // default reading font; Jersey 15 is the alternative (help page switch)
   function setFont(f) {
@@ -2227,13 +2248,13 @@ function createSolver() {
     syncTopbar();
   }
   // Three looks: modern (default), pixel, and game (the pixel look in Pixel Odyssey's own colours and level badges)
-  const SKINS = { modern: 'Modern theme', pixel: 'Pixel theme', game: 'Game theme' };
+  const SKINS = { modern: 'Modern theme', pixel: 'Pixel theme', game: 'Game theme', test: 'Test theme' };
   let skin = 'modern';
   function setSkin(next) {
     skin = SKINS[next] ? next : 'modern';
     const d = document.documentElement;
-    d.setAttribute('data-skin', skin === 'modern' ? 'modern' : 'pixel');
-    if (skin === 'game') d.setAttribute('data-flavor', 'game'); else d.removeAttribute('data-flavor');
+    d.setAttribute('data-skin', skin === 'modern' || skin === 'test' ? 'modern' : 'pixel');
+    if (skin === 'game' || skin === 'test') d.setAttribute('data-flavor', skin); else d.removeAttribute('data-flavor');
     syncTopbar();
     const b = document.querySelector('[data-action="skin"]');
     if (b) b.setAttribute('aria-pressed', String(skin !== 'modern'));
@@ -2684,7 +2705,9 @@ function createSolver() {
   function sceneSetup() {
     const c = scene.el || (scene.el = document.getElementById('scene'));
     if (!c) return false;
-    const W = 180, H = Math.max(200, Math.round(W * innerHeight / Math.max(1, innerWidth)));
+    // one world pixel is the same size across and down: phones get 180 pixels across, wide screens see more land
+    const cw = c.clientWidth || innerWidth, ch = c.clientHeight || innerHeight, px = Math.max(1, Math.min(cw / 180, ch / 200));
+    const W = Math.round(cw / px), H = Math.round(ch / px);
     if (scene.W !== W || scene.H !== H) {
       scene.W = W; scene.H = H; c.width = W; c.height = H;
       scene.ctx = c.getContext('2d');
@@ -3959,7 +3982,7 @@ function createSolver() {
     const act = el.dataset.action;
     switch (act) {
       case 'home': e.preventDefault(); if (ui.pickerSheet.hidden && ui.infoSheet.hidden && ui.guideSheet.hidden) goHome(); else closeSheets(); break;
-      case 'skin': setSkin({ modern: 'pixel', pixel: 'game', game: 'modern' }[skin]); toast(SKINS[skin]); break;
+      case 'skin': setSkin({ modern: 'pixel', pixel: 'game', game: 'test', test: 'modern' }[skin]); toast(SKINS[skin]); break;
       case 'skin-pick': setSkin(el.dataset.skin); toast(SKINS[skin]); break;
       case 'icon-style': setIconStyle(iconStyle === 'modern' ? 'pixelhd' : 'modern'); toast(ICON_STYLES[iconStyle].label); break;
       case 'reload': location.reload(); break;
