@@ -263,6 +263,23 @@ def bosses_of(index):
     return out
 
 
+def monsters_of(index):
+    """The monsters, weakest first by the wiki's power: description, element and fight stats (drops are in `where`)."""
+    num = lambda v: int(float(v)) if str(v).replace(".", "", 1).isdigit() else 0
+    out = []
+    for path, meta in index.items():
+        fm = (meta or {}).get("frontmatter") or {}
+        if fm.get("fileClass") != "monster" or not fm.get("name"):
+            continue
+        desc = str(fm.get("description") or "").strip()
+        out.append({"name": fm["name"], "id": num(fm.get("id")), "desc": "" if desc == "None" else desc,
+                    "element": str(fm.get("element") or "").strip(), "power": num(fm.get("power")),
+                    "hp": num(fm.get("hp")), "atk": num(fm.get("attack")), "def": num(fm.get("defense")),
+                    "spd": num(fm.get("speed")), "luck": num(fm.get("luck")), "mana": num(fm.get("mana"))})
+    out.sort(key=lambda m: (m["power"], m["name"]))
+    return out
+
+
 def main() -> None:
     offline = "--offline" in sys.argv
     CACHE_DIR.mkdir(exist_ok=True)
@@ -387,6 +404,7 @@ def main() -> None:
     places.sort(key=lambda pl: (pl["steps"], pl["name"]))
 
     bosses = bosses_of(index)
+    monsters = monsters_of(index)
 
     stat_names = sorted({name for it in items for name in it["stats"]})
     payload = {
@@ -401,6 +419,7 @@ def main() -> None:
         "uses": uses,
         "places": places,
         "bosses": bosses,
+        "monsters": monsters,
     }
     OUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     OUT_FILE.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
