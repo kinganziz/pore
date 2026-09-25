@@ -3991,7 +3991,7 @@ __SOLVER_JS__
     patchHTML(ui.resultsBody, `${compareKey ? compareHTML() : ''}
       <div class="card hero ${plain ? 'plain' : ''}">
         <div class="hero-top">
-          <span class="hero-label">${plain ? `<span class="plain-badge">No shortcut</span>${esc(item.name)} → P${state.L}` : `Cheapest path · ${esc(item.name)} → P${state.L}`}</span>
+          <span class="hero-label">${plain ? `<span class="plain-badge">No shortcut</span>${esc(item.name)} → P${state.L}` : `Least-grind path · ${esc(item.name)} → P${state.L}`}</span>
           ${solving ? '<span class="solving"><span class="dot"></span>updating</span>' : ''}
         </div>
         ${state.L < item.maxL ? `<div class="lvl-note"><span>Planning for <b>P${state.L}</b> · this item goes up to P${item.maxL}</span><button class="btn small" type="button" data-action="set-level" data-level="${item.maxL}">Plan P${item.maxL}</button></div>` : ''}
