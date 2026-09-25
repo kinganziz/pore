@@ -15,33 +15,29 @@ l #bd8122
 m #c0a782
 n #bc9d6e
 o #9c825d
-p #121015
-q #141216
-r #c3b197
-s #484649
-t #100e14
-u #ffffff
-v #2a2a36
-w #9f8b6e
-x #a29380
-y #49361c
-z #ac8448
-A #f6ede1
-B #c5bbb0
-C #c7bfb7
-D #f4e8d8
-E #754f2a
-F #928b83
-G #0f0d10
-H #b5aca0
-I #0f1d0f
-J #447547
-K #1a3b1d
-L #85cc85
-M #63ae63
-N #245624
-O #419041
-P #307330
+p #141216
+q #c3b197
+r #ffffff
+s #2a2a36
+t #9f8b6e
+u #a29380
+v #49361c
+w #ac8448
+x #f6ede1
+y #c5bbb0
+z #c7bfb7
+A #f4e8d8
+B #754f2a
+C #928b83
+D #b5aca0
+E #0f1d0f
+F #447547
+G #1a3b1d
+H #85cc85
+I #63ae63
+J #245624
+K #419041
+L #307330
 --
 ................................
 ..............aaaa..............
@@ -56,22 +52,22 @@ P #307330
 .diabcbbbbbeeeeebbbbbccccclkahd.
 digabbbbbbbbebeebbbcbcccccklafhd
 digabcbbbbcmmmeebbnnncccccllafhd
-digabbcbbcoppqrebnsppoccccklafhd
-digabccbcnpqptrbcntqqpmcckllafhd
-digabbcbbcmuvprebnqupwccckklafhd
-digabcccbbnvvprbcnpvvmbcckllafhd
-.diabbccccntvxbcbcovtmcckkklahd.
-.diabccccccrryynzyymmccckkllahd.
-.dgabbccccccyABsqCDyccckkkklahd.
-..dEkccccckyADFsGCDDyckkkkllEd..
-...daccccccyADFqGCDHyckkkllad...
-....akkkcckyADDCCDHHykkkkkla....
-.....akkkkcyDDDDDHDHyckkkla.....
-......akkkkkyDHHHHHyckkkla......
-.......akkklkyyyyyycklkla.......
-.......IJklllkkkkkkklllKI.......
-......ILMaaaklllllllaaaNI.......
-......ILLMLMaaaaaaaaOPONNI......
-......ILMMMMMMOMOMPOPPPNNI......
-.....ILLOMOMOOPOPONPNPNNNI......
-.....ILMOOOOOPPPPPNNNNNNNNI.....
+digabbcbbcopppqebnpppoccccklafhd
+digabccbcnppppqbcnppppmcckllafhd
+digabbcbbcmrspqebnprptccckklafhd
+digabcccbbnsspqbcnpssmbcckllafhd
+.diabbccccnpsubcbcospmcckkklahd.
+.diabccccccqqvvnwvvmmccckkllahd.
+.dgabbccccccvxyppzAvccckkkklahd.
+..dBkccccckvxACppzAAvckkkkllBd..
+...daccccccvxACppzADvckkkllad...
+....akkkcckvxAAzzADDvkkkkkla....
+.....akkkkcvAAAAADADvckkkla.....
+......akkkkkvADDDDDvckkkla......
+.......akkklkvvvvvvcklkla.......
+.......EFklllkkkkkkklllGE.......
+......EHIaaaklllllllaaaJE.......
+......EHHIHIaaaaaaaaKLKJJE......
+......EHIIIIIIKIKILKLLLJJE......
+.....EHHKIKIKKLKLKJLJLJJJE......
+.....EHIKKKKKLLLLLJJJJJJJJE.....

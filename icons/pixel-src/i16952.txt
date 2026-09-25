@@ -31,18 +31,16 @@ B #337134
 C #265428
 D #141216
 E #ffffff
-F #484649
-G #2b5e2e
-H #0f0d10
-I #38733b
-J #0b160b
-K #38693a
-L #142e17
-M #70c670
-N #509c50
-O #1a421a
-P #307230
-Q #235823
+F #2b5e2e
+G #38733b
+H #0b160b
+I #38693a
+J #142e17
+K #70c670
+L #509c50
+M #1a421a
+N #307230
+O #235823
 --
 ................................
 ................................
@@ -66,13 +64,13 @@ Q #235823
 ..bggggggggggggggggggggxxxxyyb..
 ..bgggggggggxgxgxgxgxgxxxxxxyb..
 ..bgxxgggggBBxBBBBxBCxxxxxxyyb..
-..bggxxxggBDDEFFFDEFDzgxxxxyyb..
-..bgxxxxxxxGDDHHHHDHIgxxxxyyyb..
+..bggxxxggBDDEDDDDEDDzgxxxxyyb..
+..bgxxxxxxxFDDDDDDDDGgxxxxyyyb..
 ..bxyxyxyxxxzzzzzzzzgxxxyyyyyb..
 ...bbxyyyyxyxxxxxxxxxyxyyyybb...
-.....bbJKxyyyyyyyyyyyyyLJbb.....
-......JMNbbbbbbbbbbbbbbOJ.......
-......JMMNMNMPNPNPPQPQPOOJ......
-......JMNNNNNPPPPPQQQQQOOJ......
-.....JMMPNPNPPQPQPOQOQOOOJ......
-.....JMNPPPPPQQQQQOOOOOOOOJ.....
+.....bbHIxyyyyyyyyyyyyyJHbb.....
+......HKLbbbbbbbbbbbbbbMH.......
+......HKKLKLKNLNLNNONONMMH......
+......HKLLLLLNNNNNOOOOOMMH......
+.....HKKNLNLNNONONMOMOMMMH......
+.....HKLNNNNNOOOOOMMMMMMMMH.....

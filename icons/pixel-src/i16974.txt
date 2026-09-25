@@ -49,7 +49,7 @@ G #a8584a
 ....afffeeddegggaadgjjggjjja....
 ...akffdeafeaaegaaejaaejajjla...
 ...akffdaadeaoaapoaaqagjaajla...
-...afafdaqaarrppoqrsssaateaja...
+...afafdaoaarrppoqrsssaateaja...
 ..afffaaosuuuuvoqruuuurwtggjja..
 ..afffdtqqrxuuvporuxuyzwtejjja..
 ..afffetzqsAAuvoqruAArzwtgjjja..
@@ -57,7 +57,7 @@ G #a8584a
 ..afffddtCDBBBoqzqBBrEFtegjjja..
 ..afffdetEEqqoqssqqqzFFtggjjja..
 ..afffddetzzwzsGGrqzwwtgggjjja..
-..afffddddtzwwzrrzzwwtggggjjja..
+..afffddddtzwwzrrwzwwtggggjjja..
 ..afffddddfttzwwwwwttgggggjjja..
 ..afffdddddfdtttttteggggggjjja..
 ..afffdddddddedededgggggggjjja..

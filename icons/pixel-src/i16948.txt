@@ -14,18 +14,16 @@ k #8aa5c2
 l #457cb4
 m #141216
 n #ffffff
-o #484649
-p #7389a3
-q #0f0d10
-r #a2a5ac
-s #222c36
-t #888f9a
-u #3d546f
-v #d8e1ea
-w #c9d6e2
-x #587ca0
-y #bbcada
-z #8da6bf
+o #7389a3
+p #a2a5ac
+q #222c36
+r #888f9a
+s #3d546f
+t #d8e1ea
+u #c9d6e2
+v #587ca0
+w #bbcada
+x #8da6bf
 --
 ................................
 ................................
@@ -49,13 +47,13 @@ z #8da6bf
 ..acccccccccccccccccccceeeeffa..
 ..acccccccccecececececeeeeeefa..
 ..aceeccccckkekkkkekleeeeeeffa..
-..acceeecckmmnooomnomgceeeeffa..
-..aceeeeeeepmmqqqqmqrceeeefffa..
+..acceeecckmmnmmmmnmmgceeeeffa..
+..aceeeeeeeommmmmmmmpceeeefffa..
 ..aefefefeeeggggggggceeefffffa..
 ...aaeffffefeeeeeeeeefeffffaa...
-.....aastefffffffffffffusaa.....
-......svwaaaaaaaaaaaaaaxs.......
-......svvwvwvywywyyzyzyxxs......
-......svwwwwwyyyyyzzzzzxxs......
-.....svvywywyyzyzyxzxzxxxs......
-.....svwyyyyyzzzzzxxxxxxxxs.....
+.....aaqrefffffffffffffsqaa.....
+......qtuaaaaaaaaaaaaaavq.......
+......qttututwuwuwwxwxwvvq......
+......qtuuuuuwwwwwxxxxxvvq......
+.....qttwuwuwwxwxwvxvxvvvq......
+.....qtuwwwwwxxxxxvvvvvvvvq.....

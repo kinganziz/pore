@@ -68,12 +68,12 @@ R #96815b
 ...agagdkayxxxnpzpxxqAagdkaka...
 ..aggagdkBAppnprrpppzCDgdkakka..
 ..aggagdkEzzFzrGGqpzFFEgdkakka..
-..aggagdkaEzFFzqqzzFFEabdkakka..
+..aggagdkaEzFFzqqFzFFEabdkakka..
 ..aggagihaHHIzFFFFFJHHajdkakka..
 ..aggabadKLLMEEEEEENNNOdaiakka..
 ..agggabdaLMMNHNPHNPNPaidaikka..
 ..agggbdaLMMMNNHHMPPPPPaddkkka..
 ..agggddaMMMMNNNMNPPPPQadikkka..
 ..agbbddaLMMMNNNNNPPPPPaikkkka..
-...aaHKaMMNMNNPNPNQPQPQQRHaaa...
+...aaHKaNMNMNNPNPNQPQPQQRHaaa...
 .....HLMNNNNNPPPPPQQQQQQQQH.....

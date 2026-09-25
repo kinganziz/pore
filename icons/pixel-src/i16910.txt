@@ -15,55 +15,53 @@ l #c7eaff
 m #9edaff
 n #0c1018
 o #b3e2ff
-p #4a5963
+p #172a37
 q #56bdff
-r #172a37
-s #111f29
-t #009cfe
-u #a78e9a
-v #c9abb7
-w #b51e55
-x #971a49
-y #e02466
-z #fbf6f5
-A #ffffff
-B #f7eeea
-C #c7bfbe
-D #bcb0af
-E #141216
-F #cecdcf
-G #a8a5a7
-H #e2346a
-I #cac6c7
-J #eaa2ac
-K #e9dad6
-L #df929b
-M #d88d97
-N #d38791
-O #4a3c3e
-P #5a4a4a
-Q #9c9293
-R #a8584a
-S #918384
-T #7e7272
-U #372d2f
-V #1f191d
-W #ae9e9d
-X #433737
-Y #262f43
-Z #c3c5ca
-0 #f2f5f9
-1 #9c9ea7
-2 #bcbfc7
-3 #e9edf4
-4 #909ab1
-5 #edf1f7
-6 #f4f0e8
-7 #9fa1a8
-8 #b2bfda
-9 #c0c2c9
-undefined #6e87b9
-undefined #5a6d97
+r #009cfe
+s #a78e9a
+t #c9abb7
+u #b51e55
+v #971a49
+w #e02466
+x #fbf6f5
+y #ffffff
+z #f7eeea
+A #c7bfbe
+B #bcb0af
+C #141216
+D #cecdcf
+E #a8a5a7
+F #e2346a
+G #cac6c7
+H #eaa2ac
+I #e9dad6
+J #df929b
+K #d88d97
+L #d38791
+M #4a3c3e
+N #5a4a4a
+O #9c9293
+P #a8584a
+Q #918384
+R #7e7272
+S #372d2f
+T #1f191d
+U #ae9e9d
+V #433737
+W #262f43
+X #c3c5ca
+Y #f2f5f9
+Z #9c9ea7
+0 #bcbfc7
+1 #e9edf4
+2 #909ab1
+3 #edf1f7
+4 #f4f0e8
+5 #9fa1a8
+6 #b2bfda
+7 #c0c2c9
+8 #6e87b9
+9 #5a6d97
 --
 ..............aaaa..............
 ...........aaabccdaaa...........
@@ -72,28 +70,28 @@ undefined #5a6d97
 .......aeakkkdbddddkkkafa.......
 ......aegkllmkdidikllmkifa......
 ....naeakllommkffklllmmkafan....
-...nppppkloomqkppklloqqkppprn...
-...nrssskolmqtksskoommtkssssn...
-....auvvkqmqqtkeekqmmttkfwxa....
-...agaggbkqttkbdddkqttkiyyaya...
-...agaggbbkkkddiiidkkkiiyyaya...
-...avgggddgbdiiiaabiyyiiyyywa...
-...avaabdagdaadiaadyaadyaaawa...
-...avgbaaabdazaaAzaaBaiaadywa...
-...avgbbiaaaCCAAzBCDDDagbiywa...
-...avggdyaEEEEFzBCEEEEagbiywa...
-...agagdyaCAEEFAzCEAEGagdyaya...
-...agagdyaDHHEFzBCEHHCagdyaya...
-...agagdyaDHHEIzBDEHHCagdyaya...
-...agagdyaJIIIzBKBIICLagdyaya...
-..aggagdyaMKBzBDDBBBKNagdyayya..
-..aggagdyOPQKKDRRCKKSTUgdyayya..
-..aggagdyVPPQWWQQWWSPXVbdyayya..
-..aggagihaYVPPTTTTPPVYajdyayya..
-..aggabadZ00Z1PXXX12334daiayya..
-..agggabda050316673838aidaiyya..
-..agggbda05553399588888addyyya..
-..agggdda5555333538888adiyyya..
-..agbbdda05553333388888aiyyyya..
-...aaYZa553533838388Yaaa...
-.....Y053333388888Y.....
+...nppppkloomqkppklloqqkppppn...
+...nppppkolmqrkppkoommrkppppn...
+....asttkqmqqrkeekqmmrrkfuva....
+...agaggbkqrrkbdddkqrrkiwwawa...
+...agaggbbkkkddiiidkkkiiwwawa...
+...atgggddgbdiiiaabiwwiiwwwua...
+...ataabdagdaadiaadwaadwaaaua...
+...atgbaaabdaxaayxaazaiaadwua...
+...atgbbiaaaAAyyxzABBBagbiwua...
+...atggdwaCCCCDxzACCCCagbiwua...
+...agagdwaAyCCDyxACyCEagdwawa...
+...agagdwaBFFCDxzACFFAagdwawa...
+...agagdwaBFFCGxzBCFFAagdwawa...
+...agagdwaHGGGxzIzGGAJagdwawa...
+..aggagdwaKIzxzBBzzzILagdwawwa..
+..aggagdwMNOIIBPPAIIQRSgdwawwa..
+..aggagdwTNNOUUOOUUQNVTbdwawwa..
+..aggagihaWTNNRRRRNNTWajdwawwa..
+..aggabadXYYXZNVVVZ0112daiawwa..
+..agggabdaY3Y1Z4451616aidaiwwa..
+..agggbdaY3331177366666addwwwa..
+..agggdda33331113166668adiwwwa..
+..agbbddaY3331111166666aiwwwwa..
+...aaWXa13131161618686889Waaa...
+.....WY3111116666688888888W.....

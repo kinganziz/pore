@@ -11,31 +11,28 @@ h #51516d
 i #87879b
 j #74738c
 k #616077
-l #121015
-m #141216
-n #484649
-o #100e14
-p #ffffff
-q #2a2a36
-r #717082
-s #81808e
-t #a4a4bb
-u #8a8aa8
-v #66667c
-w #4d4c63
-x #38384d
-y #42425a
-z #15151a
-A #58576d
-B #282738
-C #a1a1b9
-D #81819c
-E #38384c
-F #4f4e69
-G #606080
-H #4b4b66
-I #696880
-J #828297
+l #141216
+m #ffffff
+n #2a2a36
+o #717082
+p #81808e
+q #a4a4bb
+r #8a8aa8
+s #66667c
+t #4d4c63
+u #38384d
+v #42425a
+w #15151a
+x #58576d
+y #282738
+z #a1a1b9
+A #81819c
+B #38384c
+C #4f4e69
+D #606080
+E #4b4b66
+F #696880
+G #828297
 --
 ................................
 ..............aaaa..............
@@ -50,22 +47,22 @@ J #828297
 adbabcbbbbbdddddbbbbbcccccheaeea
 adbabbbbbbbbdbddbbbcbcccccehaeha
 adbabcbbbbciiiddbbjjjccccchhaeha
-adbabbcbbckllmgdbjnllkccccehaeha
-adbabccbcjlmlogbcjommliccehhaeha
-adbabbcbbcipqlgdbjmplrccceehaeha
-adbabcccbbjqqlgbcjlqqibccehhaeha
-abbabbccccjoqsbjjckqoicceeehaeha
-.ababccccccggbjtuibiiccceehhaha.
-..ajbbcccccbceftvicbccceeeehja..
-...aecccccccccftvibccceeeehha...
-....accccccccewtviccceeeehha....
-....aeeecccceftuvibceeeeeeha....
-.....aeeeecccftuvjeeeeeeeha.....
-......aeeeeehxtuvjceeeeeha......
-.......aeeehytuvkceeeheha.......
-.......zAehhxtuvjehehhhBz.......
-......zCDaaatuvwhhhhaaaEz.......
-......zCCDFtuvvaaaaaGHGEEz......
-......zCDGFuvAIDGDHGHHHEEz......
-.....zCCGDGJJGGGHGEHEHEEEz......
-.....zCDGGGGGHHHHHEEEEEEEEz.....
+adbabbcbbcklllgdbjlllkccccehaeha
+adbabccbcjllllgbcjlllliccehhaeha
+adbabbcbbcimnlgdbjlmloccceehaeha
+adbabcccbbjnnlgbcjlnnibccehhaeha
+abbabbccccjlnpbjjcknlicceeehaeha
+.ababccccccggbjqribiiccceehhaha.
+..ajbbcccccbcefqsicbccceeeehja..
+...aecccccccccfqsibccceeeehha...
+....accccccccetqsiccceeeehha....
+....aeeeccccefqrsibceeeeeeha....
+.....aeeeecccfqrsjeeeeeeeha.....
+......aeeeeehuqrsjceeeeeha......
+.......aeeehvqrskceeeheha.......
+.......wxehhuqrsjehehhhyw.......
+......wzAaaaqrsthhhhaaaBw.......
+......wzzACqrssaaaaaDEDBBw......
+......wzADCrsxFADAEDEEEBBw......
+.....wzzDADGGDDDEDBEBEBBBw......
+.....wzADDDDDEEEEEBBBBBBBBw.....

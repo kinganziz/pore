@@ -294,11 +294,12 @@ export function pixelKit(options = {}) {
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
       const li = own[y][x]; if (li < 0) continue;
       const L = layers[li], R = L.ramp;
-      if (size[li] < 5) { col[y][x] = R.mid; continue; }
+      if (size[li] < 5 || lum(R.mid) < 0.22) { col[y][x] = R.mid; continue; }   // specks and dark rings stay flat
       const same = (dx, dy) => { const nx = x + dx, ny = y + dy; return nx >= 0 && ny >= 0 && nx < N && ny < N && own[ny][nx] === li; };
       const light = !same(0, -1) || !same(-1, 0), dark = !same(0, 1) || !same(1, 0);
       // the second ring in from each rim: half its pixels (a checkerboard) take the rim's step too
-      const light2 = DITHER && !light && (!same(0, -2) || !same(-2, 0) || !same(-1, -1)), dark2 = DITHER && !dark && (!same(0, 2) || !same(2, 0) || !same(1, 1));
+      const light2 = DITHER && !light && (!same(0, -2) || !same(-2, 0) || !same(-1, -1)) && same(0, 2) && same(2, 0),
+        dark2 = DITHER && !dark && (!same(0, 2) || !same(2, 0) || !same(1, 1)) && same(0, -2) && same(-2, 0);
       const dith = (x + y) % 2 === 0;
       let step = 0;
       if (light && !dark) step = -1; else if (dark && !light) step = 1;
@@ -314,7 +315,7 @@ export function pixelKit(options = {}) {
     // ambient occlusion: a part lying under another part darkens where that part sits on it
     const occ = col.map(r => r.slice());
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-      const li = own[y][x]; if (li < 0 || !col[y][x] || size[li] < 5) continue;
+      const li = own[y][x]; if (li < 0 || !col[y][x] || size[li] < 5 || lum(layers[li].ramp.mid) < 0.22) continue;
       let over = 0;
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
         const nx = x + dx, ny = y + dy;

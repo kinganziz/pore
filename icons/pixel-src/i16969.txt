@@ -71,12 +71,12 @@ U #183475
 ...agagdkayxxxnpzpxxqAagdkaka...
 ..aggagdkBAppnprrpppzCDgdkakka..
 ..aggagdkEzzFzrGGqpzFFEgdkakka..
-..aggagdkaEzFFzqqzzFFEabdkakka..
+..aggagdkaEzFFzqqFzFFEabdkakka..
 ..aggagihaHHIzFFFFFJHHajdkakka..
 ..aggabadKLLMEEEEEENNNOdaiakka..
 ..agggabdaLMMNPQRPNSNSaidaikka..
 ..agggbdaLMMMNNPPMSSSSSaddkkka..
 ..agggddaMMMMNNNMNSSSSTadikkka..
 ..agbbddaLMMMNNNNNSSSSSaikkkka..
-...aaHKaMMNMNNSNSNTSTSTTUHaaa...
+...aaHKaNMNMNNSNSNTSTSTTUHaaa...
 .....HLMNNNNNSSSSSTTTTTTTTH.....

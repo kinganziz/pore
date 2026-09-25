@@ -17,16 +17,14 @@ n #2a2a36
 o #5a5c65
 p #4e525b
 q #83878e
-r #535456
-s #1a1b1c
-t #18181a
-u #8b8d94
-v #36383e
-w #acafb5
-x #8e9198
-y #424449
-z #70747c
-A #585b62
+r #18181a
+s #8b8d94
+t #36383e
+u #acafb5
+v #8e9198
+w #424449
+x #70747c
+y #585b62
 --
 ................................
 ..........aaaaaaaaaaaa..........
@@ -49,14 +47,14 @@ A #585b62
 ..abbcccccbbcbbbbccccccceeeega..
 ..abcccccecefccecececccceeegga..
 ..acbcccfffophffffffccceeeeega..
-..aceccfqggprrrrrrrakbeeeeegga..
-..acceefgjkhassssssskeeeeeeega..
+..aceccfqggpaaaaaaaakbeeeeegga..
+..acceefgjkhaaaaaaaakeeeeeeega..
 ..aceeeekbcbkkkkkkkieeeeeeegga..
 ..acceeececcbcbcbeceeeeeeeegga..
 ..aeegeeeeeeeeeeeeeeeeeeeeggga..
 ...aeggegeeeeeeeeeeeeeeegggga...
 ....aaegggegegegegegegegggaa....
-......tuaegggggggggggggavt......
-......twxaaaaaaaaaaaaaayyt......
-.....twwzxxxxzzzzzAAAAAyyt......
-.....twxzzzzzAAAAAyyyyyyyyt.....
+......rsaegggggggggggggatr......
+......ruvaaaaaaaaaaaaaawwr......
+.....ruuxvvvvxxxxxyyyyywwr......
+.....ruvxxxxxyyyyywwwwwwwwr.....

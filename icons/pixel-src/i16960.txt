@@ -57,7 +57,7 @@ O #307230
 ....afffeeddegggaadgjjggjjja....
 ...akffdeafeaaegaaejaaejajjla...
 ...akffdaadeaoaapoaaqagjaajla...
-...afafdaqaarrppoqrsssaateaja...
+...afafdaoaarrppoqrsssaateaja...
 ..afffaaosuuuuvoqruuuurwtggjja..
 ..afffdtqqrxuuvporuxuyzwtejjja..
 ..afffetzqsAAuvoqruAArzwtgjjja..
@@ -65,7 +65,7 @@ O #307230
 ..afffddtCDBBBoqzqBBrEFtegjjja..
 ..afffdetEEqqoqssqqqzFFtggjjja..
 ..afffddetzzwzsGGrqzwwtgggjjja..
-..afffddddtzwwzrrzzwwtggggjjja..
+..afffddddtzwwzrrwzwwtggggjjja..
 ..afffddddfttzwwwwwttgggggjjja..
 ..afffdddddfdtttttteggggggjjja..
 ..afffdddddddedededgggggggjjja..
