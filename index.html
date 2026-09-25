@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>PORE · Pixel Odyssey Refinement Engine</title>
+<title>PORE · Less grind, more life</title>
 <meta name="description" content="Less grind, more life. PORE saves Pixel Odyssey players time: the cheapest way to refine gear, where every item comes from, and what you already own.">
 <meta name="theme-color" content="#0a0c12">
 <meta name="color-scheme" content="dark light">
@@ -4444,7 +4444,7 @@ function createSolver() {
             <div class="hero-num"><span id="heroNum">${fmt(cost)}</span><small>base items</small></div>
             <div class="hero-sub">instead of <b>${fmt(standard)}</b> the standard way${targetPerfect ? '' : ' · custom target'}</div>
             <div class="pills">
-              ${saved > 0 ? `<span class="pill good">− ${fmt(saved)} items</span>` : `<span class="pill info">already optimal</span>`}
+              ${saved > 0 ? `<span class="pill good">− ${fmt(saved)} items to gather</span>` : `<span class="pill info">already optimal</span>`}
               ${ownedUsed ? `<span class="pill info">${ownedUsed} owned used</span>` : ''}
               ${state.m === 'robust' ? `<span class="pill gold">safe rounding</span>` : state.m !== 'exact' ? `<span class="pill gold">formula: ${esc(modelInfo.label)}</span>` : ''}
               ${res.overrideHits ? `<span class="pill info">${obs.length} observation${obs.length > 1 ? 's' : ''} applied</span>` : ''}
@@ -4453,7 +4453,7 @@ function createSolver() {
           </div>
           <div class="ring" aria-label="${pct}% saved">
             <svg viewBox="0 0 100 100"><defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#37d39a"/><stop offset="1" stop-color="#8b7cff"/></linearGradient></defs><circle class="disc" cx="50" cy="50" r="37"/><circle class="track" cx="50" cy="50" r="42"/><circle class="arc" id="ringArc" cx="50" cy="50" r="42" style="stroke-dashoffset:${ringOffset.toFixed(1)}"/></svg>
-            <div class="lbl"><b>${pct}%</b><small>saved</small></div>
+            <div class="lbl"><b>${pct}%</b><small>less grind</small></div>
           </div>
         </div>
         <div class="tiles">
@@ -4930,13 +4930,13 @@ function createSolver() {
       const owned = a.ownedUse.reduce((x, y) => x + y, 0);
       body = anzSays(`Let's take your <b>${esc(item.name)}</b> to <b>P${state.L}</b>. First, gather <b>${fmt(toCollect)}</b> base items (P1 ${esc(item.name)})` +
         `${stock ? `; you already have ${fmt(stock)}` : ''}${owned ? `, plus the ${owned} refined cop${owned === 1 ? 'y' : 'ies'} you own` : ''}. ` +
-        `After that it's ${n} refine step${n === 1 ? '' : 's'} and about ${feeText(item, a.gold)}. I'll tell you exactly what to combine.`) +
+        `After that it's ${n} refine step${n === 1 ? '' : 's'} and about ${feeText(item, a.gold)}. I'll tell you exactly what to combine, so no time goes to waste.`) +
         `<div class="g-how"><b>Which charms will you use?</b><p>Switch off any you'd rather keep, rare ones for example. I'll pick the fewest for every refine.</p>${charmPickHTML()}</div>` +
         `<div class="guide-actions"><button class="btn primary block" type="button" data-action="guide-next">I have them, let's go</button></div>`;
     } else if (guide.i >= n) {
       const root = last.res.plan.nodes[last.res.plan.root];
       body = anzSays(`That's it! Your ${esc(item.name)} should now be ${chipHTML(root, item, 'result')}. ` +
-        `You used <b>${fmt(a.p1)}</b> base items instead of ${fmt(last.res.standard)}. See you in town!`) +
+        `You gathered <b>${fmt(a.p1)}</b> base items instead of ${fmt(last.res.standard)}. That's time you keep: go spend it on something you enjoy!`) +
         `<div class="guide-actions"><button class="btn primary block" type="button" data-action="close-guide">Close</button>` +
         `<button class="btn small ghost" type="button" data-action="guide-back">Back</button></div>`;
     } else {
@@ -5142,7 +5142,7 @@ function createSolver() {
     const bw = g.measureText(big).width;
     g.fillStyle = col('--muted'); g.font = `50px ${font}`; g.fillText('base items', pad + 90 + bw, pad + 520);
     const saved = res.standard - a.p1, pct = res.standard ? Math.round(saved / res.standard * 100) : 0;
-    g.fillStyle = col('--good'); g.font = `54px ${font}`; g.fillText(saved > 0 ? `instead of ${fmt(res.standard)}: ${pct}% saved` : 'no shortcut: the standard way is the cheapest', pad + 60, pad + 610);
+    g.fillStyle = col('--good'); g.font = `54px ${font}`; g.fillText(saved > 0 ? `instead of ${fmt(res.standard)}: ${pct}% less grind` : 'no shortcut: the standard way is the cheapest', pad + 60, pad + 610);
     // result stats
     const root = res.plan.nodes[res.plan.root];
     const statTxt = root.s.map((v, i) => `${v} ${item.stats[i].short}`).join(' · ');
@@ -5192,7 +5192,7 @@ function createSolver() {
     // people who already use PORE skip it (the help page can replay it)
     if (!introSeen('pick') && (recent.length || projects.length) && !introSeen('replay')) { markIntro('pick'); markIntro('guide'); return; }
     if (!state.item && !introSeen('pick')) {
-      setTimeout(() => coach(document.querySelector('.home-cta') || document.querySelector('.pick-trigger'), "Hi, I'm anz! Pick the item you want to refine here, and I'll find the cheapest way to max it.", 'pick'), 900);
+      setTimeout(() => coach(document.querySelector('.home-cta') || document.querySelector('.pick-trigger'), "Hi, I'm anz! Pick the item you want to refine here, and I'll find the way to max it with the least grinding.", 'pick'), 900);
     } else if (state.item && introSeen('pick') && !introSeen('guide') && last && last.res) {
       setTimeout(() => { const b = document.querySelector('.guide-cta'); if (b) coach(b, "Here's your plan! Every step is listed below: scroll down and follow it at your own pace. Or tap here and I'll hand you one refine at a time. Either way, your progress is saved.", 'guide'); }, 1800);
     }
@@ -5254,7 +5254,7 @@ function createSolver() {
   async function share() {
     persist();
     const url = location.href;
-    if (navigator.share) { try { await navigator.share({ title: `PORE · ${last.item.name} → P${state.L}`, text: `${last.analysis.p1} base items instead of ${last.res.standard}`, url }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
+    if (navigator.share) { try { await navigator.share({ title: `PORE · ${last.item.name} → P${state.L}`, text: `${last.analysis.p1} base items to gather instead of ${last.res.standard}. Less grind, more life.`, url }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
     copy(url, 'Link copied');
   }
 
@@ -5395,7 +5395,7 @@ function createSolver() {
         `<img class="map-pic" data-map="${esc(m.name)}" src="${mapPic(m)}" alt="" draggable="false">` +
         `<span class="ir-main"><b>${esc(m.name)}</b><small>${m.steps ? fmt(m.steps) + ' steps to unlock' : 'where it starts'} · ${MAP_KEYS.get(m.name).size} items</small>${m.desc ? `<small class="map-desc">${esc(m.desc)}</small>` : ''}</span>` +
         `<span class="map-go">›</span></button>`).join('')}</div>` : '<p class="inv-hint">Nothing matches.</p>') +
-        '<p class="inv-hint">Every place in the game, in the order you reach them. Tap one to see what you can get there.</p>';
+        '<p class="inv-hint">Every place in the game, in the order you reach them. Tap one to see what you can get there, and go straight to the right place.</p>';
       invRenderPop();
       return;
     }
@@ -5862,7 +5862,7 @@ function createSolver() {
       const pt = document.getElementById('progressText'), pf = document.getElementById('progressFill');
       if (pt) pt.textContent = `${done}/${total} done`;
       if (pf) pf.style.width = `${total ? (done / total) * 100 : 0}%`;
-      if (done === total && total) { toast('All steps done — enjoy your refined item!'); burst('finale', card); }
+      if (done === total && total) { toast('All steps done: time saved. Enjoy the rest of your day!'); burst('finale', card); }
       else {
         toastUndo(el.checked ? 'Step done' : 'Step unticked', snap);
         const grp = card && card.closest('.lvl-group');
