@@ -1476,7 +1476,7 @@
   .slots.named { row-gap: 10px; }
   .named-slot { display: grid; justify-items: center; gap: 3px; min-width: 0; }
   .named-slot .slot { width: 100%; }
-  .ns-name { font-size: 11px; line-height: 1.15; text-align: center; color: var(--text); max-width: 100%; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; text-shadow: 1px 1px 0 rgba(0, 0, 0, .6); }
+  .ns-name { font-size: 11px; line-height: 1.15; text-align: center; color: var(--text); max-width: 100%; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; text-shadow: 1px 1px 0 rgba(0, 0, 0, .6); }
   .named-slot .slot.off + .ns-name { color: var(--soft); }
   .inv-list { display: grid; gap: 2px; }
   .inv-row { display: grid; grid-template-columns: 40px 1fr auto; align-items: center; gap: 10px; padding: 6px 6px; border: 0; border-radius: 10px; background: none; color: var(--text); text-align: left; cursor: pointer; font: inherit; }
@@ -1610,6 +1610,17 @@
   .slot .qty.hot, .inv-row .ir-n.hot { color: #7ee07a; }
   .inv-row .ir-n small { display: block; font-size: 11px; color: var(--soft); text-align: right; }
   .inv-row.sel { background: linear-gradient(90deg, color-mix(in srgb, var(--gold) 16%, transparent), transparent 85%); }
+  .map-list { display: grid; gap: 4px; }
+  .map-row { display: grid; grid-template-columns: 72px 1fr auto; align-items: center; gap: 12px; padding: 6px; border: 0; border-radius: 12px; background: none; color: var(--text); text-align: left; cursor: pointer; font: inherit; }
+  .map-row:active { background: rgba(255, 255, 255, .08); }
+  @media (hover: hover) { .map-row:hover { background: linear-gradient(90deg, rgba(255, 255, 255, .07), transparent 85%); } }
+  .map-pic { width: 72px; height: 52px; border-radius: 10px; object-fit: cover; image-rendering: pixelated; box-shadow: 2px 2px 0 rgba(0, 0, 0, .4); }
+  .map-row .ir-main { display: grid; min-width: 0; gap: 1px; }
+  .map-row b { font-size: 16px; color: var(--gold); }
+  .map-row small { color: var(--soft); font-size: 13px; }
+  .map-row .map-desc { color: var(--muted); font-size: 12px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .map-go { color: var(--gold); font-size: 22px; padding-right: 4px; }
+  .inv-back { display: inline-block; margin: 0 0 10px 2px; padding: 4px 10px; border: 0; border-radius: 10px; background: rgba(255, 255, 255, .08); color: var(--gold); font: inherit; font-size: 14px; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -1843,6 +1854,15 @@ __SOLVER_JS__
     ['EVENT', 'Event items', 'Event item', 'Easter Egg'], ['BASIC', 'Fossils', 'Fossil', 'Fossil'], ['SKIN', 'Skins', 'Skin', 'Skin #1']];
   const GOOD_SINGULAR = Object.fromEntries(GOOD_TYPES.map(t => [t[0], t[2]]));
   const anyItem = k => ITEM_BY_KEY.get(k) || GOOD_BY_KEY.get(k) || CHARMS.find(c => c.key === k);
+  // the maps (locations) in game order, and every item you can get in each: found there, from its monsters,
+  // encounters, ore nodes and shops
+  const MAPS = ITEM_DB.places || [];
+  const MAP_KEYS = new Map(MAPS.map(m => [m.name, new Set()]));
+  for (const [k, list] of Object.entries(WHERE)) for (const e of list) {
+    const locs = e[0] === 'find' ? [e[1]] : ['mob', 'mine', 'shop'].includes(e[0]) ? e[3] : e[0] === 'enc' ? e[4] : [];
+    for (const loc of locs || []) if (MAP_KEYS.has(loc)) MAP_KEYS.get(loc).add(k);
+  }
+  const MAP_BG = { sunny: 'hills', cave: 'cave', forest: 'forest', cursed: 'forest', 'crystal cave': 'cave', sand: 'desert', snow: 'snow', sea: 'sea', mountains: 'snow', island: 'sea', sharp: 'snow', red: 'forest', mushroom: 'shrooms', swamp: 'shrooms', apocalypse: 'town' };
   // the places each item comes from, for searching the bag by place ("whisper cave", "undead")
   const PLACES = Object.fromEntries(Object.entries(WHERE).map(([k, list]) => [k, list.map(e => [typeof e[1] === 'string' ? e[1] : '', ...(Array.isArray(e[3]) ? e[3] : []), ...(Array.isArray(e[4]) ? e[4] : [])].join(' ')).join(' ').toLowerCase()]));
   const TYPES = [['WEAPON', 'Weapons', 'Weapon'], ['BOSS', 'Boss weapons', 'Boss weapon'], ['HELMET', 'Helmets', 'Helmet'], ['CHEST', 'Chest', 'Chest'], ['LEGGEAR', 'Leg gear', 'Leg gear'],
@@ -1885,7 +1905,7 @@ __SOLVER_JS__
   ['projectsSheet', 'projectsBody', 'charmsSheet', 'charmsBody', 'settingsSheet', 'tabbar', 'itemBody', 'itemHint', 'targetCard', 'targetBody', 'targetHint', 'ownedCard', 'ownedBody', 'resultsBody', 'pickerSheet', 'pickerBody', 'filters', 'searchInput', 'infoSheet', 'guideSheet', 'guideBody', 'toast', 'fx', 'themeBtn', 'infoBtn', 'catGrid', 'dataDate']
     .forEach(id => ui[id] = document.getElementById(id));
   const picker = { q: '', type: 'ALL', sort: 'name', view: 'grid' };   // views: list, grid (icon + name + cost), icons
-  try { const v = localStorage.getItem('pore.pickerview'); if (['list', 'grid', 'icons'].includes(v)) picker.view = v; } catch (e) { /* ignore */ }
+  try { const v = localStorage.getItem('pore.pickerview.v2'); if (['list', 'grid', 'icons'].includes(v)) picker.view = v; } catch (e) { /* ignore */ }
   let badges = {};
   let recent = [];
   let observations = [];          // { id, item, itemName, ts, baseL, base, matL, mat, predicted, actual, rates, statNames, model }
@@ -4237,13 +4257,10 @@ __SOLVER_JS__
     const pv = document.getElementById('pickViews');
     if (pv) pv.innerHTML = ['grid', 'list', 'icons'].map(v => `<button type="button" class="${(v === 'list' ? !grid && !icons : picker.view === v) ? 'on' : ''}" data-action="picker-view" data-view="${v}" aria-label="${v === 'grid' ? 'Tiles with names' : v === 'list' ? 'List' : 'Icons only'}" title="${v === 'grid' ? 'Tiles' : v === 'list' ? 'List' : 'Icons'}">${INV_VIEW_SVG[v]}</button>`).join('');
     let html = `<div class="sort-row"><span>${list.length} item${list.length === 1 ? '' : 's'}</span><div class="sort-tools"><div class="seg"><button type="button" class="${picker.sort === 'name' ? 'on' : ''}" data-action="sort" data-sort="name">A–Z</button><button type="button" class="${picker.sort === 'cost' ? 'on' : ''}" data-action="sort" data-sort="cost">Cheapest<span class="p10"> ${picker.type === 'BOSS' ? 'P5' : picker.type === 'ALL' ? 'max' : 'P10'}</span></button></div></div></div>`;
-    if (!q && picker.type === 'ALL') {   // shelves above the full list: the best deals, then what you opened lately
-      const deals = homeDeals();
+    if (!q && picker.type === 'ALL') {   // a shelf above the full list: what you opened lately
       let rec = recent.map(k => ITEM_BY_KEY.get(k)).filter(Boolean);
       if (picker.sort === 'cost') rec = rec.slice().sort(byCost);
-      if (deals.length) html += `<div class="list-title">Best deals <small>cheapest to max</small></div><div class="${box}">${deals.map(cell).join('')}</div>`;
-      if (rec.length) html += `<div class="list-title">Recent</div><div class="${box}">${rec.map(cell).join('')}</div>`;
-      if (deals.length || rec.length) html += `<div class="list-title">All items</div>`;
+      if (rec.length) html += `<div class="list-title">Recent</div><div class="${box}">${rec.map(cell).join('')}</div><div class="list-title">All items</div>`;
     }
     html += list.length ? `<div class="${box}">${list.map(cell).join('')}</div>` : '<div class="empty-note" style="padding:20px;text-align:center">No items match. Try a stat name like "crit" or pick Custom.</div>';
     setWithImages(ui.pickerBody, html);
@@ -4321,6 +4338,8 @@ __SOLVER_JS__
     if (!ready) guide.resync = true;   // pick the right step once the plan is ready
     ui.guideSheet.hidden = false; document.body.classList.add('locked');
     renderGuide();
+    const top = () => { const b = document.getElementById('guideBody'); if (b) b.scrollTop = 0; };   // always opens at the top
+    top(); requestAnimationFrame(top); setTimeout(top, 80);
   }
   function closeGuide(opts) {
     if (ui.guideSheet.hidden) return;
@@ -4749,7 +4768,7 @@ __SOLVER_JS__
   // The charms inventory: which charms PORE may use (tap to switch one off) and, optionally, how many you have
   // The inventory as a game bag: category tabs (Items, Charms, Coins) and a grid of slots with count badges; tapping
   // a slot opens a small editor under the grid (count stepper, remove or use-in-plans)
-  let invTab = 'all', invSel = null;
+  let invTab = 'all', invSel = null, invMap = null;   // invMap: the map (location) whose items are shown
   // counts the way the game shows them: 1x, 57x, 1.9k
   const invQty = n => {   // 1x, 57x, 1.9k, 12m, 12b, 3.4t
     for (const [v, u] of [[1e12, 't'], [1e9, 'b'], [1e6, 'm'], [1e3, 'k']]) if (n >= v * (v === 1e3 ? 1 : 0.9995)) { const x = n / v; return (x >= 100 ? Math.round(x) : x.toFixed(1).replace(/\.0$/, '')) + u; }
@@ -4769,7 +4788,7 @@ __SOLVER_JS__
   let invGear = false;   // hide everything that cannot be equipped
   try { invGear = localStorage.getItem('pore.invgear.v1') === '1'; } catch (e) { /* ignore */ }
   let invView = 'grid';   // like the item list: 'grid' (tiles with names), 'list' (rows) or 'icons'
-  try { invView = localStorage.getItem('pore.invview.v1') || 'grid'; } catch (e) { /* ignore */ }
+  try { invView = localStorage.getItem('pore.invview.v2') || 'grid'; } catch (e) { /* ignore */ }
   const INV_VIEW_SVG = {
     list: '<svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M1 2h3v3H1zM6 3h9v1H6zM1 7h3v3H1zM6 8h9v1H6zM1 12h3v3H1zM6 13h9v1H6z"/></svg>',
     grid: '<svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M1 1h6v4H1zM1 6h6v1H1zM9 1h6v4H9zM9 6h6v1H9zM1 9h6v4H1zM1 14h6v1H1zM9 9h6v4H9zM9 14h6v1H9z"/></svg>',
@@ -4780,9 +4799,9 @@ __SOLVER_JS__
     if (!ui.charmsBody || (!force && ui.charmsSheet.hidden)) return;
     // every category the bag can hold: all, charms, each item type (like the game's filter row), coins
     if (invGear && invTab.startsWith('g:')) invTab = 'all';
-    const cats = [['all', 'All'], ['charms', 'Charms'], ...TYPES.map(t => ['t:' + t[0], t[1]]), ...(invGear ? [] : GOOD_TYPES.map(t => ['g:' + t[0], t[1]])), ['coins', 'Coins']];
+    const cats = [['all', 'All'], ['maps', 'Maps'], ['charms', 'Charms'], ...TYPES.map(t => ['t:' + t[0], t[1]]), ...(invGear ? [] : GOOD_TYPES.map(t => ['g:' + t[0], t[1]])), ['coins', 'Coins']];
     const catName = (cats.find(c => c[0] === invTab) || cats[0])[1];
-    const nameEl = document.getElementById('invCatName'); if (nameEl) nameEl.textContent = invTab === 'all' ? (invGear ? 'Gear only' : '') : catName;
+    const nameEl = document.getElementById('invCatName'); if (nameEl) nameEl.textContent = invTab === 'all' ? (invGear ? 'Gear only' : '') : invTab === 'maps' && invMap ? invMap : catName;
     ui.charmsBody.innerHTML = `<label class="inv-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></svg><input type="search" placeholder="Search by name" value="${esc(invQ)}" data-field="inv-q" aria-label="Search the inventory">` +
       `<button type="button" class="inv-gear ${invGear ? 'on' : ''}" data-action="inv-gear" aria-pressed="${invGear}" aria-label="Gear only: hide what you cannot equip" title="Gear only">${iconSVG((ITEMS.find(it => it.name === 'Iron Sword') || ITEMS[0]).key)}</button>` +
       `<span class="inv-views" role="group" aria-label="View">${['grid', 'list', 'icons'].map(v => `<button type="button" class="${invView === v ? 'on' : ''}" data-action="inv-view" data-view="${v}" aria-label="${v === 'grid' ? 'Tiles with names' : v === 'list' ? 'List' : 'Icons only'}" title="${v === 'grid' ? 'Tiles' : v === 'list' ? 'List' : 'Icons'}">${INV_VIEW_SVG[v]}</button>`).join('')}</span></label>` +
@@ -4791,7 +4810,7 @@ __SOLVER_JS__
     const goodArt = t => { const g = GOODS.find(x => x.name === (GOOD_TYPES.find(y => y[0] === t) || [])[3]) || GOODS.find(x => x.type === t); return g ? iconSVG(g.key) : ''; };
     const clover = CHARMS.find(c => c.name === 'Clover') || CHARMS[0];
     const allArt = () => `<span class="cat-quad">${['Iron Sword', 'Potion of Luck', 'Gold ore', 'Apple'].map(n => { const x = ITEMS.find(i => i.name === n) || GOODS.find(i => i.name === n); return x ? iconSVG(x.key) : ''; }).join('')}</span>`;
-    const catArt = k => ({ all: allArt(), charms: clover ? iconSVG(clover.key) : '', coins: iconSVG('u-gold') })[k] || (k.startsWith('g:') ? goodArt(k.slice(2)) : filterIcon(k.slice(2)));   // item types use the item list's type icons
+    const catArt = k => ({ all: allArt(), maps: iconSVG('u-map'), charms: clover ? iconSVG(clover.key) : '', coins: iconSVG('u-gold') })[k] || (k.startsWith('g:') ? goodArt(k.slice(2)) : filterIcon(k.slice(2)));   // item types use the item list's type icons
     const strip = document.getElementById('invCats'), sx = strip.scrollLeft;
     strip.innerHTML = cats.map(([k, l]) => `<button type="button" role="tab" class="inv-cat ${invTab === k ? 'on' : ''}" data-action="inv-tab" data-tab="${k}" aria-selected="${invTab === k}" aria-label="${l}" title="${l}">${catArt(k)}<i class="cat-n" data-cat="${k}" hidden></i></button>`).join('');
     strip.scrollLeft = sx;   // stays where the player left it
@@ -4809,8 +4828,19 @@ __SOLVER_JS__
   function invRenderGrid() {
     const box = document.getElementById('invGrid'); if (!box) return;
     invBadges();
-    const q = invQ.trim().toLowerCase(), hit = (name, key) => !q || name.toLowerCase().includes(q) || (q.length > 2 && !!PLACES[key] && PLACES[key].includes(q));
-    const show = k => invTab === 'all' || invTab === k || (k === 'items' && invTab.startsWith('t:')) || (k === 'goods' && invTab.startsWith('g:'));
+    const q = invQ.trim().toLowerCase(), onMap = invTab === 'maps' && invMap && MAP_KEYS.get(invMap);
+    if (invTab === 'maps' && !onMap) {   // the maps, in game order, with a picture of their world
+      const list = MAPS.filter(m => !q || m.name.toLowerCase().includes(q));
+      box.innerHTML = (list.length ? `<div class="map-list">${list.map(m => `<button type="button" class="map-row" data-action="inv-map" data-place="${esc(m.name)}">` +
+        `<img class="map-pic" src="${bgThumb(MAP_BG[m.kind] || 'hills')}" alt="" draggable="false">` +
+        `<span class="ir-main"><b>${esc(m.name)}</b><small>${m.steps ? fmt(m.steps) + ' steps to unlock' : 'where it starts'} · ${MAP_KEYS.get(m.name).size} items</small>${m.desc ? `<small class="map-desc">${esc(m.desc)}</small>` : ''}</span>` +
+        `<span class="map-go">›</span></button>`).join('')}</div>` : '<p class="inv-hint">Nothing matches.</p>') +
+        '<p class="inv-hint">Every place in the game, in the order you reach them. Tap one to see what you can get there.</p>';
+      invRenderPop();
+      return;
+    }
+    const hit = (name, key) => (!onMap || onMap.has(key)) && (!q || name.toLowerCase().includes(q) || (q.length > 2 && !!PLACES[key] && PLACES[key].includes(q)));
+    const show = k => invTab === 'all' || invTab === k || (k === 'items' && invTab.startsWith('t:')) || (k === 'goods' && invTab.startsWith('g:')) || (!!onMap && k !== 'coins');
     const typeOk = it => invTab.length < 3 || invTab[1] !== ':' || it.type === invTab.slice(2);
     const rows = [];   // { key, icon, n, cls, glow, label, lv, sub }
     if (show('coins')) for (const k of ['gold', 'wb']) { const nm = k === 'gold' ? 'Gold' : 'WB tokens'; if (hit(nm)) rows.push({ key: k, icon: iconSVG('u-' + k), n: inv[k] != null ? (inv[k] >= 1000 ? invQty(inv[k]) : inv[k] + '') : '', cls: inv[k] == null ? 'blank' : '', glow: k === 'gold' ? '#f6c453' : '#cf8f4f', label: nm, sub: inv[k] == null ? 'not tracked' : k === 'gold' ? 'refining fees' : 'boss weapon fees' }); }
@@ -4834,7 +4864,8 @@ __SOLVER_JS__
     else if (invView === 'grid') html = `<div class="slots named">${rows.map(r => `<div class="named-slot">${invSlot(r.key, r.icon, r.n, r)}<span class="ns-name">${esc(r.label)}</span></div>`).join('')}</div>`;
     else html = `<div class="slots">${rows.map(r => invSlot(r.key, r.icon, r.n, r)).join('')}</div>`;
     const hint = invTab.startsWith('g:') ? 'Tap an item to see where to get it and set how many you own.' : { all: 'Tap anything to see where to get it and set how many you own. Dim means you have none. Search finds places too.', charms: 'Tap a charm to set your stock or keep it out of plans.', coins: 'Gold pays fees, world boss (WB) tokens pay boss weapons.' }[invTab] || 'Tap an item to see it and set how many base (P1) copies you own.';
-    box.innerHTML = (rows.length ? html : '<p class="inv-hint">Nothing matches.</p>') + `<p class="inv-hint">${hint}</p>`;
+    box.innerHTML = (onMap ? `<button type="button" class="inv-back" data-action="inv-map-back">‹ All maps</button>` : '') +
+      (rows.length ? html : '<p class="inv-hint">Nothing matches.</p>') + `<p class="inv-hint">${onMap ? `Everything you can get in ${esc(invMap)}. Tap an item for where exactly.` : hint}</p>`;
     invRenderPop();
   }
   // a tappable item inside a card (ingredients, keys, products): opens that item's card
@@ -4999,13 +5030,20 @@ __SOLVER_JS__
       case 'close-projects': closeProjects(); break;
       case 'close-settings': closeSettings(); break;
       case 'close-charms': closeCharms(); break;
-      case 'inv-tab': invTab = el.dataset.tab; invSel = null; haptic(6); renderCharms(); break;   // the category icons at the bottom
+      case 'inv-tab': invTab = el.dataset.tab; invSel = null; invMap = null; haptic(6); renderCharms(); break;   // the category icons at the bottom
       case 'inv-sel': invSel = invSel === el.dataset.key ? null : el.dataset.key; haptic(6); invRenderGrid(); break;
-      case 'inv-place': invQ = el.dataset.q; invSel = null; haptic(6); if (ui.charmsSheet.hidden) tabGo('inventory'); else renderCharms(); toast(`Everything from ${el.dataset.q}`); break;
+      case 'inv-map': invMap = el.dataset.place; invQ = ''; invSel = null; haptic(6); renderCharms(); { const b = document.getElementById('charmsBody'); if (b) b.scrollTop = 0; } break;
+      case 'inv-map-back': invMap = null; invSel = null; haptic(6); renderCharms(); break;
+      case 'inv-place': if (MAP_KEYS.has(el.dataset.q)) {   // a map name: its page in Maps
+          invTab = 'maps'; invMap = el.dataset.q; invQ = ''; invSel = null; haptic(6);
+          if (ui.charmsSheet.hidden) tabGo('inventory'); else renderCharms();
+          break;
+        }
+        invQ = el.dataset.q; invSel = null; haptic(6); if (ui.charmsSheet.hidden) tabGo('inventory'); else renderCharms(); toast(`Everything from ${el.dataset.q}`); break;
       case 'inv-go': invSel = el.dataset.key; haptic(6); if (ui.charmsSheet.hidden) { tabGo('inventory'); break; } invRenderGrid(); { const cd = document.querySelector('#invPop .ip-card'); if (cd) cd.scrollTop = 0; } break;   // an item named inside a card
       case 'inv-pop-close': if (el.id === 'invPop' && e.target !== el) break; invSel = null; invRenderGrid(); break;   // the × or a tap beside the card (not inside it)
       case 'inv-gear': invGear = !invGear; try { localStorage.setItem('pore.invgear.v1', invGear ? '1' : '0'); } catch (err) { /* ignore */ } haptic(6); renderCharms(); toast(invGear ? 'Gear only' : 'Everything'); break;
-      case 'inv-view': invView = el.dataset.view; try { localStorage.setItem('pore.invview.v1', invView); } catch (err) { /* ignore */ } renderCharms(); break;
+      case 'inv-view': invView = el.dataset.view; try { localStorage.setItem('pore.invview.v2', invView); } catch (err) { /* ignore */ } renderCharms(); break;
       case 'inv-step': {
         const k = el.dataset.key, d = Number(el.dataset.d);
         if (el.dataset.field === 'inv-item') { invSetItem(k, Math.max(0, (inv.items[k] || 0) + d)); invSave(); if (state.item === k) { state.stock = inv.items[k]; persist(); renderResults(); } }
@@ -5017,7 +5055,7 @@ __SOLVER_JS__
       case 'clear-search': picker.q = ''; ui.searchInput.value = ''; el.hidden = true; renderPickerList(); ui.searchInput.focus(); break;
       case 'filter': picker.type = el.dataset.type; renderFilters(); renderPickerList(); break;
       case 'sort': picker.sort = el.dataset.sort; renderPickerList(); break;
-      case 'picker-view': picker.view = ['grid', 'icons'].includes(el.dataset.view) ? el.dataset.view : 'list'; try { localStorage.setItem('pore.pickerview', picker.view); } catch (e2) { /* ignore */ } renderPickerList(); break;
+      case 'picker-view': picker.view = ['grid', 'icons'].includes(el.dataset.view) ? el.dataset.view : 'list'; try { localStorage.setItem('pore.pickerview.v2', picker.view); } catch (e2) { /* ignore */ } renderPickerList(); break;
       case 'pick':
         if (invAdding) {   // adding to the inventory: back to it with the item listed
           invAdding = false;

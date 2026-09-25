@@ -21,7 +21,7 @@ STYLES = {"HD": "modern", "Pixel": "pixel"}
 def main() -> None:
     data = json.loads(DATA.read_text(encoding="utf-8"))
     keys = [f"i{it['id']}" for it in data["items"] + data.get("goods", [])] + [f"c{ch['id']}" for ch in data.get("charms", [])]
-    keys += ["u-home", "u-projects", "u-bag", "u-settings", "u-gold", "u-wb"]   # interface icons (tools/ui_icons.py)
+    keys += ["u-home", "u-projects", "u-bag", "u-settings", "u-gold", "u-wb", "u-map"]   # interface icons (tools/ui_icons.py)
     failed = False
     for name, folder in STYLES.items():
         missing = [k for k in keys if not (ROOT / "icons" / folder / f"{k}.svg").exists()]

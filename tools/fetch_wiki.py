@@ -361,6 +361,15 @@ def main() -> None:
 
     where, uses = sources(index, items, charms, goods, frontmatter_of)
 
+    # the maps: every location with its description and the steps it takes to unlock, in game order
+    places = []
+    for path, meta in index.items():
+        fm = (meta or {}).get("frontmatter") or {}
+        if fm.get("fileClass") != "location" or not fm.get("name"):
+            continue
+        places.append({"name": fm["name"], "desc": (fm.get("description") or "").strip(), "steps": int(fm.get("required-steps") or 0), "kind": fm.get("bg-name") or fm.get("type") or ""})
+    places.sort(key=lambda pl: (pl["steps"], pl["name"]))
+
     stat_names = sorted({name for it in items for name in it["stats"]})
     payload = {
         "source": WIKI_URL,
@@ -372,6 +381,7 @@ def main() -> None:
         "goods": goods,
         "where": where,
         "uses": uses,
+        "places": places,
     }
     OUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     OUT_FILE.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")

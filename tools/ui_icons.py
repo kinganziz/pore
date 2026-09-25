@@ -109,7 +109,18 @@ def wb(ic):
     ])
 
 
-ICONS = {"u-home": home, "u-projects": projects, "u-bag": bag, "u-settings": settings, "u-gold": gold, "u-wb": wb}
+def map_(ic):
+    """a folded parchment map with a dotted path to a red X"""
+    return "".join([
+        shape(ic, "M6 14 L22 8 L42 14 L58 8 L58 50 L42 56 L22 50 L6 56 Z", PAPER, ic.lg(PAPER, 0, 0, 1, 1)),
+        shape(ic, "M22 8 L42 14 L42 56 L22 50 Z", C("#f0d8a0", "#dcc088", "#b09060", "#3a2410"), sw=1.6),
+        line("M12 44 C16 36 22 40 26 32 C30 24 36 30 40 24", "#8a5a2a", 2.4, 0.9),
+        line("M44 18 L52 26 M52 18 L44 26", "#d23a3a", 3.2),
+        line("M12 20 L18 18", HL, 1.8, 0.6),
+    ])
+
+
+ICONS = {"u-map": map_, "u-home": home, "u-projects": projects, "u-bag": bag, "u-settings": settings, "u-gold": gold, "u-wb": wb}
 
 
 def main() -> None:
