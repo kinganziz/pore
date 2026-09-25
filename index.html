@@ -1051,6 +1051,7 @@
   :root[data-flavor="game"] .chip-btn .lvr { font-size: 15px; }
   .theme-pick button { font-family: inherit !important; }
   /* ---------- home as a game title screen over an animated landscape ---------- */
+  #scene { transition: opacity .26s ease; }
   #scene { position: fixed; left: 0; top: 0; width: 100%; height: 100vh; height: 100lvh; z-index: 0; display: none; image-rendering: pixelated; pointer-events: none; }   /* lvh: still full screen when the phone's address bar slides away */
   body:not(.has-item) #scene { display: block; }
   body:not(.has-item) { background: #07061a; }
@@ -2768,6 +2769,14 @@ function createSolver() {
     document.documentElement.toggleAttribute('data-nobg', bgNow === 'none');
     scene.key = ''; syncBgPicker(); sceneHide(); sceneShow();
   }
+  // Auto: every tap on the Home tab brings a different scene, cross-faded
+  function bgNext() {
+    if (bgPref !== 'auto' || !scene.el) return;
+    const pool = BG_SCENES.filter(k => k !== bgNow), next = pool[Math.floor(Math.random() * pool.length)];
+    const swap = () => { bgNow = next; try { localStorage.setItem('pore.bg.last', next); } catch (e) { /* ignore */ } scene.key = ''; sceneHide(); sceneShow(); scene.el.style.opacity = ''; };
+    if (reduced) { swap(); return; }
+    scene.el.style.opacity = '0'; setTimeout(swap, 260);
+  }
   function setBgMotion(on) {
     bgMotion = !!on;
     try { localStorage.setItem('pore.bgmotion.v1', bgMotion ? 'on' : 'off'); } catch (e) { /* ignore */ }
@@ -3196,6 +3205,7 @@ function createSolver() {
     haptic(8);
     const open = { items: !ui.pickerSheet.hidden, help: !ui.infoSheet.hidden, guide: !ui.guideSheet.hidden };
     if (open[id]) return;
+    if (id === 'home') bgNext();   // Auto background: a new scene on every Home tap
     const t = planTarget();
     if ((id === 'plan' || id === 'guide') && !t) { toast('Open an item first: Plan and Guide follow it'); return; }
     const inSheet = Object.values(open).some(Boolean);
