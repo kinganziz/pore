@@ -2893,7 +2893,7 @@ __SOLVER_JS__
     ],
     town: [
       { sky: ['#07061a', '#120f33', '#1e1a4d', '#2e2766', '#433779'], star: '#fff6e0', moon: '#fff1c4', cloud: '#2a2560', far: '#1a1740', farWin: '#6a5aa8', house: '#0f0d28', roof: '#171438', win: '#ffd27a', winOff: '#1d1a42', lamp: '#ffe8a0', ground: '#0a0920', bat: '#05040f' },
-      { sky: ['#9ed2fa', '#b6ddfb', '#cfe8fc', '#e6f3fd', '#fdf6ea'], star: null, moon: '#fff6cc', cloud: '#ffffff', far: '#a3b2cf', farWin: '#c6d2e6', house: '#e4d4b6', roof: '#b4584c', win: '#6a7c9c', winOff: '#8a9ab8', lamp: '#fff4d0', ground: '#8c8474', bat: '#3a3a48' },
+      { sky: ['#9ed2fa', '#b6ddfb', '#cfe8fc', '#e6f3fd', '#fdf6ea'], star: null, moon: '#fff6cc', cloud: '#ffffff', far: '#a3b2cf', farWin: '#c6d2e6', house: '#e4d4b6', roof: '#a8987e', win: '#6a7c9c', winOff: '#8a9ab8', lamp: '#fff4d0', ground: '#8c8474', bat: '#3a3a48' },
     ],
   };
   // the Red Forest, the crystal caves and Mycropolis
@@ -3344,13 +3344,13 @@ __SOLVER_JS__
         g.globalAlpha = 1;
       });
       each([{ x: 200 }], 0.2, 12, W, (t, x) => { g.fillStyle = pal.far; g.fillRect(x - 4, fy - 58, 9, 70); for (let k = 0; k < 8; k++) { const inset = Math.floor((7 - k) / 2); g.fillRect(x - 4 + inset, fy - 66 + k, 9 - inset * 2, 1); }   /* the spire: a point on top */ g.fillStyle = pal.lamp; g.fillRect(x - 2, fy - 52, 5, 5); g.fillStyle = pal.far; g.fillRect(x, fy - 51, 1, 2); g.fillRect(x, fy - 50, 2, 1); });
-      // near houses: pitched roofs, chimneys, windows lighting up and going dark
+      // near buildings: flat roofs with a ledge, rooftop boxes and antennas, windows lighting up and going dark
       each(scene.st.houses, 0.6, 32, W, (h, x) => {
         const top = gy - h.h;
         g.fillStyle = pal.house; g.fillRect(x, top, h.w, h.h);
-        if (h.roof) { g.fillStyle = pal.roof; const half = Math.ceil(h.w / 2) + 1; for (let k = 0; k < half; k++) { const inset = half - 1 - k; g.fillRect(x - 1 + inset, top - half + k + 1, h.w + 2 - inset * 2, 1); } }   // a pitched roof: a point on top, widening down to the walls
-        else { g.fillStyle = pal.roof; g.fillRect(x - 1, top - 2, h.w + 2, 2); }
-        if (h.chim) { g.fillStyle = pal.house; g.fillRect(x + h.w - 5, top - (h.roof ? Math.ceil(h.w / 2) - 1 : 5), 3, 5); }
+        // flat-roofed buildings: a ledge along the top, and on some a rooftop box with an antenna
+        g.fillStyle = pal.roof; g.fillRect(x - 1, top - 2, h.w + 2, 2);
+        if (h.chim) { g.fillRect(x + h.w - 7, top - 5, 4, 3); if (h.roof) g.fillRect(x + 3, top - 7, 1, 5); }
         for (let wy = top + 3, j = 0; wy < gy - 4; wy += 6, j++) for (let wx = x + 3, i = 0; wx < x + h.w - 3; wx += 5, i++) {
           // each window keeps its light for a while (about 40 s, each on its own clock), like people switching lamps
           const id = h.seed * 31 + i * 7 + j * 13, bucket = Math.floor(now / 40 + (id % 40) / 40);
