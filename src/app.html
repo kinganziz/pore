@@ -4638,22 +4638,35 @@ __SOLVER_JS__
     const q = picker.q.trim().toLowerCase();
     let list = ITEMS.filter(it => picker.type === 'ALL' || it.type === picker.type);
     const sq = statQuery(q);
-    if (sq) list = list.filter(it => Object.entries(it.stats).some(([n, v]) => sq.match(n) && sq.test(v)));
+    const goal = new Map();   // key -> { L, cost } when searching a stat goal such as "atk 50+"
+    if (sq && sq.goal) {
+      for (const it of list) {
+        const names = Object.keys(it.stats), idx = names.findIndex(n => sq.match(n)); if (idx < 0) continue;
+        let chain; try { const base = Object.values(it.stats); chain = S.perfectChain(base, itemRates(it), maxOf(it), S.makeCtx('exact', {}, base.length)); } catch (e) { continue; }
+        let L = 0; for (let l = 1; l <= maxOf(it); l++) if (chain[l] && sq.test(chain[l][idx])) { L = l; break; }
+        if (!L) continue;
+        // base items for a perfect P(L): PORE's cost for the perfect max, halved for each level below it (about), never above the standard 2^(L-1)
+        const std = 2 ** (L - 1), est = badges[it.key] != null && !noShortcut(it) ? Math.max(1, Math.round(badges[it.key] / 2 ** (maxOf(it) - L))) : std;
+        goal.set(it.key, { L, cost: Math.min(std, est) });
+      }
+      list = list.filter(it => goal.has(it.key));
+    } else if (sq) list = list.filter(it => Object.entries(it.stats).some(([n, v]) => sq.match(n) && sq.test(v)));
     else if (q) list = list.filter(it => it.name.toLowerCase().includes(q) || (it.boss || '').toLowerCase().includes(q) || Object.keys(it.stats).some(n => n.toLowerCase().includes(q) || metaFor(n).short.toLowerCase().includes(q)) || (it.affinity || '').toLowerCase().includes(q) || TYPE_SINGULAR[it.type].toLowerCase().includes(q) || (TYPE_WORDS[it.type] || []).some(w => w.startsWith(q) || q.startsWith(w)));
     const byCost = (x, y) => costShare(x) - costShare(y) || x.name.localeCompare(y.name);
     const owned = it => (inv.items[it.key] || 0) > 0 ? 1 : 0;
-    if (picker.sort === 'cost') list = list.slice().sort(byCost);
+    if (goal.size) list = list.slice().sort((x, y) => goal.get(x.key).cost - goal.get(y.key).cost || goal.get(x.key).L - goal.get(y.key).L || x.name.localeCompare(y.name));
+    else if (picker.sort === 'cost') list = list.slice().sort(byCost);
     else if (picker.sort === 'value') list = list.slice().sort((x, y) => owned(y) - owned(x) || valueOf(y) - valueOf(x) || x.name.localeCompare(y.name));
     else list = list.slice().sort((x, y) => x.name.localeCompare(y.name));
     const on = it => state.item === it.key ? 'sel' : '';
-    const cost = it => badges[it.key] != null ? (noShortcut(it) ? '—' : fmt(badges[it.key])) : '';
+    const cost = it => goal.has(it.key) ? '~' + fmt(goal.get(it.key).cost) : badges[it.key] != null ? (noShortcut(it) ? '—' : fmt(badges[it.key])) : '';
     const hot = it => badges[it.key] != null && isHot(it) ? 'hot' : '';
-    const tip = it => `${esc(it.name)} · ${esc(statsLine(it))}${badges[it.key] != null ? ` · perfect P${maxOf(it)}: ${noShortcut(it) ? 'no shortcut' : fmt(badges[it.key]) + ' base items'}` : ''}`;
+    const tip = it => goal.has(it.key) ? (goal.get(it.key).L === 1 ? `${esc(it.name)} already has ${sq.v}+ ${esc(sq.name)} unrefined` : `${esc(it.name)} reaches ${sq.v}+ ${esc(sq.name)} at P${goal.get(it.key).L}, about ${fmt(goal.get(it.key).cost)} base items`) : `${esc(it.name)} · ${esc(statsLine(it))}${badges[it.key] != null ? ` · perfect P${maxOf(it)}: ${noShortcut(it) ? 'no shortcut' : fmt(badges[it.key]) + ' base items'}` : ''}`;
     // like the bag: frameless tiles with the name under them (the P10 cost in the corner), rows, or icons only
     const tile = it => `<div class="named-slot"><button class="slot ${on(it)}" type="button" data-action="pick" data-key="${it.key}" title="${tip(it)}">${iconSVG(it.key)}${cost(it) ? `<i class="qty ${hot(it)}">${cost(it)}</i>` : ''}</button><span class="ns-name">${esc(it.name)}</span></div>`;
     const row = it => `<button class="inv-row ${on(it)}" type="button" data-action="pick" data-key="${it.key}" title="${tip(it)}"><span class="ir-ic">${iconSVG(it.key)}</span>` +
       `<span class="ir-main"><b>${esc(it.name)}</b><small>${esc(TYPE_SINGULAR[it.type])}${it.boss ? ' · max P' + maxOf(it) : ''}${it.affinity ? ' · ' + esc(AFF_LABEL(it.affinity)) : ''} · ${statsLine(it)}</small></span>` +
-      `<span class="ir-n ${hot(it)}">${cost(it) ? `${cost(it)}<small>P${maxOf(it)}</small>` : ''}</span></button>`;
+      `<span class="ir-n ${hot(it)}">${cost(it) ? `${cost(it)}<small>P${goal.has(it.key) ? goal.get(it.key).L : maxOf(it)}</small>` : ''}</span></button>`;
     const bare = it => `<button class="slot ${on(it)}" type="button" data-action="pick" data-key="${it.key}" aria-label="${esc(it.name)}" title="${tip(it)}">${iconSVG(it.key)}</button>`;
     const grid = picker.view === 'grid', icons = picker.view === 'icons';
     const cell = icons ? bare : grid ? tile : row;
@@ -4991,7 +5004,7 @@ __SOLVER_JS__
     const names = Object.keys(STAT_META).filter(n => n.toLowerCase().includes(name) || STAT_META[n][0].toLowerCase() === name || STAT_META[n][0].toLowerCase().startsWith(name));
     if (!names.length) return null;
     const cmp = { '=': x => x === v, '>=': x => x >= v, '<=': x => x <= v, '>': x => x > v, '<': x => x < v }[op];
-    return { match: n => names.includes(n), test: cmp };
+    return { match: n => names.includes(n), test: cmp, goal: op === '>=' || op === '>', v, name: names.length === 1 ? (STAT_META[names[0]] || [names[0]])[0] : name.toUpperCase() };
   }
 
   /* ================= share the plan as an image ================= */
