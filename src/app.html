@@ -1073,10 +1073,8 @@
   .tab-icon { display: grid; place-items: center; width: 34px; height: 34px; }
   .tab-icon .pixel, .tab-icon img { width: 32px; height: 32px; image-rendering: pixelated; }
   .tab-icon img { object-fit: contain; }
-  .tab-glyph { width: 26px; height: 26px; }
   .tab-label { font-size: 11px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
   .tab.on { background: linear-gradient(160deg, var(--accent), var(--accent-2)); color: var(--on-accent, #fff); box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 40%, transparent); }
-  .tab.on .tab-glyph { color: var(--on-accent, #fff); }
   :root { --tabbar-h: calc(71px + var(--safe-b)); }
   @media (min-width: 720px) { :root { --tabbar-h: 88px; } }
   body { padding-bottom: var(--tabbar-h); }
@@ -1086,7 +1084,6 @@
   .topbar { z-index: 56; }   /* above the sheets, which tuck 1px under it: no gap between the bar and a sheet */
   @media (max-width: 719px) { .sheet { height: 100%; padding-top: 0; } }
   @media (min-width: 720px) { .sheet { height: min(100%, 900px); } }
-  :root[data-flavor="game"] .tab.on .tab-glyph { color: #e0ffe8; }
   :root[data-flavor="game"] .tab-label { color: #eaf6ee; }
   /* ---------- game look, stage 3: the plan as a quest log ---------- */
   /* level headers: a chapter banner with the Roman numeral in gold */
@@ -1446,8 +1443,6 @@
   /* colourful pixel icons in the tab bar and the inventory categories (like the game's bottom bar) */
   .tab-art { width: 30px; height: 30px; image-rendering: pixelated; filter: drop-shadow(1px 2px 0 rgba(0, 0, 0, .45)); }
   .inv-cat { position: relative; }
-  .inv-cat .cat-art { width: 24px; height: 24px; image-rendering: pixelated; transition: transform .15s; }   /* full colour, no shadow, no dimming */
-  .inv-cat.on .cat-art { transform: scale(1.18); }
   .inv-cat.on::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: 2px; height: 3px; border-radius: 2px; background: var(--gold); }
   .inv-cat.on { background: none; }
   /* inventory without item frames: icons float on the world with a soft glow of their colour; level and count stay */
@@ -1519,8 +1514,8 @@
   .inv-cat-name { display: block; font-size: 15px; letter-spacing: 1px; color: var(--muted); font-family: inherit; font-weight: 400; text-transform: none; min-height: 0; }
   .inv-cat-name:empty { display: none; }
   .inv-search .inv-gear { width: 34px; height: 30px; border: 0; border-radius: 8px; background: none; cursor: pointer; display: grid; place-items: center; flex: 0 0 auto; padding: 0; }
-  .inv-gear .cat-art { width: 20px; height: 20px; opacity: .45; filter: saturate(.3); transition: opacity .15s, filter .15s; }
-  .inv-gear.on .cat-art { opacity: 1; filter: none; }
+  .inv-gear .pixel { width: 22px; height: 22px; opacity: .45; filter: saturate(.3); transition: opacity .15s, filter .15s; }
+  .inv-gear.on .pixel { opacity: 1; filter: none; }
   .inv-gear.on { background: color-mix(in srgb, var(--gold) 18%, transparent); }
   .cat-quad { display: grid; grid-template-columns: 1fr 1fr; width: 26px; height: 26px; }
   .cat-quad .pixel, .cat-quad > svg, .cat-quad img { width: 13px !important; height: 13px !important; }
@@ -2244,7 +2239,7 @@ __SOLVER_JS__
     try { localStorage.setItem(STORAGE.icons, iconStyle); } catch (e) { /* ignore */ }
     renderItem(); renderResults();
     if (!ui.pickerSheet.hidden) { renderFilters(); if (picker.type !== 'CUSTOM') renderPickerList(); }
-    renderCharms(); renderProjects();
+    renderCharms(); renderProjects(); renderTabbar();
   }
   function iconHTML(item, cls) {
     if (item.key && item.key !== 'custom') return `<div class="icon-frame ${cls || ''}">${iconSVG(item.key)}</div>`;
@@ -3230,8 +3225,6 @@ __SOLVER_JS__
   addEventListener('resize', () => { if (!scene.el) return; scene.key = ''; sceneShow(); });
 
   /* ================= tab bar: Home, Items, Plan, Guide, Help (like the game's bottom bar) ================= */
-  const TAB_HOME = '<svg class="tab-glyph" viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M7 1h2v1h1v1h1v1h1v1h1v1h1v1h1v2h-1v6H9v-4H7v4H2V9H1V7h1V6h1V5h1V4h1V3h1V2h1z"/></svg>';
-  const TAB_HELP = '<svg class="tab-glyph" viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M5 2h6v1h1v1h1v4h-1v1h-1v1H9v2H7V9h1V8h1V7h1V4H6v2H4V4h1V3h0z M7 13h2v2H7z"/></svg>';
   // Plan and Guide follow the last item you opened, from any screen; until there is one they are locked
   function planTarget() {
     if (state.item) return { key: state.item };
@@ -3247,24 +3240,14 @@ __SOLVER_JS__
     resetPlan(); pendingScroll = lastPlanY; lastPlanY = null;   // back where you were on the page
     jumpTo(0); renderAll(); scheduleSolve(0);
   }
-  const ART_HOME = '<svg class="tab-art" viewBox="0 0 16 15" shape-rendering="crispEdges"><path fill="#2a1608" d="M7 0h2v1h-2zM6 1h1v1h-1zM9 1h1v1h-1zM5 2h1v1h-1zM10 2h1v1h-1zM4 3h1v1h-1zM11 3h1v1h-1zM3 4h1v1h-1zM12 4h1v1h-1zM2 5h1v1h-1zM13 5h1v1h-1zM1 6h14v1h-14zM2 7h1v1h-1zM13 7h1v1h-1zM2 8h1v1h-1zM13 8h1v1h-1zM2 9h1v1h-1zM13 9h1v1h-1zM2 10h1v1h-1zM13 10h1v1h-1zM2 11h1v1h-1zM13 11h1v1h-1zM2 12h1v1h-1zM13 12h1v1h-1zM2 13h1v1h-1zM13 13h1v1h-1zM2 14h12v1h-12z"/><path fill="#a8322a" d="M7 1h2v1h-2zM6 2h1v1h-1zM9 2h1v1h-1zM5 3h1v1h-1zM10 3h1v1h-1zM4 4h1v1h-1zM11 4h1v1h-1zM3 5h1v1h-1zM12 5h1v1h-1z"/><path fill="#d9483b" d="M7 2h2v1h-2zM6 3h4v1h-4zM5 4h6v1h-6zM4 5h8v1h-8z"/><path fill="#c9ae80" d="M3 7h10v1h-10zM3 8h1v1h-1zM12 8h1v1h-1zM3 9h1v1h-1zM12 9h1v1h-1zM3 10h1v1h-1zM12 10h1v1h-1zM3 11h1v1h-1zM12 11h1v1h-1zM3 12h1v1h-1zM12 12h1v1h-1zM3 13h1v1h-1zM12 13h1v1h-1z"/><path fill="#e8d3a8" d="M4 8h8v1h-8zM6 9h4v1h-4zM6 10h4v1h-4zM6 11h6v1h-6zM6 12h6v1h-6zM6 13h6v1h-6z"/><path fill="#7a4a22" d="M4 9h2v1h-2zM4 10h2v1h-2zM4 11h2v1h-2zM4 12h1v1h-1zM4 13h2v1h-2z"/><path fill="#8fd0ff" d="M10 9h2v1h-2zM10 10h2v1h-2z"/><path fill="#f6c453" d="M5 12h1v1h-1z"/></svg>';
-  const ART_PROJECTS = '<svg class="tab-art" viewBox="0 0 16 15" shape-rendering="crispEdges"><path fill="#3a2410" d="M2 0h12v1h-12zM1 1h1v1h-1zM14 1h1v1h-1zM1 2h1v1h-1zM14 2h1v1h-1zM2 3h1v1h-1zM13 3h1v1h-1zM2 4h1v1h-1zM13 4h1v1h-1zM2 5h1v1h-1zM13 5h1v1h-1zM2 6h1v1h-1zM13 6h1v1h-1zM2 7h1v1h-1zM13 7h1v1h-1zM2 8h1v1h-1zM13 8h1v1h-1zM2 9h1v1h-1zM13 9h1v1h-1zM2 10h1v1h-1zM13 10h1v1h-1zM2 11h1v1h-1zM13 11h1v1h-1zM1 12h1v1h-1zM14 12h1v1h-1zM1 13h1v1h-1zM14 13h1v1h-1zM2 14h12v1h-12z"/><path fill="#c9a36a" d="M2 1h12v1h-12zM2 2h1v1h-1zM13 2h1v1h-1zM2 12h1v1h-1zM13 12h1v1h-1zM2 13h12v1h-12z"/><path fill="#f2dfb0" d="M3 2h10v1h-10zM3 3h10v1h-10zM3 4h2v1h-2zM10 4h3v1h-3zM3 5h10v1h-10zM3 6h2v1h-2zM11 6h2v1h-2zM3 7h10v1h-10zM3 8h2v1h-2zM8 8h5v1h-5zM3 9h7v1h-7zM12 9h1v1h-1zM3 10h2v1h-2zM7 10h2v1h-2zM3 11h6v1h-6zM12 11h1v1h-1zM3 12h10v1h-10z"/><path fill="#8a6a44" d="M5 4h5v1h-5zM5 6h6v1h-6zM5 8h3v1h-3zM5 10h2v1h-2z"/><path fill="#a8322a" d="M10 9h2v1h-2zM9 10h1v1h-1zM12 10h1v1h-1zM9 11h3v1h-3z"/><path fill="#e0474f" d="M10 10h2v1h-2z"/></svg>';
-  const ART_BAG = '<svg class="tab-art" viewBox="0 0 16 14" shape-rendering="crispEdges"><path fill="#2a1608" d="M6 0h4v1h-4zM5 1h1v1h-1zM10 1h1v1h-1zM5 2h1v1h-1zM10 2h1v1h-1zM3 3h10v1h-10zM2 4h1v1h-1zM13 4h1v1h-1zM1 5h1v1h-1zM14 5h1v1h-1zM1 6h1v1h-1zM14 6h1v1h-1zM1 7h1v1h-1zM14 7h1v1h-1zM1 8h1v1h-1zM14 8h1v1h-1zM1 9h1v1h-1zM14 9h1v1h-1zM1 10h1v1h-1zM14 10h1v1h-1zM1 11h1v1h-1zM14 11h1v1h-1zM2 12h1v1h-1zM13 12h1v1h-1zM3 13h10v1h-10z"/><path fill="#7a4a22" d="M3 4h10v1h-10zM2 5h2v1h-2zM12 5h2v1h-2zM2 6h1v1h-1zM13 6h1v1h-1zM2 7h1v1h-1zM13 7h1v1h-1zM2 8h1v1h-1zM13 8h1v1h-1zM2 9h1v1h-1zM13 9h1v1h-1zM2 10h1v1h-1zM13 10h1v1h-1zM2 11h2v1h-2zM12 11h2v1h-2zM3 12h10v1h-10z"/><path fill="#a8683a" d="M4 5h8v1h-8zM3 6h10v1h-10zM3 7h4v1h-4zM9 7h4v1h-4zM3 8h4v1h-4zM9 8h4v1h-4zM3 9h10v1h-10zM3 10h2v1h-2zM6 10h7v1h-7zM4 11h8v1h-8z"/><path fill="#f6c453" d="M7 7h2v1h-2zM7 8h1v1h-1z"/><path fill="#b8862a" d="M8 8h1v1h-1z"/><path fill="#c98a55" d="M5 10h1v1h-1z"/></svg>';
-  const ART_SETTINGS = '<svg class="tab-art" viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="#1e2430" d="M7 0h2v1h-2zM6 1h1v1h-1zM9 1h1v1h-1zM3 2h2v1h-2zM6 2h1v1h-1zM9 2h1v1h-1zM11 2h2v1h-2zM2 3h1v1h-1zM5 3h1v1h-1zM10 3h1v1h-1zM13 3h1v1h-1zM2 4h1v1h-1zM13 4h1v1h-1zM3 5h1v1h-1zM12 5h1v1h-1zM1 6h2v1h-2zM13 6h2v1h-2zM0 7h1v1h-1zM15 7h1v1h-1zM0 8h1v1h-1zM15 8h1v1h-1zM1 9h2v1h-2zM13 9h2v1h-2zM3 10h1v1h-1zM12 10h1v1h-1zM2 11h1v1h-1zM13 11h1v1h-1zM2 12h1v1h-1zM5 12h1v1h-1zM10 12h1v1h-1zM13 12h1v1h-1zM3 13h2v1h-2zM6 13h1v1h-1zM9 13h1v1h-1zM11 13h2v1h-2zM6 14h1v1h-1zM9 14h1v1h-1zM7 15h2v1h-2z"/><path fill="#f4f7fb" d="M7 1h2v1h-2zM7 2h2v1h-2zM3 3h2v1h-2zM6 3h3v1h-3zM3 4h5v1h-5zM4 5h2v1h-2zM3 6h2v1h-2zM1 7h4v1h-4zM1 8h3v1h-3z"/><path fill="#c4ccd8" d="M9 3h1v1h-1zM11 3h2v1h-2zM8 4h5v1h-5zM10 5h2v1h-2zM11 6h1v1h-1zM4 8h1v1h-1zM3 9h2v1h-2zM4 10h2v1h-2zM3 11h4v1h-4zM3 12h2v1h-2z"/><path fill="#4a5566" d="M6 5h4v1h-4zM5 6h1v1h-1zM10 6h1v1h-1zM5 7h1v1h-1zM10 7h1v1h-1zM5 8h1v1h-1zM10 8h1v1h-1zM5 9h1v1h-1zM10 9h1v1h-1zM6 10h4v1h-4z"/><path fill="#ffe07a" d="M6 6h3v1h-3zM6 7h1v1h-1zM6 8h1v1h-1z"/><path fill="#e0a020" d="M9 6h1v1h-1zM9 7h1v1h-1zM9 8h1v1h-1zM6 9h4v1h-4z"/><path fill="#7c8aa0" d="M12 6h1v1h-1zM11 7h4v1h-4zM11 8h4v1h-4zM11 9h2v1h-2zM10 10h2v1h-2zM7 11h6v1h-6zM6 12h4v1h-4zM11 12h2v1h-2zM7 13h2v1h-2zM7 14h2v1h-2z"/><path fill="#5a3a08" d="M7 7h2v1h-2zM7 8h2v1h-2z"/></svg>';
-  const CAT_ALL = '<svg class="cat-art" viewBox="0 0 12 12" shape-rendering="crispEdges"><path fill="#9a2a3a" d="M1 0h4v1h-4zM0 1h1v1h-1zM4 1h1v1h-1zM0 2h1v1h-1zM4 2h1v1h-1zM0 3h1v1h-1zM4 3h1v1h-1zM1 4h4v1h-4z"/><path fill="#1f7a3a" d="M7 0h4v1h-4zM6 1h1v1h-1zM10 1h1v1h-1zM6 2h1v1h-1zM10 2h1v1h-1zM6 3h1v1h-1zM10 3h1v1h-1zM7 4h4v1h-4z"/><path fill="#ff5a6e" d="M1 1h2v1h-2zM1 2h3v1h-3zM1 3h3v1h-3z"/><path fill="#ffffff" d="M3 1h1v1h-1zM9 1h1v1h-1zM3 7h1v1h-1zM9 7h1v1h-1z"/><path fill="#5fd873" d="M7 1h2v1h-2zM7 2h3v1h-3zM7 3h3v1h-3z"/><path fill="#2a4aa8" d="M1 6h4v1h-4zM0 7h1v1h-1zM4 7h1v1h-1zM0 8h1v1h-1zM4 8h1v1h-1zM0 9h1v1h-1zM4 9h1v1h-1zM1 10h4v1h-4z"/><path fill="#a8781a" d="M7 6h4v1h-4zM6 7h1v1h-1zM10 7h1v1h-1zM6 8h1v1h-1zM10 8h1v1h-1zM6 9h1v1h-1zM10 9h1v1h-1zM7 10h4v1h-4z"/><path fill="#6aa8ff" d="M1 7h2v1h-2zM1 8h3v1h-3zM1 9h3v1h-3z"/><path fill="#ffd84a" d="M7 7h2v1h-2zM7 8h3v1h-3zM7 9h3v1h-3z"/></svg>';
-  const CAT_SWORD = '<svg class="cat-art" viewBox="0 0 12 12" shape-rendering="crispEdges"><path fill="#2a3140" d="M9 0h2v1h-2zM8 1h1v1h-1zM11 1h1v1h-1zM7 2h1v1h-1zM11 2h1v1h-1zM6 3h1v1h-1zM10 3h1v1h-1zM5 4h1v1h-1zM9 4h1v1h-1zM1 5h1v1h-1zM4 5h1v1h-1zM8 5h1v1h-1zM1 6h2v1h-2zM7 6h1v1h-1zM2 7h2v1h-2zM6 7h1v1h-1zM2 8h1v1h-1zM4 8h2v1h-2zM1 9h1v1h-1zM3 9h2v1h-2zM0 10h1v1h-1zM2 10h1v1h-1zM0 11h2v1h-2z"/><path fill="#ffffff" d="M9 1h2v1h-2zM8 2h1v1h-1zM7 3h1v1h-1zM6 4h1v1h-1zM5 5h1v1h-1zM4 6h1v1h-1z"/><path fill="#b8c4d4" d="M9 2h2v1h-2zM8 3h2v1h-2zM7 4h2v1h-2zM6 5h2v1h-2zM5 6h2v1h-2zM4 7h2v1h-2z"/><path fill="#e0a82a" d="M3 8h1v1h-1zM2 9h1v1h-1zM1 10h1v1h-1z"/></svg>';
-  const CAT_CLOVER = '<svg class="cat-art" viewBox="0 0 12 12" shape-rendering="crispEdges"><path fill="#1f7a3a" d="M3 0h2v1h-2zM6 0h2v1h-2zM2 1h1v1h-1zM5 1h1v1h-1zM8 1h1v1h-1zM2 2h1v1h-1zM5 2h1v1h-1zM8 2h1v1h-1zM1 3h2v1h-2zM8 3h2v1h-2zM0 4h1v1h-1zM3 4h1v1h-1zM7 4h1v1h-1zM10 4h1v1h-1zM0 5h1v1h-1zM10 5h1v1h-1zM0 6h1v1h-1zM3 6h1v1h-1zM7 6h1v1h-1zM10 6h1v1h-1zM1 7h2v1h-2zM8 7h2v1h-2zM2 8h1v1h-1zM5 8h1v1h-1zM8 8h1v1h-1zM2 9h1v1h-1zM4 9h1v1h-1zM6 9h1v1h-1zM8 9h1v1h-1zM3 10h1v1h-1zM7 10h1v1h-1z"/><path fill="#5fd873" d="M3 1h2v1h-2zM6 1h2v1h-2zM3 2h1v1h-1zM7 2h1v1h-1zM3 3h5v1h-5zM1 4h2v1h-2zM4 4h3v1h-3zM8 4h2v1h-2zM1 5h1v1h-1zM3 5h5v1h-5zM9 5h1v1h-1zM1 6h2v1h-2zM4 6h3v1h-3zM8 6h2v1h-2zM3 7h5v1h-5zM3 8h2v1h-2zM6 8h2v1h-2zM3 9h1v1h-1zM7 9h1v1h-1z"/><path fill="#b8ffbe" d="M4 2h1v1h-1zM6 2h1v1h-1zM2 5h1v1h-1zM8 5h1v1h-1z"/><path fill="#3d8a3d" d="M5 10h1v1h-1zM5 11h2v1h-2z"/></svg>';
-  const CAT_COINS = '<svg class="cat-art" viewBox="0 0 12 12" shape-rendering="crispEdges"><path fill="#a8781a" d="M2 0h6v1h-6zM1 1h1v1h-1zM8 1h1v1h-1zM0 2h1v1h-1zM9 2h1v1h-1zM0 3h10v1h-10zM0 4h1v1h-1zM9 4h1v1h-1zM0 5h10v1h-10zM1 6h10v1h-10zM0 7h1v1h-1zM11 7h1v1h-1zM0 8h1v1h-1zM11 8h1v1h-1zM0 9h12v1h-12zM0 10h1v1h-1zM11 10h1v1h-1zM1 11h10v1h-10z"/><path fill="#ffd84a" d="M2 1h6v1h-6zM1 2h1v1h-1zM3 2h6v1h-6zM1 4h8v1h-8zM1 7h10v1h-10zM2 8h9v1h-9zM1 10h10v1h-10z"/><path fill="#fff6c8" d="M2 2h1v1h-1zM1 8h1v1h-1z"/></svg>';
-  const TAB_PROJECTS = '<svg class="tab-glyph" viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M3 1h10v14H3v-1H2V2h1zM4 3v10h8V3zM5 4h6v1H5zM5 6h6v1H5zM5 8h4v1H5zM5 10h5v1H5z"/></svg>';
-  const TAB_BAG = '<svg class="tab-glyph" viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M6 1h4v1h1v2h2v1h1v9h-1v1H3v-1H2V5h1V4h2V2h1zM7 2v2h2V2zM4 6v7h8V6zM6 7h4v2H6z"/></svg>';
-  const TAB_SETTINGS = '<svg class="tab-glyph" viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M7 0h2v2h1V1h2v2h1v2h2v2h-1v2h1v2h-2v2h-1v1h-2v-1H9v2H7v-2H6v1H4v-2H3v-2H1V9h1V7H1V5h2V3h1V1h2v1h1zM7 5v1H6v1H5v2h1v1h1v1h2v-1h1V9h1V7h-1V6H9V5z"/></svg>';
   function renderTabbar() {
     const tab = (id, icon, label, badge) => `<button class="tab" type="button" data-action="tab" data-tab="${id}"><span class="tab-icon">${icon}${badge ? `<i class="tab-badge">${badge}</i>` : ''}</span><span class="tab-label">${label}</span></button>`;
-    ui.tabbar.innerHTML = tab('home', ART_HOME, 'Home') +
+    const ui_ = k => iconSVG('u-' + k, 'tab-art');   // interface icons: HD drawings + pixel versions like the items (tools/ui_icons.py)
+    ui.tabbar.innerHTML = tab('home', ui_('home'), 'Home') +
       tab('items', iconSVG((ITEMS.find(it => it.name === 'Iron Sword') || ITEMS[0]).key), 'Items') +
-      tab('projects', ART_PROJECTS, 'Projects', projects.length || '') +
-      tab('inventory', ART_BAG, 'Inventory') +
-      tab('settings', ART_SETTINGS, 'Settings');   // Help lives in the top bar (?)
+      tab('projects', ui_('projects'), 'Projects', projects.length || '') +
+      tab('inventory', ui_('bag'), 'Inventory') +
+      tab('settings', ui_('settings'), 'Settings');   // Help lives in the top bar (?)
     renderProjects();
     syncTabbar();
   }
@@ -4481,16 +4464,6 @@ __SOLVER_JS__
   // The inventory as a game bag: category tabs (Items, Charms, Coins) and a grid of slots with count badges; tapping
   // a slot opens a small editor under the grid (count stepper, remove or use-in-plans)
   let invTab = 'all', invSel = null;
-  const INV_COIN_SVG = {
-    gold: '<svg class="pixel" width="48" height="48" viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="#6b4a0e" d="M5 0h6v1h-6zM3 1h2v1h-2zM11 1h2v1h-2zM2 2h1v1h-1zM13 2h1v1h-1zM1 3h1v1h-1zM14 3h1v1h-1zM1 4h1v1h-1zM14 4h1v1h-1zM0 5h1v1h-1zM15 5h1v1h-1zM0 6h1v1h-1zM15 6h1v1h-1zM0 7h1v1h-1zM15 7h1v1h-1zM0 8h1v1h-1zM15 8h1v1h-1zM0 9h1v1h-1zM15 9h1v1h-1zM0 10h1v1h-1zM15 10h1v1h-1zM1 11h1v1h-1zM14 11h1v1h-1zM1 12h1v1h-1zM14 12h1v1h-1zM2 13h1v1h-1zM13 13h1v1h-1zM3 14h2v1h-2zM11 14h2v1h-2zM5 15h6v1h-6z"/><path fill="#ffe486" d="M5 1h6v1h-6zM3 2h1v1h-1zM2 3h1v1h-1zM2 4h1v1h-1zM1 5h1v1h-1zM1 6h1v1h-1zM1 7h1v1h-1zM1 8h1v1h-1zM1 9h1v1h-1zM1 10h1v1h-1zM2 11h1v1h-1z"/><path fill="#ffcc33" d="M4 2h8v1h-8zM5 3h8v1h-8zM4 4h3v1h-3zM9 4h4v1h-4zM2 5h1v1h-1zM4 5h2v1h-2zM10 5h4v1h-4zM2 6h1v1h-1zM13 6h1v1h-1zM2 7h3v1h-3zM11 7h3v1h-3zM2 8h2v1h-2zM7 8h2v1h-2zM12 8h2v1h-2zM2 9h2v1h-2zM6 9h4v1h-4zM12 9h2v1h-2zM2 10h12v1h-12zM3 11h10v1h-10zM3 12h9v1h-9zM5 13h6v1h-6z"/><path fill="#c98a12" d="M12 2h1v1h-1zM13 3h1v1h-1zM13 4h1v1h-1zM14 5h1v1h-1zM14 6h1v1h-1zM14 7h1v1h-1zM14 8h1v1h-1zM14 9h1v1h-1zM14 10h1v1h-1zM13 11h1v1h-1zM2 12h1v1h-1zM12 12h2v1h-2zM3 13h2v1h-2zM11 13h2v1h-2zM5 14h6v1h-6z"/><path fill="#fff8d8" d="M3 3h2v1h-2zM3 4h1v1h-1zM3 5h1v1h-1z"/><path fill="#e0a21c" d="M7 4h2v1h-2zM6 5h4v1h-4zM3 6h10v1h-10zM5 7h6v1h-6zM4 8h3v1h-3zM9 8h3v1h-3zM4 9h2v1h-2zM10 9h2v1h-2z"/></svg>',   // a round, shaded gold coin with an embossed star
-    wb: '<svg class="pixel" width="48" height="48" viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="#3d2410" d="M5 0h6v1h-6zM3 1h2v1h-2zM11 1h2v1h-2zM2 2h1v1h-1zM13 2h1v1h-1zM1 3h1v1h-1zM14 3h1v1h-1zM1 4h1v1h-1zM14 4h1v1h-1zM0 5h1v1h-1zM15 5h1v1h-1zM0 6h1v1h-1zM15 6h1v1h-1zM0 7h1v1h-1zM15 7h1v1h-1zM0 8h1v1h-1zM15 8h1v1h-1zM0 9h1v1h-1zM15 9h1v1h-1zM0 10h1v1h-1zM15 10h1v1h-1zM1 11h1v1h-1zM14 11h1v1h-1zM1 12h1v1h-1zM14 12h1v1h-1zM2 13h1v1h-1zM13 13h1v1h-1zM3 14h2v1h-2zM11 14h2v1h-2zM5 15h6v1h-6z"/><path fill="#f0c890" d="M5 1h6v1h-6zM3 2h1v1h-1zM2 3h1v1h-1zM2 4h1v1h-1zM1 5h1v1h-1zM1 6h1v1h-1zM1 7h1v1h-1zM1 8h1v1h-1zM1 9h1v1h-1zM1 10h1v1h-1zM2 11h1v1h-1z"/><path fill="#cf8f4f" d="M4 2h8v1h-8zM4 3h3v1h-3zM9 3h4v1h-4zM4 4h9v1h-9zM2 5h3v1h-3zM11 5h3v1h-3zM2 6h3v1h-3zM11 6h3v1h-3zM2 7h1v1h-1zM4 7h1v1h-1zM11 7h1v1h-1zM13 7h1v1h-1zM2 8h1v1h-1zM4 8h1v1h-1zM11 8h1v1h-1zM13 8h1v1h-1zM2 9h3v1h-3zM11 9h3v1h-3zM2 10h3v1h-3zM11 10h3v1h-3zM3 11h10v1h-10zM3 12h4v1h-4zM9 12h4v1h-4zM5 13h6v1h-6z"/><path fill="#8a5424" d="M12 2h1v1h-1zM13 3h1v1h-1zM13 4h1v1h-1zM14 5h1v1h-1zM14 6h1v1h-1zM14 7h1v1h-1zM14 8h1v1h-1zM14 9h1v1h-1zM14 10h1v1h-1zM13 11h1v1h-1zM2 12h1v1h-1zM13 12h1v1h-1zM3 13h2v1h-2zM11 13h2v1h-2zM5 14h6v1h-6z"/><path fill="#fff0d8" d="M3 3h1v1h-1zM3 4h1v1h-1z"/><path fill="#a86a32" d="M7 3h2v1h-2zM3 7h1v1h-1zM12 7h1v1h-1zM3 8h1v1h-1zM12 8h1v1h-1zM7 12h2v1h-2z"/><path fill="#5a3416" d="M5 5h6v1h-6zM5 6h1v1h-1zM10 6h1v1h-1zM5 7h1v1h-1zM10 7h1v1h-1zM5 8h1v1h-1zM10 8h1v1h-1zM5 9h1v1h-1zM10 9h1v1h-1zM5 10h6v1h-6z"/></svg>',   // a world boss token: a bronze coin with a square hole, like an old Japanese coin
-  };
-  const INV_TAB_SVG = {
-    all: '<svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M2 2h5v5H2zM9 2h5v5H9zM2 9h5v5H2zM9 9h5v5H9z"/></svg>',
-    items: '<svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M11 1h4v4h-1v1h-1v1h-1v1h-1v1h-1v1H9v1h1v1h1v2h-1v1H9v-1H8v-1H7v1H6v1H5v1H3v-1h1v-1h1v-1h1V9H5V8H4V7h2v1h1V7h1V6h1V5h1V4h1V3h1V2h-1z"/></svg>',
-    charms: '<svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M4 1h3v1h1v1h1V2h1V1h3v1h1v3h-1v1h-1v1h1v1h1v3h-1v1h-3v-1H9v-1H8v1H7v1H4v-1H3v-3h1V7h1V6H4V5H3V2h1zM7 10h2v2h1v3H9v1H8v-2H7z"/></svg>',
-    coins: '<svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M5 1h6v1h2v2h1v6h-1v2h-2v1H5v-1H3v-2H2V4h1V2h2zM6 4v1H5v6h1v1h4v-1h1V5h-1V4zM7 6h2v4H7z"/></svg>',
-  };
   // counts the way the game shows them: 1x, 57x, 1.9k
   const invQty = n => {   // 1x, 57x, 1.9k, 12m, 12b, 3.4t
     for (const [v, u] of [[1e12, 't'], [1e9, 'b'], [1e6, 'm'], [1e3, 'k']]) if (n >= v * (v === 1e3 ? 1 : 0.9995)) { const x = n / v; return (x >= 100 ? Math.round(x) : x.toFixed(1).replace(/\.0$/, '')) + u; }
@@ -4525,14 +4498,14 @@ __SOLVER_JS__
     const catName = (cats.find(c => c[0] === invTab) || cats[0])[1];
     const nameEl = document.getElementById('invCatName'); if (nameEl) nameEl.textContent = invTab === 'all' ? (invGear ? 'Gear only' : '') : catName;
     ui.charmsBody.innerHTML = `<label class="inv-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></svg><input type="search" placeholder="Search by name" value="${esc(invQ)}" data-field="inv-q" aria-label="Search the inventory">` +
-      `<button type="button" class="inv-gear ${invGear ? 'on' : ''}" data-action="inv-gear" aria-pressed="${invGear}" aria-label="Gear only: hide what you cannot equip" title="Gear only">${CAT_SWORD}</button>` +
+      `<button type="button" class="inv-gear ${invGear ? 'on' : ''}" data-action="inv-gear" aria-pressed="${invGear}" aria-label="Gear only: hide what you cannot equip" title="Gear only">${iconSVG((ITEMS.find(it => it.name === 'Iron Sword') || ITEMS[0]).key)}</button>` +
       `<span class="inv-views" role="group" aria-label="View">${['grid', 'list', 'icons'].map(v => `<button type="button" class="${invView === v ? 'on' : ''}" data-action="inv-view" data-view="${v}" aria-label="${v === 'grid' ? 'Tiles with names' : v === 'list' ? 'List' : 'Icons only'}" title="${v === 'grid' ? 'Tiles' : v === 'list' ? 'List' : 'Icons'}">${INV_VIEW_SVG[v]}</button>`).join('')}</span></label>` +
       `<div id="invGrid"></div>`;
     // the category icons: a fixed strip at the foot of the sheet, right above the tab bar (like the game)
     const goodArt = t => { const g = GOODS.find(x => x.name === (GOOD_TYPES.find(y => y[0] === t) || [])[3]) || GOODS.find(x => x.type === t); return g ? iconSVG(g.key) : ''; };
     const clover = CHARMS.find(c => c.name === 'Clover') || CHARMS[0];
     const allArt = () => `<span class="cat-quad">${['Iron Sword', 'Potion of Luck', 'Gold ore', 'Apple'].map(n => { const x = ITEMS.find(i => i.name === n) || GOODS.find(i => i.name === n); return x ? iconSVG(x.key) : ''; }).join('')}</span>`;
-    const catArt = k => ({ all: allArt(), charms: clover ? iconSVG(clover.key) : CAT_CLOVER, coins: CAT_COINS })[k] || (k.startsWith('g:') ? goodArt(k.slice(2)) : filterIcon(k.slice(2)));   // item types use the item list's type icons
+    const catArt = k => ({ all: allArt(), charms: clover ? iconSVG(clover.key) : '', coins: iconSVG('u-gold') })[k] || (k.startsWith('g:') ? goodArt(k.slice(2)) : filterIcon(k.slice(2)));   // item types use the item list's type icons
     const strip = document.getElementById('invCats'), sx = strip.scrollLeft;
     strip.innerHTML = cats.map(([k, l]) => `<button type="button" role="tab" class="inv-cat ${invTab === k ? 'on' : ''}" data-action="inv-tab" data-tab="${k}" aria-selected="${invTab === k}" aria-label="${l}" title="${l}">${catArt(k)}</button>`).join('');
     strip.scrollLeft = sx;   // stays where the player left it
@@ -4544,7 +4517,7 @@ __SOLVER_JS__
     const show = k => invTab === 'all' || invTab === k || (k === 'items' && invTab.startsWith('t:')) || (k === 'goods' && invTab.startsWith('g:'));
     const typeOk = it => invTab.length < 3 || invTab[1] !== ':' || it.type === invTab.slice(2);
     const rows = [];   // { key, icon, n, cls, glow, label, lv, sub }
-    if (show('coins')) for (const k of ['gold', 'wb']) { const nm = k === 'gold' ? 'Gold' : 'WB tokens'; if (hit(nm)) rows.push({ key: k, icon: INV_COIN_SVG[k], n: inv[k] != null ? (inv[k] >= 1000 ? invQty(inv[k]) : inv[k] + '') : '', cls: inv[k] == null ? 'blank' : '', glow: k === 'gold' ? '#f6c453' : '#cf8f4f', label: nm, sub: inv[k] == null ? 'not tracked' : k === 'gold' ? 'refining fees' : 'boss weapon fees' }); }
+    if (show('coins')) for (const k of ['gold', 'wb']) { const nm = k === 'gold' ? 'Gold' : 'WB tokens'; if (hit(nm)) rows.push({ key: k, icon: iconSVG('u-' + k), n: inv[k] != null ? (inv[k] >= 1000 ? invQty(inv[k]) : inv[k] + '') : '', cls: inv[k] == null ? 'blank' : '', glow: k === 'gold' ? '#f6c453' : '#cf8f4f', label: nm, sub: inv[k] == null ? 'not tracked' : k === 'gold' ? 'refining fees' : 'boss weapon fees' }); }
     if (show('charms')) for (const c of CHARMS) if (hit(c.name, c.key)) rows.push({ key: c.key, icon: iconSVG(c.key), n: charmStock[c.key] ? invQty(charmStock[c.key]) : '', cls: charmOff.has(c.key) ? 'off' : '', glow: '#ff9d3c', label: c.name, lv: '×' + c.factor, lvCls: 'mult', sub: `charm ×${c.factor}${charmOff.has(c.key) ? ' · kept out of plans' : ''}` });
     if (show('items') || show('goods')) {
       const has = it => (inv.items[it.key] || 0) > 0;
@@ -4649,7 +4622,7 @@ __SOLVER_JS__
         `<div class="ie-acts gm-opts"><span>Use in plans</span><button type="button" class="${charmOff.has(c.key) ? '' : 'on'}" data-action="charm" data-key="${c.key}" data-set="on">On</button><button type="button" class="${charmOff.has(c.key) ? 'on' : ''}" data-action="charm" data-key="${c.key}" data-set="off">Off</button></div>`;
     } else {
       const nm = invSel === 'gold' ? 'Gold' : 'WB tokens';
-      head = `${INV_COIN_SVG[invSel]}<div><b>${nm}</b><small>${invSel === 'gold' ? 'pays refining fees' : 'world boss tokens: pay boss weapon fees'}</small></div>`;
+      head = `${iconSVG('u-' + invSel)}<div><b>${nm}</b><small>${invSel === 'gold' ? 'pays refining fees' : 'world boss tokens: pay boss weapon fees'}</small></div>`;
       controls = `<div class="ip-lab">You have <small>empty = not tracked</small></div><label class="ie-coin"><input class="num" type="number" inputmode="numeric" min="0" step="1" value="${inv[invSel] != null ? inv[invSel] : ''}" placeholder="not tracked" data-field="inv-${invSel}" aria-label="${nm} you have"></label>`;
     }
     const old = pop.querySelector('.ip-card'), same = !pop.hidden && old && pop.dataset.key === invSel;
