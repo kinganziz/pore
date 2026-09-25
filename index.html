@@ -1621,6 +1621,16 @@
   .map-row .map-desc { color: var(--muted); font-size: 12px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .map-go { color: var(--gold); font-size: 22px; padding-right: 4px; }
   .inv-back { display: inline-block; margin: 0 0 10px 2px; padding: 4px 10px; border: 0; border-radius: 10px; background: rgba(255, 255, 255, .08); color: var(--gold); font: inherit; font-size: 14px; cursor: pointer; }
+  /* text that does not fit drifts to its end and back, pausing at both ends */
+  .mq { text-overflow: clip !important; }
+  .mq > .mq-in { display: inline-block; animation: mq var(--mqt, 4s) ease-in-out infinite alternate; }
+  @keyframes mq { 0%, 18% { transform: translateX(0); } 82%, 100% { transform: translateX(var(--mq)); } }
+  input.mq-ph { animation: mq-ph var(--mqt, 4s) ease-in-out infinite alternate; }
+  @keyframes mq-ph { 0%, 18% { text-indent: 0; } 82%, 100% { text-indent: var(--mq); } }
+  @media (prefers-reduced-motion: reduce) { .mq > .mq-in, input.mq-ph { animation: none; } }
+  .ie-acts button.armed { background: var(--bad, #e2343e) !important; color: #fff !important; }
+  /* icons only: no names under them, so as many columns as fit (about 7 on a phone) */
+  .slots:not(.named) { grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap: 6px; }
 </style>
 </head>
 <body>
@@ -4013,6 +4023,35 @@ function createSolver() {
     if (open) haptic(6);
   }
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('menu-open')) poreMenu(false); });
+  // Text that does not fit its one-line box drifts slowly to its end and back (instead of being cut with "…"),
+  // and so does a search box's hint text while the box is empty.
+  const MQ_SEL = '.inv-row .ir-main b, .inv-row .ir-main small, .map-row b, .map-row .ir-main > small:not(.map-desc), .ip-head b, .ip-head small, .proj-main b, .inv-nm, .rec-label, .pore-menu .brand p span';
+  let mqT = 0;
+  function marquee() {
+    if (reduced) return;
+    document.querySelectorAll(MQ_SEL).forEach(el => {
+      if (!el.offsetParent) return;
+      let inner = el.firstElementChild && el.firstElementChild.classList.contains('mq-in') ? el.firstElementChild : null;
+      const d = (inner ? inner.scrollWidth : el.scrollWidth) - el.clientWidth;
+      if (d > 2) {
+        if (!inner) { inner = document.createElement('span'); inner.className = 'mq-in'; while (el.firstChild) inner.appendChild(el.firstChild); el.appendChild(inner); }
+        el.classList.add('mq'); el.style.setProperty('--mq', -d + 'px'); el.style.setProperty('--mqt', (2.5 + d / 22).toFixed(1) + 's');
+      } else if (inner) el.classList.remove('mq');
+    });
+    const cv = marquee.cv || (marquee.cv = document.createElement('canvas').getContext('2d'));
+    document.querySelectorAll('input[type="search"][placeholder]').forEach(inp => {
+      if (!inp.offsetParent) return;
+      const cs = getComputedStyle(inp); cv.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+      const d = cv.measureText(inp.placeholder).width - (inp.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight));
+      const on = d > 2 && !inp.value && document.activeElement !== inp;
+      inp.classList.toggle('mq-ph', on);
+      if (on) { inp.style.setProperty('--mq', -Math.ceil(d + 4) + 'px'); inp.style.setProperty('--mqt', (2.5 + d / 22).toFixed(1) + 's'); }
+    });
+  }
+  const marqueeSoon = () => { clearTimeout(mqT); mqT = setTimeout(marquee, 250); };
+  new MutationObserver(marqueeSoon).observe(document.body, { childList: true, subtree: true });
+  addEventListener('resize', marqueeSoon);
+  document.addEventListener('focusin', marqueeSoon); document.addEventListener('focusout', marqueeSoon); document.addEventListener('input', marqueeSoon);
   function tabGo(id) {
     haptic(8);
     poreMenu(false);
@@ -5495,7 +5534,13 @@ function createSolver() {
         haptic(5); invRenderGrid(); break;
       }
       case 'inv-add': invAdding = true; if (invTab.startsWith('t:')) picker.type = invTab.slice(2); closeCharms({ fromHistory: true }); openPicker({ fromHistory: true }); replaceEntry({ sheet: 'picker' }); toast('Pick the item you own'); break;
-      case 'inv-del': delete inv.items[el.dataset.key]; invSave(); invRenderGrid(); if (state.item === el.dataset.key) { state.stock = 0; persist(); renderResults(); } break;
+      case 'inv-del':
+        if (!el.classList.contains('armed')) {   // clearing a count is easy to hit by accident: the first tap only arms it
+          el.classList.add('armed'); el.textContent = 'Clear? Tap again'; haptic(12);
+          setTimeout(() => { if (document.contains(el)) { el.classList.remove('armed'); el.textContent = 'Clear'; } }, 3000);
+          break;
+        }
+        delete inv.items[el.dataset.key]; invSave(); invRenderGrid(); if (state.item === el.dataset.key) { state.stock = 0; persist(); renderResults(); } break;
       case 'clear-search': picker.q = ''; ui.searchInput.value = ''; el.hidden = true; renderPickerList(); ui.searchInput.focus(); break;
       case 'filter': picker.type = el.dataset.type; renderFilters(); renderPickerList(); break;
       case 'sort': picker.sort = el.dataset.sort; renderPickerList(); break;
