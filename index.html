@@ -1178,7 +1178,7 @@
   /* ---------- title screen: no frames (games put little in boxes here): the item cards and the call to action sit on the world ---------- */
   :root .home-hero .home-best.home-best { background: none !important; border: 0 !important; box-shadow: none !important; backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important; justify-content: center; padding: 6px 0; text-shadow: 1px 1px 0 rgba(0, 0, 0, .65), 0 0 12px rgba(0, 0, 0, .45); }
-  :root .home-hero .home-best .hb-icon { background: none !important; box-shadow: none !important; filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, .45)); }
+  :root .home-hero .home-best .hb-icon { background: none !important; box-shadow: none !important; filter: none; }
   :root .home-hero .home-best .hb-icon .pixel { width: 52px; height: 52px; }
   :root .home-hero .home-best b { font-size: 20px; }
   :root .home-hero .home-best .hb-num { font-size: 34px; }   /* the icon, the count and the name (our icons differ from the game's) */
@@ -1671,6 +1671,10 @@
   .map-head .map-ores { color: var(--text); } .map-head .map-ores i { color: var(--muted); font-style: normal; }
   .fs-btn .ico-fs-out { display: none; } .fs-btn.on .ico-fs-out { display: block; } .fs-btn.on .ico-fs-in { display: none; }
   .pm-row[hidden] { display: none !important; }
+  .npc-pic { width: 72px; height: 52px; border-radius: 10px; background: rgba(255, 255, 255, .06); display: grid; grid-template-columns: 1fr 1fr; place-items: center; padding: 2px; box-sizing: border-box; }
+  .npc-pic .pixel { width: 22px; height: 22px; }
+  .npc-head { margin: 0 2px 12px; } .npc-head small { color: var(--gold); font-size: 13px; }
+  #saverClock small { font-size: .38em; margin-left: .25em; letter-spacing: 0; }
 </style>
 </head>
 <body>
@@ -2368,8 +2372,18 @@ function createSolver() {
     }
     return best;
   }
-  const chanceTxt = ([c, how]) => how === 'found' ? `found ${c}%` : how === 'mined' || how.startsWith('sold') ? how : `${how} ${c}%`;
-  const chanceShort = ([c, how]) => how === 'mined' ? 'mine' : how.startsWith('sold') ? 'shop' : c + '%';
+  const chanceTxt = ([c, how]) => how[0] === '$' ? `sells for ${fmt(+how.slice(1))} gold` : how === 'found' ? `found ${c}%` : how === 'mined' || how.startsWith('sold') ? how : `${how} ${c}%`;
+  const chanceShort = ([c, how]) => how[0] === '$' ? fmt(+how.slice(1)) + 'g' : how === 'mined' ? 'mine' : how.startsWith('sold') ? 'shop' : c + '%';
+  // NPCs who sell things, in the order you reach them: what each sells (with the gold price) and where they stand
+  const NPCS = new Map();
+  for (const [k, list] of Object.entries(WHERE)) for (const e of list) if (e[0] === 'shop') {
+    const n = NPCS.get(e[1]) || NPCS.set(e[1], { name: e[1], items: new Map(), locs: new Set() }).get(e[1]);
+    if (!n.items.has(k) || +e[2] < n.items.get(k)) n.items.set(k, +e[2] || 0);
+    for (const l of e[3] || []) n.locs.add(l);
+  }
+  const mapAt = name => { const i = MAPS.findIndex(m => m.name === name); return i < 0 ? 99 : i; };
+  const NPC_LIST = [...NPCS.values()].sort((a, b) => Math.min(...[...a.locs].map(mapAt), 99) - Math.min(...[...b.locs].map(mapAt), 99) || a.name.localeCompare(b.name));
+  const npcDeal = (key, npc) => { const n = NPCS.get(npc), pr = n && n.items.get(key); return pr == null ? [0, ''] : [1e9 - pr, '$' + pr]; };   // cheapest first
   const mapArt = {};
   // A map's picture is shown only when it is complete (never the bare landscape first): until then an empty
   // frame, then the finished picture fades in. All of them are made in the background shortly after start.
@@ -3417,7 +3431,7 @@ function createSolver() {
     clearTimeout(saverClockT);
     if (!saverOn()) return;
     const el = document.getElementById('saverClock'), d = new Date();
-    if (el) el.textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (el) { const h = d.getHours(); el.innerHTML = `${h % 12 || 12}:${String(d.getMinutes()).padStart(2, '0')}<small>${h < 12 ? 'AM' : 'PM'}</small>`; }   // like a phone: 9:05 PM
     if (bgPref === 'auto') { if (!saverSceneAt) saverSceneAt = Date.now() + 90000; else if (Date.now() > saverSceneAt) { saverSceneAt = Date.now() + 90000; bgNext(); } }
     saverClockT = setTimeout(saverTick, 5000);
   }
@@ -5382,7 +5396,7 @@ function createSolver() {
   // The charms inventory: which charms PORE may use (tap to switch one off) and, optionally, how many you have
   // The inventory as a game bag: category tabs (Items, Charms, Coins) and a grid of slots with count badges; tapping
   // a slot opens a small editor under the grid (count stepper, remove or use-in-plans)
-  let invTab = 'all', invSel = null, invMap = null;   // invMap: the map (location) whose items are shown
+  let invTab = 'all', invSel = null, invMap = null, invNpc = null;   // invMap: the map (location) whose items are shown
   // counts the way the game shows them: 1x, 57x, 1.9k
   const invQty = n => {   // 1x, 57x, 1.9k, 12m, 12b, 3.4t
     for (const [v, u] of [[1e12, 't'], [1e9, 'b'], [1e6, 'm'], [1e3, 'k']]) if (n >= v * (v === 1e3 ? 1 : 0.9995)) { const x = n / v; return (x >= 100 ? Math.round(x) : x.toFixed(1).replace(/\.0$/, '')) + u; }
@@ -5413,11 +5427,11 @@ function createSolver() {
     if (!ui.charmsBody || (!force && ui.charmsSheet.hidden)) return;
     // every category the bag can hold: all, charms, each item type (like the game's filter row), coins
     if (invGear && invTab.startsWith('g:')) invTab = 'all';
-    const cats = [['all', 'All'], ['maps', 'Maps'], ['charms', 'Charms'], ...TYPES.map(t => ['t:' + t[0], t[1]]), ...(invGear ? [] : GOOD_TYPES.map(t => ['g:' + t[0], t[1]])), ['coins', 'Coins']];
+    const cats = [['all', 'All'], ['maps', 'Maps'], ['npcs', 'NPCs'], ['charms', 'Charms'], ...TYPES.map(t => ['t:' + t[0], t[1]]), ...(invGear ? [] : GOOD_TYPES.map(t => ['g:' + t[0], t[1]])), ['coins', 'Coins']];
     const catName = (cats.find(c => c[0] === invTab) || cats[0])[1];
-    const nameEl = document.getElementById('invCatName'); if (nameEl) nameEl.textContent = invTab === 'all' ? (invGear ? 'Gear only' : '') : invTab === 'maps' && invMap ? invMap : catName;
-    const mapList = invTab === 'maps' && !invMap;   // the list of maps: no gear filter or item views to pick
-    ui.charmsBody.innerHTML = `<label class="inv-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></svg><input type="search" placeholder="${mapList ? 'Search maps' : 'Search items or places'}" value="${esc(invQ)}" data-field="inv-q" aria-label="Search the inventory">` +
+    const nameEl = document.getElementById('invCatName'); if (nameEl) nameEl.textContent = invTab === 'all' ? (invGear ? 'Gear only' : '') : invTab === 'maps' && invMap ? invMap : invTab === 'npcs' && invNpc ? invNpc : catName;
+    const mapList = (invTab === 'maps' && !invMap) || (invTab === 'npcs' && !invNpc);   // the list of maps: no gear filter or item views to pick
+    ui.charmsBody.innerHTML = `<label class="inv-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></svg><input type="search" placeholder="${mapList ? (invTab === 'npcs' ? 'Search NPCs' : 'Search maps') : 'Search items or places'}" value="${esc(invQ)}" data-field="inv-q" aria-label="Search the inventory">` +
       (mapList ? '</label>' : `<button type="button" class="inv-gear ${invGear ? 'on' : ''}" data-action="inv-gear" aria-pressed="${invGear}" aria-label="Gear only: hide what you cannot equip" title="Gear only">${iconSVG((ITEMS.find(it => it.name === 'Iron Sword') || ITEMS[0]).key)}</button>` +
       `<span class="inv-views" role="group" aria-label="View">${['grid', 'list', 'icons'].map(v => `<button type="button" class="${invView === v ? 'on' : ''}" data-action="inv-view" data-view="${v}" aria-label="${v === 'grid' ? 'Tiles with names' : v === 'list' ? 'List' : 'Icons only'}" title="${v === 'grid' ? 'Tiles' : v === 'list' ? 'List' : 'Icons'}">${INV_VIEW_SVG[v]}</button>`).join('')}</span></label>`) +
       `<div id="invGrid"></div>`;
@@ -5425,7 +5439,7 @@ function createSolver() {
     const goodArt = t => { const g = GOODS.find(x => x.name === (GOOD_TYPES.find(y => y[0] === t) || [])[3]) || GOODS.find(x => x.type === t); return g ? iconSVG(g.key) : ''; };
     const clover = CHARMS.find(c => c.name === 'Clover') || CHARMS[0];
     const allArt = () => `<span class="cat-quad">${['Iron Sword', 'Potion of Luck', 'Gold ore', 'Apple'].map(n => { const x = ITEMS.find(i => i.name === n) || GOODS.find(i => i.name === n); return x ? iconSVG(x.key) : ''; }).join('')}</span>`;
-    const catArt = k => ({ all: allArt(), maps: iconSVG('u-map'), charms: clover ? iconSVG(clover.key) : '', coins: iconSVG('u-gold') })[k] || (k.startsWith('g:') ? goodArt(k.slice(2)) : filterIcon(k.slice(2)));   // item types use the item list's type icons
+    const catArt = k => ({ all: allArt(), maps: iconSVG('u-map'), npcs: goodArt('SKIN'), charms: clover ? iconSVG(clover.key) : '', coins: iconSVG('u-gold') })[k] || (k.startsWith('g:') ? goodArt(k.slice(2)) : filterIcon(k.slice(2)));   // item types use the item list's type icons
     const strip = document.getElementById('invCats'), sx = strip.scrollLeft;
     strip.innerHTML = cats.map(([k, l]) => `<button type="button" role="tab" class="inv-cat ${invTab === k ? 'on' : ''}" data-action="inv-tab" data-tab="${k}" aria-selected="${invTab === k}" aria-label="${l}" title="${l}">${catArt(k)}<i class="cat-n" data-cat="${k}" hidden></i></button>`).join('');
     strip.scrollLeft = sx;   // stays where the player left it
@@ -5444,6 +5458,19 @@ function createSolver() {
     const box = document.getElementById('invGrid'); if (!box) return;
     invBadges();
     const q = invQ.trim().toLowerCase(), onMap = invTab === 'maps' && invMap && MAP_KEYS.get(invMap);
+    const onNpc = invTab === 'npcs' && invNpc && NPCS.has(invNpc) && new Set(NPCS.get(invNpc).items.keys());
+    const onSet = onMap || onNpc, placeOf = k => onMap ? mapChance(k, invMap) : npcDeal(k, invNpc);
+    if (invTab === 'npcs' && !onNpc) {   // the NPCs, in the order you meet them, with a few of their wares
+      const list = NPC_LIST.filter(n => !q || `${n.name} ${[...n.locs].join(' ')}`.toLowerCase().includes(q));
+      box.innerHTML = (list.length ? `<div class="map-list">${list.map(n => { const wares = [...n.items.entries()].sort((a, b) => b[1] - a[1]), low = Math.min(...n.items.values());
+        return `<button type="button" class="map-row" data-action="inv-npc" data-npc="${esc(n.name)}">` +
+          `<span class="npc-pic">${wares.slice(0, 4).map(([k]) => iconSVG(k)).join('')}</span>` +
+          `<span class="ir-main"><b>${esc(n.name)}</b><small>${[...n.locs].map(esc).join(', ') || 'somewhere'} · ${n.items.size} item${n.items.size === 1 ? '' : 's'}</small><small class="map-desc">from ${fmt(low)} gold</small></span>` +
+          `<span class="map-go">›</span></button>`; }).join('')}</div>` : '<p class="inv-hint">Nothing matches.</p>') +
+        '<p class="inv-hint">Every NPC who sells something, in the order you meet them. Tap one to see what they sell and for how much.</p>';
+      invRenderPop();
+      return;
+    }
     if (invTab === 'maps' && !onMap) {   // the maps, in game order, with a picture of their world
       const list = MAPS.filter(m => !q || `${m.name} ${m.kind || ''} ${m.desc || ''}`.toLowerCase().includes(q));   // by name, kind (cave, snow…) or description
       box.innerHTML = (list.length ? `<div class="map-list">${list.map(m => `<button type="button" class="map-row" data-action="inv-map" data-place="${esc(m.name)}">` +
@@ -5454,8 +5481,8 @@ function createSolver() {
       invRenderPop();
       return;
     }
-    const hit = (name, key) => (!onMap || onMap.has(key)) && (!q || name.toLowerCase().includes(q) || (q.length > 2 && !!PLACES[key] && PLACES[key].includes(q)));
-    const show = k => invTab === 'all' || invTab === k || (k === 'items' && invTab.startsWith('t:')) || (k === 'goods' && invTab.startsWith('g:')) || (!!onMap && k !== 'coins');
+    const hit = (name, key) => (!onSet || onSet.has(key)) && (!q || name.toLowerCase().includes(q) || (q.length > 2 && !!PLACES[key] && PLACES[key].includes(q)));
+    const show = k => invTab === 'all' || invTab === k || (k === 'items' && invTab.startsWith('t:')) || (k === 'goods' && invTab.startsWith('g:')) || (!!onSet && k !== 'coins');
     const typeOk = it => invTab.length < 3 || invTab[1] !== ':' || it.type === invTab.slice(2);
     const rows = [];   // { key, icon, n, cls, glow, label, lv, sub }
     if (show('coins')) for (const k of ['gold', 'wb']) { const nm = k === 'gold' ? 'Gold' : 'WB tokens'; if (hit(nm)) rows.push({ key: k, icon: iconSVG('u-' + k), n: inv[k] != null ? (inv[k] >= 1000 ? invQty(inv[k]) : inv[k] + '') : '', cls: inv[k] == null ? 'blank' : '', glow: k === 'gold' ? '#f6c453' : '#cf8f4f', label: nm, sub: inv[k] == null ? 'not tracked' : k === 'gold' ? 'refining fees' : 'boss weapon fees' }); }
@@ -5465,7 +5492,7 @@ function createSolver() {
       const pool = [...(show('items') ? ITEMS.filter(it => it.key !== 'custom').sort((a, b) => a.name.localeCompare(b.name)) : []), ...(show('goods') && !invGear ? GOODS : [])]
         .filter(it => hit(it.name, it.key) && typeOk(it));
       const at = new Map(pool.map((it, i) => [it.key, i]));
-      const mc = onMap ? new Map(pool.map(it => [it.key, mapChance(it.key, invMap)])) : null;   // on a map: likeliest first
+      const mc = onSet ? new Map(pool.map(it => [it.key, placeOf(it.key)])) : null;   // on a map: likeliest first; at an NPC: cheapest first
       pool.sort((a, b) => (mc ? mc.get(b.key)[0] - mc.get(a.key)[0] : 0) || (has(b) - has(a)) || (has(a) ? (inv.added[b.key] || 0) - (inv.added[a.key] || 0) : 0) || at.get(a.key) - at.get(b.key))
         .forEach(it => {
           const gear = ITEM_BY_KEY.has(it.key);
@@ -5474,8 +5501,8 @@ function createSolver() {
             sub: (mc && mc.get(it.key)[0] ? chanceTxt(mc.get(it.key)) + ' · ' : '') + (gear ? `${TYPE_SINGULAR[it.type] || ''} · ${statsLine(it)}` : `${GOOD_SINGULAR[it.type] || ''}${it.rarity ? ' · ' + it.rarity : ''}${it.desc ? ' · ' + it.desc : ''}`) });
         });
     }
-    if (onMap) {   // charms join the items: everything on a map in order of its chance there
-      for (const r of rows) if (r.cv == null) { const c = mapChance(r.key, invMap); r.cv = c[0]; if (c[0]) { r.ch = chanceShort(c); r.sub = chanceTxt(c) + ' · ' + r.sub; } }
+    if (onSet) {   // charms join the items: everything on a map in order of its chance there (at an NPC: by price)
+      for (const r of rows) if (r.cv == null) { const c = placeOf(r.key); r.cv = c[0]; if (c[0]) { r.ch = chanceShort(c); r.sub = chanceTxt(c) + ' · ' + r.sub; } }
       rows.sort((a, b) => b.cv - a.cv);
     }
     const sel = r => invSel === r.key ? 'sel' : '';
@@ -5484,13 +5511,16 @@ function createSolver() {
         `<span class="ir-ic">${r.icon}</span><span class="ir-main"><b>${esc(r.label)}</b><small>${esc(r.sub || '')}</small></span><span class="ir-n">${r.n || ''}</span></button>`).join('')}</div>`;
     else if (invView === 'grid') html = `<div class="slots named">${rows.map(r => `<div class="named-slot">${invSlot(r.key, r.icon, r.n, r)}<span class="ns-name">${esc(r.label)}</span>${r.ch ? `<small class="ns-ch">${r.ch}</small>` : ''}</div>`).join('')}</div>`;
     else html = `<div class="slots">${rows.map(r => invSlot(r.key, r.icon, r.n, r)).join('')}</div>`;
-    const hint = invTab.startsWith('g:') ? 'Tap an item to see where to get it and set how many you own.' : { all: 'Tap anything to see where to get it and set how many you own. Dim means you have none. Search finds places too.', charms: 'Tap a charm to set your stock or keep it out of plans.', coins: 'Gold pays fees, world boss (WB) tokens pay boss weapons.' }[invTab] || 'Tap an item to see it and set how many base (P1) copies you own.';
+    const hint = invTab.startsWith('g:') ? 'Tap an item to see where to get it and set how many you own.' : { all: 'Tap anything to see where to get it and set how many you own. Search finds places too.', charms: 'Tap a charm to set your stock or keep it out of plans.', coins: 'Gold pays fees, world boss (WB) tokens pay boss weapons.' }[invTab] || 'Tap an item to see it and set how many base (P1) copies you own.';
     const mp = onMap && MAPS.find(m => m.name === invMap);
-    box.innerHTML = (onMap ? `<button type="button" class="inv-back" data-action="inv-map-back">‹ All maps</button>` +
+    const np = onNpc && NPCS.get(invNpc);
+    box.innerHTML = (onNpc ? `<button type="button" class="inv-back" data-action="inv-npc-back">‹ All NPCs</button>` +
+      `<div class="npc-head"><small>${[...np.locs].map(l => MAP_KEYS.has(l) ? `<button type="button" class="ip-map" data-action="inv-place" data-q="${esc(l)}">${esc(l)}</button>` : esc(l)).join(', ')} · sells ${np.items.size} item${np.items.size === 1 ? '' : 's'} for gold</small></div>` : '') +
+      (onMap ? `<button type="button" class="inv-back" data-action="inv-map-back">‹ All maps</button>` +
       (mp ? `<div class="map-head">${mapImg(mp)}` +
         `<div><small>${mp.steps ? fmt(mp.steps) + ' steps to unlock' : 'where it starts'} · ${onMap.size} items</small>${mp.desc ? `<p>${esc(mp.desc)}</p>` : ''}` +
         `${(MAP_ORES.get(mp.name) || []).length ? `<p class="map-ores">Ores: ${MAP_ORES.get(mp.name).map(([k, pw]) => `${esc(((anyItem(k) || {}).name || '').replace(/ Node$/, ''))}${pw ? ` <i>(power ${pw})</i>` : ''}`).join(' · ')}</p>` : ''}</div></div>` : '') : '') +
-      (rows.length ? html : '<p class="inv-hint">Nothing matches.</p>') + `<p class="inv-hint">${onMap ? `Everything you can get in ${esc(invMap)}. Tap an item for where exactly.` : hint}</p>`;
+      (rows.length ? html : '<p class="inv-hint">Nothing matches.</p>') + `<p class="inv-hint">${onMap ? `Everything you can get in ${esc(invMap)}. Tap an item for where exactly.` : onNpc ? `What ${esc(invNpc)} sells, cheapest first.` : hint}</p>`;
     invRenderPop();
   }
   // a tappable item inside a card (ingredients, keys, products): opens that item's card
@@ -5656,12 +5686,19 @@ function createSolver() {
       case 'close-projects': closeProjects(); break;
       case 'close-settings': closeSettings(); break;
       case 'close-charms': closeCharms(); break;
-      case 'inv-tab': invTab = el.dataset.tab; invSel = null; invMap = null; haptic(6); renderCharms(); break;   // the category icons at the bottom
+      case 'inv-tab': invTab = el.dataset.tab; invSel = null; invMap = null; invNpc = null; haptic(6); renderCharms(); break;   // the category icons at the bottom
       case 'inv-sel': invSel = invSel === el.dataset.key ? null : el.dataset.key; haptic(6); invRenderGrid(); break;
       case 'inv-map': invMap = el.dataset.place; invQ = ''; invSel = null; haptic(6); renderCharms(); { const b = document.getElementById('charmsBody'); if (b) b.scrollTop = 0; } break;
       case 'inv-map-back': invMap = null; invSel = null; haptic(6); renderCharms(); break;
-      case 'inv-place': if (MAP_KEYS.has(el.dataset.q)) {   // a map name: its page in Maps
-          invTab = 'maps'; invMap = el.dataset.q; invQ = ''; invSel = null; haptic(6);
+      case 'inv-npc': invNpc = el.dataset.npc; invQ = ''; invSel = null; haptic(6); renderCharms(); { const b = document.getElementById('charmsBody'); if (b) b.scrollTop = 0; } break;
+      case 'inv-npc-back': invNpc = null; invSel = null; haptic(6); renderCharms(); break;
+      case 'inv-place': if (NPCS.has(el.dataset.q)) {   // an NPC: their page in NPCs
+          invTab = 'npcs'; invNpc = el.dataset.q; invMap = null; invQ = ''; invSel = null; haptic(6);
+          if (ui.charmsSheet.hidden) tabGo('inventory'); else renderCharms();
+          break;
+        }
+        if (MAP_KEYS.has(el.dataset.q)) {   // a map name: its page in Maps
+          invTab = 'maps'; invMap = el.dataset.q; invNpc = null; invQ = ''; invSel = null; haptic(6);
           if (ui.charmsSheet.hidden) tabGo('inventory'); else renderCharms();
           break;
         }
