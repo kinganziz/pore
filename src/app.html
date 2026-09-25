@@ -2262,8 +2262,9 @@ __SOLVER_JS__
   function sceneSetup() {
     const c = scene.el || (scene.el = document.getElementById('scene'));
     if (!c) return false;
-    // one world pixel is the same size across and down: phones get 180 pixels across, wide screens see more land
-    const cw = c.clientWidth || innerWidth, ch = c.clientHeight || innerHeight, px = Math.max(1, Math.min(cw / 180, ch / 200));
+    // one world pixel is the same size across and down, and never bigger than 3 screen pixels: phones get 180
+    // pixels across, big screens see more land instead of a blown-up picture
+    const cw = c.clientWidth || innerWidth, ch = c.clientHeight || innerHeight, px = Math.max(1, Math.min(cw / 180, ch / 200, 3));
     const W = Math.round(cw / px), H = Math.round(ch / px);
     if (scene.W !== W || scene.H !== H) {
       scene.W = W; scene.H = H; c.width = W; c.height = H;
@@ -2326,23 +2327,23 @@ __SOLVER_JS__
     layer(midSpeed, 0.63, midAmps, pal.mid);
     g.fillStyle = pal.tree;                                  // pines on the hills
     const midOff = off(midSpeed);
-    for (const t of scene.trees) {
-      const x = ((Math.round(t.x) - midOff) % P + P) % P;
-      if (x > W + 6) continue;
-      const base = Math.round(ridge(x + midOff, P, 0.63, midAmps, H));
-      for (let k = 0; k < t.h; k++) { const w = Math.max(1, Math.floor((k + 2) / 2.2)); g.fillRect(x - w, base - t.h + k, w * 2 + 1, 1); }
-      g.fillRect(x, base, 1, 2);
+    for (const t of scene.trees) {   // the hills repeat every P pixels; so do the trees, for screens wider than P
+      for (let x = ((Math.round(t.x) - midOff) % P + P) % P; x <= W + 6; x += P) {
+        const base = Math.round(ridge(x + midOff, P, 0.63, midAmps, H));
+        for (let k = 0; k < t.h; k++) { const w = Math.max(1, Math.floor((k + 2) / 2.2)); g.fillRect(x - w, base - t.h + k, w * 2 + 1, 1); }
+        g.fillRect(x, base, 1, 2);
+      }
     }
     const nearSpeed = 1.2, nearAmps = [[0.012, 3, 0.2], [0.008, 8, 2.4]];
     layer(nearSpeed, 0.8, nearAmps, pal.near);
     g.fillStyle = pal.near;                                  // standing stones and broken pillars
     const nearOff = off(nearSpeed);
     for (const rk of scene.rocks) {
-      const x = ((Math.round(rk.x) - nearOff) % P + P) % P;
-      if (x > W + 8) continue;
-      const base = Math.round(ridge(x + nearOff, P, 0.8, nearAmps, H));
-      g.fillRect(x, base - rk.h, rk.w, rk.h + 1);
-      g.fillRect(x - 1, base - rk.h, rk.w + 2, 1);
+      for (let x = ((Math.round(rk.x) - nearOff) % P + P) % P; x <= W + 8; x += P) {
+        const base = Math.round(ridge(x + nearOff, P, 0.8, nearAmps, H));
+        g.fillRect(x, base - rk.h, rk.w, rk.h + 1);
+        g.fillRect(x - 1, base - rk.h, rk.w + 2, 1);
+      }
     }
     // fireflies drifting up
     for (const f of scene.flies) {
