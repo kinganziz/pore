@@ -428,7 +428,7 @@ def crispy_seaweed(ic):
 def chocolate_bunny(ic):
     choc = P["chocolate"]
     return J([ell(ic, 24, 14, 4.5, 11, choc), ell(ic, 36, 14, 4.5, 11, choc), ell(ic, 30, 30, 12, 11, choc), ell(ic, 34, 48, 16, 12, choc),
-                    dot(26, 28, 1.8, INK), dot(34, 28, 1.8, INK), ell(ic, 50, 50, 5, 5, C("#ffffff", "#f4ecd8", "#c8b890", "#5a4a30"), sw=1.4),
+                    dot(26, 28, 1.8, INK), dot(34, 28, 1.8, INK),   # seen from the front: no tail (it read as a stray blob)
                     hl("M22 26 C22 23 24 21 27 20", 2.2)])
 
 

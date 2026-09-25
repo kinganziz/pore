@@ -1939,7 +1939,8 @@ __SOLVER_JS__
   const ITEM_BY_KEY = new Map(ITEMS.map(it => [it.key, it]));
   const CHARMS = (ITEM_DB.charms || []).map(c => Object.assign({ key: 'c' + c.id }, c));
   // everything else a player can own (potions, food, ores, drops...): no refining, but where to get it and what it is for
-  const GOODS = (ITEM_DB.goods || []).map(g => Object.assign({ key: 'i' + g.id }, g));
+  const REMOVED = /^(pig perfume)$/i;   // items PORE leaves out altogether
+  const GOODS = (ITEM_DB.goods || []).filter(g => !REMOVED.test(g.name)).map(g => Object.assign({ key: 'i' + g.id }, g));
   const GOOD_BY_KEY = new Map(GOODS.map(g => [g.key, g]));
   const WHERE = ITEM_DB.where || {}, USES = ITEM_DB.uses || {};
   const GOOD_TYPES = [['POTION', 'Potions', 'Potion', 'Potion of Luck'], ['FOOD', 'Food', 'Food', 'Apple'], ['FRUIT', 'Fruit', 'Fruit', 'Red Berries'],
@@ -3753,7 +3754,7 @@ __SOLVER_JS__
   }
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('menu-open')) poreMenu(false); });
   // Text that does not fit its one-line box drifts slowly to its end and back (instead of being cut with "…"),
-  // and so does a search box's hint text while the box is empty.
+  // and so does a search box's text (its hint, or what is in it) while you are not typing in it.
   const MQ_SEL = '.inv-row .ir-main b, .inv-row .ir-main small, .map-row b, .map-row .ir-main > small:not(.map-desc), .proj-main b, .inv-nm, .rec-label, .pore-menu .brand p span';
   let mqT = 0;
   function marquee() {
@@ -3777,8 +3778,8 @@ __SOLVER_JS__
     document.querySelectorAll('input[type="search"][placeholder]').forEach(inp => {
       if (!inp.offsetParent) return;
       const cs = getComputedStyle(inp); cv.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`; try { cv.letterSpacing = cs.letterSpacing; } catch (e) { /* older browsers */ }
-      const d = cv.measureText(inp.placeholder).width - (inp.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight));
-      const on = d > 16 && !inp.value && document.activeElement !== inp;
+      const d = cv.measureText(inp.value || inp.placeholder).width - (inp.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight));
+      const on = d > 16 && document.activeElement !== inp;   // the hint, or what is in the box, while you are not typing
       inp.classList.toggle('mq-ph', on);
       if (on) { inp.style.setProperty('--mq', -Math.ceil(d + 4) + 'px'); inp.style.setProperty('--mqt', (2.5 + d / 22).toFixed(1) + 's'); }
     });
