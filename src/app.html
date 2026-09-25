@@ -1184,7 +1184,7 @@ __SOLVER_JS__
   const MODEL_KEYS = new Set(S.models.map(m => m.key));
 
   /* ================= state ================= */
-  const state = { item: null, custom: null, L: 10, t: {}, o: [], k: {}, stock: 0, view: 'up', m: 'exact', cf: 0, ch: {} };
+  const state = { item: null, custom: null, L: 10, w: 0, wl: 0, t: {}, o: [], k: {}, stock: 0, view: 'up', m: 'exact', cf: 0, ch: {} };
   const ui = {};
   ['itemBody', 'itemHint', 'targetCard', 'targetBody', 'targetHint', 'ownedCard', 'ownedBody', 'resultsBody', 'pickerSheet', 'pickerBody', 'filters', 'searchInput', 'infoSheet', 'guideSheet', 'guideBody', 'toast', 'fx', 'themeBtn', 'infoBtn', 'catGrid', 'dataDate']
     .forEach(id => ui[id] = document.getElementById(id));
@@ -1220,6 +1220,7 @@ __SOLVER_JS__
 
   function encodeState(forShare) {
     const s = { L: state.L };
+    if (state.w) { s.w = state.w; s.wl = state.wl; }
     if (state.item) s.i = state.item;
     if (state.custom) s.c = state.custom;
     if (Object.keys(state.t).length) s.t = state.t;
@@ -1240,6 +1241,8 @@ __SOLVER_JS__
     state.custom = s.c && Array.isArray(s.c.stats) ? { name: String(s.c.name || 'Custom item').slice(0, 40), stats: s.c.stats.filter(x => x && x.name && x.value > 0).slice(0, 3).map(x => ({ name: String(x.name), value: Math.max(1, Math.round(Number(x.value))) })) } : null;
     if (state.item === 'custom' && !state.custom) state.item = null;
     state.L = Math.min(10, Math.max(2, Number(s.L) || 10));
+    state.w = s.w >= 2 && s.w <= 10 ? Number(s.w) : 0;   // the level a boss weapon's P5 cap replaced
+    state.wl = state.w ? Math.min(state.L, Number(s.wl) || state.L) : 0;
     state.t = s.t && typeof s.t === 'object' ? s.t : {};
     state.o = Array.isArray(s.o) ? s.o.filter(o => o && o.L >= 2 && o.L <= 10).map(o => ({ L: Number(o.L), s: o.s && typeof o.s === 'object' ? o.s : {}, q: Math.max(1, Math.min(999, Number(o.q) || 1)) })).slice(0, 12) : [];
     state.k = s.k && typeof s.k === 'object' ? s.k : {};
@@ -1395,7 +1398,8 @@ __SOLVER_JS__
     item.overrides = overridesFor(item);
     item.ctx = S.makeCtx(state.m, item.overrides, stats.length);
     item.chain = S.perfectChain(stats.map(st => st.value), rates, 10, item.ctx);
-    if (state.L > item.maxL) state.L = item.maxL;
+    if (state.L > item.maxL) { if (!state.w) state.w = state.L; state.L = item.maxL; state.wl = item.maxL; }
+    else if (state.w && item.maxL >= state.w && state.L === state.wl) { state.L = state.w; state.w = 0; }   // untouched since the cap
     if (state.o.some(o => o.L > item.maxL)) state.o = state.o.filter(o => o.L <= item.maxL);
     return item;
   }
@@ -2799,9 +2803,6 @@ __SOLVER_JS__
   }
 
   function pickItem(key) {
-    // leaving a boss weapon (capped at P5) for a normal item: go back to aiming for P10
-    const prevMax = maxOf(ITEM_BY_KEY.get(state.item));
-    if (prevMax < 10 && state.L === prevMax && maxOf(ITEM_BY_KEY.get(key)) > prevMax) state.L = 10;
     state.item = key;
     state.t = {}; state.o = []; state.stock = 0; state.k = {};
     last = null; openObsForm = null;
@@ -2967,7 +2968,7 @@ __SOLVER_JS__
         state.custom = c; pickItem('custom'); break;
       }
       case 'edit-custom': picker.type = 'CUSTOM'; openPicker(); break;
-      case 'set-level': haptic(); state.L = Number(el.dataset.level); openObsForm = null; afterChange(); break;
+      case 'set-level': haptic(); state.L = Number(el.dataset.level); state.w = 0; openObsForm = null; afterChange(); break;
       case 'target-perfect': delete state.t[el.dataset.stat]; afterChange(); break;
       case 'target-skip': { const n = el.dataset.stat; if (state.t[n] === 'skip') delete state.t[n]; else state.t[n] = 'skip'; afterChange(); break; }
       case 'target-reset': state.t = {}; afterChange(); break;
@@ -3009,7 +3010,7 @@ __SOLVER_JS__
         let L = 2; while (L <= item.maxL && item.chain[L][i] < want) L++;
         const st = item.stats[i];
         if (L > item.maxL) { toast(`Even P${item.maxL} reaches at most ${item.chain[item.maxL][i]} ${st.short}`); break; }
-        state.L = L; state.t = {};
+        state.L = L; state.w = 0; state.t = {};
         item.stats.forEach((x, k) => { state.t[x.name] = k === i ? want : 'skip'; });
         if (item.stats.length === 1 && want === item.chain[L][0]) state.t = {};
         haptic(); revealResults = true; afterChange();
