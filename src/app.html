@@ -1635,6 +1635,10 @@
   .hb-carousel { padding: 10px 0 8px; border-radius: 16px; background: rgba(8, 10, 28, .42); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08), 3px 3px 0 rgba(0, 0, 0, .25);
     -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
   :root[data-sky="day"] .hb-carousel { background: rgba(255, 255, 255, .5); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .6), 3px 3px 0 rgba(0, 0, 0, .12); }
+  .map-head { display: grid; grid-template-columns: 112px 1fr; gap: 12px; align-items: start; margin: 0 2px 14px; }
+  .map-head .map-pic { width: 112px; height: 80px; }
+  .map-head small { color: var(--gold); font-size: 13px; }
+  .map-head p { margin: 4px 0 0; color: var(--soft); font-size: 13px; line-height: 1.35; }
 </style>
 </head>
 <body>
@@ -4939,7 +4943,10 @@ __SOLVER_JS__
     else if (invView === 'grid') html = `<div class="slots named">${rows.map(r => `<div class="named-slot">${invSlot(r.key, r.icon, r.n, r)}<span class="ns-name">${esc(r.label)}</span></div>`).join('')}</div>`;
     else html = `<div class="slots">${rows.map(r => invSlot(r.key, r.icon, r.n, r)).join('')}</div>`;
     const hint = invTab.startsWith('g:') ? 'Tap an item to see where to get it and set how many you own.' : { all: 'Tap anything to see where to get it and set how many you own. Dim means you have none. Search finds places too.', charms: 'Tap a charm to set your stock or keep it out of plans.', coins: 'Gold pays fees, world boss (WB) tokens pay boss weapons.' }[invTab] || 'Tap an item to see it and set how many base (P1) copies you own.';
-    box.innerHTML = (onMap ? `<button type="button" class="inv-back" data-action="inv-map-back">‹ All maps</button>` : '') +
+    const mp = onMap && MAPS.find(m => m.name === invMap);
+    box.innerHTML = (onMap ? `<button type="button" class="inv-back" data-action="inv-map-back">‹ All maps</button>` +
+      (mp ? `<div class="map-head"><img class="map-pic" data-map="${esc(mp.name)}" src="${mapPic(mp)}" alt="" draggable="false">` +
+        `<div><small>${mp.steps ? fmt(mp.steps) + ' steps to unlock' : 'where it starts'} · ${onMap.size} items</small>${mp.desc ? `<p>${esc(mp.desc)}</p>` : ''}</div></div>` : '') : '') +
       (rows.length ? html : '<p class="inv-hint">Nothing matches.</p>') + `<p class="inv-hint">${onMap ? `Everything you can get in ${esc(invMap)}. Tap an item for where exactly.` : hint}</p>`;
     invRenderPop();
   }
