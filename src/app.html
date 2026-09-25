@@ -1581,6 +1581,9 @@
   .item-where > summary::-webkit-details-marker { display: none; }
   .item-where .ip-sec > .ip-lab:first-child { display: none; }
   .item-where .ip-sec { margin-top: 6px; }
+  /* tab bar: no border line; a raised 3D edge instead (light top rim, dark ledge under it, a hard shadow above) */
+  .tabbar.tabbar { border: 0; background-image: linear-gradient(rgba(255, 255, 255, .07), transparent 55%);
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, .18), inset 0 4px 0 rgba(0, 0, 0, .22), 0 -3px 0 rgba(0, 0, 0, .35), 0 -12px 28px rgba(0, 0, 0, .3); }
 </style>
 </head>
 <body>
