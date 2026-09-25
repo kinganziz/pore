@@ -1193,7 +1193,8 @@
   :root .home-hero .home-best .hb-icon { background: none !important; box-shadow: none !important; filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, .45)); }
   :root .home-hero .home-best .hb-icon .pixel { width: 52px; height: 52px; }
   :root .home-hero .home-best b { font-size: 20px; }
-  :root .home-hero .home-best .hb-num { font-size: 34px; }   /* just the icon and the count: bigger number */
+  :root .home-hero .home-best .hb-num { font-size: 34px; }   /* the icon, the count and the name (our icons differ from the game's) */
+  :root .home-hero .home-best .hb-name { display: block; font-size: 15px; margin-top: 0; line-height: 1.2; }
   :root .home-hero .home-best small { color: rgba(255, 255, 255, .82); }
   :root .home-hero .btn.home-cta.home-cta.home-cta { background: none !important; border: 0 !important; box-shadow: none !important; color: #fff !important;
     font-size: 22px; padding: 10px 14px; text-shadow: 2px 2px 0 rgba(0, 0, 0, .6), 0 0 16px rgba(0, 0, 0, .4); animation: cta-breathe 2.4s ease-in-out infinite; }
@@ -3246,7 +3247,7 @@ function createSolver() {
           ${spots.length ? `<div class="hb-carousel">
             <div class="hb-track">${spots.map((it, i) => `<button class="home-best" type="button" data-action="pick" data-key="${it.key}" aria-label="${fmt(badges[it.key])} items for a perfect P${maxOf(it)} ${esc(it.name)}, ${pct(it)}% less" title="${esc(it.name)} · perfect P${maxOf(it)} · ${pct(it)}% less">
               <span class="hb-icon">${iconSVG(it.key)}</span>
-              <span class="hb-text"><b><span class="hb-num" data-count="${badges[it.key]}">${fmt(i ? badges[it.key] : std(it))}</span> items</b></span>
+              <span class="hb-text"><b><span class="hb-num" data-count="${badges[it.key]}">${fmt(i ? badges[it.key] : std(it))}</span> items</b><small class="hb-name">${esc(it.name)}</small></span>
             </button>`).join('')}</div>
             ${spots.length > 1 ? `<button class="hb-arrow prev" type="button" data-action="hb-step" data-dir="-1" aria-label="Previous item"><svg viewBox="0 0 8 12" shape-rendering="crispEdges"><path fill="currentColor" d="M5 0h2v2H5zM3 2h2v2H3zM1 4h2v4H1zM3 8h2v2H3zM5 10h2v2H5z"/></svg></button>
             <button class="hb-arrow next" type="button" data-action="hb-step" data-dir="1" aria-label="Next item"><svg viewBox="0 0 8 12" shape-rendering="crispEdges"><path fill="currentColor" d="M1 0h2v2H1zM3 2h2v2H3zM5 4h2v4H5zM3 8h2v2H3zM1 10h2v2H1z"/></svg></button>
