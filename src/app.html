@@ -1741,9 +1741,20 @@ __SOLVER_JS__
     return seq;
   }
   function stepId(st) { return `${st.L}|${st.result.s.join(',')}|${st.base.k}${st.base.L}:${st.base.s.join(',')}|${st.mat.k}${st.mat.L}:${st.mat.s.join(',')}`; }
-  function doneKey() { return STORAGE.done + hashStr(last.sig); }
+  // Ticks belong to the plan without its recorded results: recording a result (even a match) must not lose them.
+  function doneSig(overrides) { const r = last.req; return JSON.stringify([last.item.key, r.base, r.rates, r.level, r.target, r.owned, r.model].concat(overrides ? [overrides] : [])); }
+  function doneKey() { return STORAGE.done + 'p' + hashStr(doneSig()); }
   function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); }
-  function loadDone() { return new Set(loadJSON(doneKey(), [])); }
+  function loadDone() {
+    const key = doneKey();
+    let raw = null; try { raw = localStorage.getItem(key); } catch (e) { /* ignore */ }
+    if (raw) return new Set(loadJSON(key, []));
+    // older versions keyed ticks by the plan including its recorded results: gather them from every earlier set
+    const set = new Set(), ov = last.req.overrides || [];
+    for (let k = ov.length; k >= 0; k--) for (const x of loadJSON(STORAGE.done + hashStr(doneSig(ov.slice(0, k))), [])) set.add(x);
+    if (set.size) saveJSON(key, Array.from(set));
+    return set;
+  }
   function charmFactor(L) { const p = S.SUCCESS[L]; return p >= 100 ? 1 : Math.ceil(100 / p - 1e-9); }
   // Multi-refine rule (verified in-game): success = base% x charm factor / items in the batch.
   function batchCharm(L, n) { return Math.max(1, Math.ceil(n * 100 / S.SUCCESS[L] - 1e-9)); }
