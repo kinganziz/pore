@@ -1569,6 +1569,9 @@
   .pore-scrim { position: fixed; inset: 0; z-index: 61; background: transparent; pointer-events: none; }
   body.menu-open .pore-scrim { pointer-events: auto; }   /* a tap anywhere else closes the strip */
   @media (prefers-reduced-motion: reduce) { .pore-menu { transition: none; } }
+  /* screensaver: the app fades away, the scene stays */
+  body.saver > :where(:not(#scene):not(script)) { opacity: 0 !important; pointer-events: none !important; transition: opacity .8s ease; }   /* fades out; comes back at once */
+  body.saver { cursor: none; }
 </style>
 </head>
 <body>
@@ -1693,6 +1696,9 @@
       <div class="gm-row gm-col"><span class="gm-l">Background</span><div class="bg-strip in-help" data-none="1" role="group" aria-label="Background"></div></div>
       <div class="gm-row"><span class="gm-l">Motion <small>saves battery when off</small></span><div class="gm-opts" role="group" aria-label="Background motion">
         <button type="button" data-action="bg-motion" data-motion="on">On</button><button type="button" data-action="bg-motion" data-motion="off">Off</button>
+      </div></div>
+      <div class="gm-row"><span class="gm-l">Screensaver <small>the scene fills the screen when you leave PORE open</small></span><div class="gm-opts" role="group" aria-label="Screensaver">
+        <button type="button" data-action="saver" data-saver="0">Off</button><button type="button" data-action="saver" data-saver="60">1 min</button><button type="button" data-action="saver" data-saver="300">5 min</button>
       </div></div>
       <div class="gm-row"><span class="gm-l">Font</span><div class="gm-opts" role="group" aria-label="Font">
         <button type="button" data-action="font" data-font="jersey" style="font-family: 'Jersey 15', sans-serif">Jersey</button><button type="button" data-action="font" data-font="vt323" style="font-family: 'VT323', monospace">VT323</button>
@@ -2793,7 +2799,38 @@ __SOLVER_JS__
     try { localStorage.setItem('pore.bgmotion.v1', bgMotion ? 'on' : 'off'); } catch (e) { /* ignore */ }
     syncBgPicker(); sceneHide(); sceneShow();
   }
+  // Screensaver: after a while with no touches the app fades away and the scene plays over the whole screen, at
+  // full motion. Any tap, key or wheel brings the app back; that first tap only wakes it (it does not press anything).
+  let saverSecs = 60, saverT = 0;
+  try { const v = localStorage.getItem('pore.saver.v1'); if (v != null) saverSecs = Number(v) || 0; } catch (e) { /* ignore */ }
+  const saverOn = () => document.body.classList.contains('saver');
+  function saverArm() {
+    clearTimeout(saverT);
+    if (saverSecs > 0) saverT = setTimeout(() => { if (!document.hidden) { document.body.classList.add('saver'); sceneHide(); sceneShow(); } }, saverSecs * 1000);
+  }
+  function saverWake(e) {
+    if (saverOn()) {
+      document.body.classList.remove('saver');
+      if (e && e.cancelable && (e.type === 'pointerdown' || e.type === 'click' || e.type === 'keydown')) { e.preventDefault(); e.stopPropagation(); }
+      if (e && e.type === 'pointerdown') {   // swallow the click that follows the waking tap (only that one)
+        const eat = ev => { ev.preventDefault(); ev.stopPropagation(); };
+        document.addEventListener('click', eat, { capture: true, once: true });
+        setTimeout(() => document.removeEventListener('click', eat, { capture: true }), 700);
+      }
+      sceneHide(); sceneShow();
+    }
+    saverArm();
+  }
+  for (const t of ['pointerdown', 'keydown', 'wheel', 'touchmove']) document.addEventListener(t, saverWake, { capture: true, passive: t === 'wheel' || t === 'touchmove' });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) saverWake(); });
+  function setSaver(secs) {
+    saverSecs = secs;
+    try { localStorage.setItem('pore.saver.v1', String(secs)); } catch (e) { /* ignore */ }
+    syncBgPicker(); saverArm();
+  }
+  saverArm();
   function syncBgPicker() {
+    document.querySelectorAll('[data-action="saver"]').forEach(b => b.classList.toggle('on', Number(b.dataset.saver) === saverSecs));
     document.querySelectorAll('.bg-cur').forEach(el => { el.innerHTML = bgCurHTML(); });
     document.querySelectorAll('[data-action="bg-pick"]').forEach(b => b.classList.toggle('on', b.dataset.bg === bgPref));
     document.querySelectorAll('[data-action="bg-motion"]').forEach(b => b.classList.toggle('on', (b.dataset.motion === 'on') === bgMotion));
@@ -3228,7 +3265,7 @@ __SOLVER_JS__
   // Home: full motion. Plan and the sheets: the land holds still and only small things move, about six frames a
   // second, so a plan left open while playing costs next to no battery and nothing tugs at the eye.
   function sceneLoop(t) {
-    const calm = !!state.item || document.body.classList.contains('locked');
+    const calm = !document.body.classList.contains('saver') && (!!state.item || document.body.classList.contains('locked'));
     const dt = Math.min(calm ? 250 : 100, t - (scene.last || t)); scene.last = t;
     sceneDraw(dt, calm);
     if (calm) scene.timer = setTimeout(() => { scene.timer = 0; scene.raf = requestAnimationFrame(sceneLoop); }, 160);
@@ -3236,7 +3273,7 @@ __SOLVER_JS__
   }
   function sceneShow() {
     if (!sceneSetup()) return;
-    if (reduced || document.hidden || !bgMotion) { sceneDraw(0, true); return; }
+    if (reduced || document.hidden || (!bgMotion && !document.body.classList.contains('saver'))) { sceneDraw(0, true); return; }
     if (!scene.raf && !scene.timer) { scene.last = 0; scene.raf = requestAnimationFrame(sceneLoop); }
   }
   function sceneHide() { if (scene.raf) cancelAnimationFrame(scene.raf); clearTimeout(scene.timer); scene.raf = 0; scene.timer = 0; }
@@ -4700,6 +4737,7 @@ __SOLVER_JS__
       case 'skin-pick': try { localStorage.setItem('pore.skin.chosen', '1'); } catch (e) { /* ignore */ } setSkin(el.dataset.skin); toast(SKINS[skin]); break;
       case 'bg-toggle': { const sw = el.closest('.bg-switch'); bgSwitchOpen(sw, !sw.classList.contains('open')); haptic(6); break; }
       case 'bg-pick': bgSwitchOpen(el.closest('.bg-switch'), false); setBg(el.dataset.bg); toast(`Background: ${BG_NAMES[bgPref]}${bgPref === 'auto' ? ' (a new one each time you open PORE)' : ''}`); break;
+      case 'saver': setSaver(Number(el.dataset.saver)); toast(saverSecs ? `Screensaver after ${saverSecs / 60} min` : 'Screensaver off'); break;
       case 'bg-motion': setBgMotion(el.dataset.motion === 'on'); toast(bgMotion ? 'Background moves' : 'Background still: saves battery'); break;
       case 'reload': location.reload(); break;
       case 'next-tip': {
