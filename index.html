@@ -1740,6 +1740,15 @@
     box-shadow: inset 2px 2px 0 rgba(0, 0, 0, .45), inset -1px -1px 0 rgba(255, 255, 255, .06), inset 0 -3px 0 var(--gold) !important; }
   :root .tabbar .tab.on .tab-label { color: var(--gold) !important; }
   #saverClock .sv-sub { display: block; margin-top: .2em; font-family: var(--font, inherit); font-size: max(14px, .2em); letter-spacing: 1px; opacity: .8; }
+  .ip-best { margin: 2px 0 8px; padding: 6px 10px; border-radius: 10px; background: color-mix(in srgb, var(--good, #37d39a) 12%, transparent); font-size: 13px; color: var(--text); }
+  .ip-best span { color: var(--good, #37d39a); font-weight: 700; margin-right: 4px; }
+  .shop-list { margin-bottom: 12px; }
+  .shop-line { display: grid; grid-template-columns: 40px 1fr; gap: 10px; align-items: start; padding: 8px 0; border-top: 1px solid var(--line); }
+  .shop-line:first-of-type { border-top: 0; }
+  .shop-line .sl-ic .pixel { width: 36px; height: 36px; }
+  .shop-line .sl-main { display: grid; gap: 2px; min-width: 0; }
+  .shop-line small { color: var(--soft); font-size: 12px; } .shop-line .sl-short { color: var(--gold); }
+  .shop-line .ip-best { margin: 4px 0 0; }
 </style>
 </head>
 <body>
@@ -2464,6 +2473,31 @@ function createSolver() {
   const ELEMENT = e => String(e || '').split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' & ');
   const mapAt = name => { const i = MAPS.findIndex(m => m.name === name); return i < 0 ? 99 : i; };
   const NPC_LIST = [...NPCS.values()].sort((a, b) => Math.min(...[...a.locs].map(mapAt), 99) - Math.min(...[...b.locs].map(mapAt), 99) || a.name.localeCompare(b.name));
+  // The quickest way to get an item, as a rough guide: buying it or mining a node is sure, crafting is steady,
+  // an encounter pays its chance times how many it gives, a monster drop its chance, a find while exploring
+  // the least; among equals, the map you unlock first wins.
+  function bestSources(key) {
+    const onMaps = locs => (locs || []).filter(l => MAP_KEYS.has(l)).sort((a, b) => mapAt(a) - mapAt(b));
+    const out = [];
+    for (const e of WHERE[key] || []) {
+      let y = 0, maps = [], text = '';
+      switch (e[0]) {
+        case 'shop': y = 5; maps = onMaps(e[3]); text = `buy from ${e[1]} for ${fmtGold(e[2])} gold`; break;
+        case 'mine': y = 4; maps = onMaps(e[3]); text = `mine ${e[1].replace(/ Node$/, '')}${+e[2] ? ` (power ${e[2]})` : ''}`; break;
+        case 'craft': y = 3.5; text = 'craft it'; break;
+        case 'enc': y = (+e[2] || 0) / 100 * (+e[3] || 1) * 2; maps = onMaps(e[4]); text = `${e[1]} (encounter) ${e[2]}%${+e[3] > 1 ? `, ${e[3]} at once` : ''}`; break;
+        case 'mob': y = (+e[2] || 0) / 100 * 1.5; maps = onMaps(e[3]); text = `${e[1]} drops it ${e[2]}%`; break;
+        case 'find': y = (+e[2] || 0) / 100; maps = onMaps([e[1]]); text = `found exploring, ${e[2]}%`; break;
+        case 'chest': y = 0.2; text = `${e[1]} chest`; break;
+        default: continue;
+      }
+      out.push({ y, map: maps[0] || '', mi: maps.length ? mapAt(maps[0]) : 99, text });
+    }
+    return out.sort((a, b) => b.y - a.y || a.mi - b.mi);
+  }
+  const mapLink = m => m ? `<button type="button" class="ip-map" data-action="inv-place" data-q="${esc(m)}">${esc(m)}</button>` : '';
+  const bestBetHTML = (key, always) => { const b = bestSources(key); if (!b.length || (!always && b.length < 2)) return '';
+    return `<div class="ip-best"><span>Best bet</span> ${esc(b[0].text)}${b[0].map ? ` in ${mapLink(b[0].map)}` : ''}</div>`; };
   const npcDeal = (key, npc) => { const n = NPCS.get(npc), pr = n && n.items.get(key); return pr == null ? [0, ''] : [1e9 - pr, '$' + pr]; };   // cheapest first
   const mapArt = {};
   // A map's picture is shown only when it is complete (never the bare landscape first): until then an empty
@@ -3307,7 +3341,7 @@ function createSolver() {
       if (miss) short.push(`${miss} ${c.name}`);
     }
     const unknown = lines.some(l => l.cls === 'unk'), left = steps.filter(st => !done.has(stepId(st))).length;
-    return { lines, short, unknown, left, ready: !short.length && !unknown && left > 0 };
+    return { lines, short, unknown, left, need, ready: !short.length && !unknown && left > 0 };
   }
   const charmLimited = () => CHARMS.some(c => charmStock[c.key] > 0);
   // one refine action per recipe with the fewest charms; totals per charm and what your stock falls short of
@@ -4538,7 +4572,7 @@ function createSolver() {
       const tot = a.steps.length, dn = a.steps.filter(st => done.has(stepId(st))).length;
       const rc = readyCheck(item, a.steps, done);
       readyNow = rc;
-      if (currentProject() || dn > 0) upsertProject({ done: dn, total: tot, saved: Math.max(0, standard - cost), ready: rc.ready ? 1 : rc.short.length ? 0 : null, short: rc.short.slice(0, 3).join(' · ') });
+      if (currentProject() || dn > 0) upsertProject({ done: dn, total: tot, saved: Math.max(0, standard - cost), need: { base: rc.need.base, gold: rc.need.gold, wb: rc.need.wb, charms: rc.need.charms }, ready: rc.ready ? 1 : rc.short.length ? 0 : null, short: rc.short.slice(0, 3).join(' · ') });
     }
     stepIndex = new Map();
     for (const st of a.steps) { if (!groups.has(st.L)) groups.set(st.L, []); groups.get(st.L).push(st); }
@@ -5203,6 +5237,33 @@ function createSolver() {
     const n = projects.reduce((t, pr) => t + (pr.saved || 0), 0);
     return n > 0 ? `<p class="proj-saved"><b>${fmt(n)}</b> base items you won't have to gather across your projects. Less grind, more life.</p>` : '';
   }
+  // Everything your projects still need, added up, minus what you own, each with the quickest way to get it
+  function shoppingHTML() {
+    const base = new Map(), charms = {}; let gold = 0, wb = 0, stale = 0;
+    for (const pr of projects) {
+      if (!pr.need) { if (pr.key) stale++; continue; }
+      if (pr.key && pr.need.base) base.set(pr.key, (base.get(pr.key) || 0) + pr.need.base);
+      gold += pr.need.gold || 0; wb += pr.need.wb || 0;
+      for (const [k, v] of Object.entries(pr.need.charms || {})) charms[k] = (charms[k] || 0) + v;
+    }
+    const rows = [];
+    const row = (icon, name, need, have, fmtN, key) => {
+      const miss = have == null ? null : Math.max(0, need - have);
+      if (miss === 0) return;   // already have enough
+      rows.push(`<div class="shop-line"><span class="sl-ic">${icon}</span><span class="sl-main"><b>${esc(name)}</b>` +
+        `<small>${miss == null ? `${fmtN(need)} needed` : `<b class="sl-short">${fmtN(miss)} to get</b> · ${fmtN(need)} needed, ${fmtN(have)} owned`}</small>` +
+        (key ? bestBetHTML(key, true) : '') + `</span></div>`);
+    };
+    for (const [k, n] of base) { const it = anyItem(k); if (it) row(iconSVG(k), it.name, n, inv.items[k] != null ? inv.items[k] : null, fmt, k); }
+    for (const c of CHARMS) if (charms[c.key]) row(iconSVG(c.key), c.name, charms[c.key], charmStock[c.key] != null ? charmStock[c.key] : null, v => String(v), c.key);
+    if (gold) row(iconSVG('u-gold'), 'Gold', gold, inv.gold != null ? inv.gold : null, v => fmtGold(v));
+    if (wb) row(iconSVG('u-wb'), 'WB tokens', wb, inv.wb != null ? inv.wb : null, fmt);
+    if (!rows.length && !stale) return '';
+    return `<div class="card shop-list"><div class="section-title"><h3>Still to gather</h3><span class="hint">all projects</span></div>` +
+      (rows.length ? rows.join('') : stale ? '' : '<p class="empty-note">You have everything your projects need.</p>') +
+      (stale ? `<p class="empty-note">${stale} project${stale === 1 ? '' : 's'} not counted yet: open ${stale === 1 ? 'it' : 'them'} once to add ${stale === 1 ? 'its' : 'their'} needs.</p>` : '') +
+      `<p class="empty-note">Counts you set in Inventory are taken off. "Best bet" is the quickest way PORE knows to get each one.</p></div>`;
+  }
   function projectsHTML() {
     if (!projects.length) return '';
     const rows = projects.map((pr, i) => {
@@ -5216,7 +5277,7 @@ function createSolver() {
         `${i === 0 ? '<span class="proj-go">Continue ›</span>' : ''}</button>` +
         `<button class="proj-x" type="button" data-action="project-remove" data-id="${esc(pr.id)}" aria-label="Remove ${esc(pr.name)} from my projects" title="Remove from my projects"><svg viewBox="0 0 7 7" shape-rendering="crispEdges"><path fill="currentColor" d="M0 0h2v1h1v1h1V1h1V0h2v2H6v1H5v1h1v1h1v2H5V6H4V5H3v1H2v1H0V5h1V4h1V3H1V2H0z"/></svg></button></div>`;
     }).join('');
-    return `<div class="card projects"><div class="section-title"><h3>My projects</h3><span class="hint">${projects.length} item${projects.length === 1 ? '' : 's'}</span></div><div class="proj-list">${rows}</div>` + savedTotalHTML() +
+    return shoppingHTML() + `<div class="card projects"><div class="section-title"><h3>My projects</h3><span class="hint">${projects.length} item${projects.length === 1 ? '' : 's'}</span></div><div class="proj-list">${rows}</div>` + savedTotalHTML() +
       `<button class="proj-new" type="button" data-action="tab" data-tab="items"><span>+</span> New project <small>pick an item to plan</small></button></div>`;
   }
 
@@ -5754,7 +5815,7 @@ function createSolver() {
       return '';
     });
     const first = rows.slice(0, 6).join(''), more = rows.slice(6);
-    return `<div class="ip-sec"><div class="ip-lab">Where to get it</div>${fuse}${first}${more.length ? `<details class="ip-more"><summary>${more.length} more</summary>${more.join('')}</details>` : ''}</div>`;
+    return `<div class="ip-sec"><div class="ip-lab">Where to get it</div>${bestBetHTML(key)}${fuse}${first}${more.length ? `<details class="ip-more"><summary>${more.length} more</summary>${more.join('')}</details>` : ''}</div>`;
   }
   function usesHTML(key) {
     const u = (USES[key] || []).concat(fusesInto(key).map(k => ['fuse', k])); if (!u.length) return '';
