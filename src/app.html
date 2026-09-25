@@ -1545,10 +1545,11 @@
   .pore-gem { position: relative; z-index: 2; }
   /* the plan page keeps room for the gem; Home has none */
   body.has-item main.app { padding-top: calc(env(safe-area-inset-top, 0px) + 58px); }
-  main .bg-switch { left: auto; right: 2px; top: 2px; flex-direction: row-reverse; }   /* top-right, level with the gem; its picker opens to the left */
-  main .bg-switch { max-width: calc(100% - 48px); }   /* the picker stops short of the PORE gem */
-  main .bg-switch .bg-strip { transform: translateX(12px); min-width: 0; overflow-x: auto; scrollbar-width: none; }
-  main .bg-switch .bg-strip::-webkit-scrollbar { display: none; }
+  /* Home's background button mirrors the PORE gem: same size, same corner distance, top-right; its scenes drop down */
+  main .bg-switch { position: fixed; z-index: 45; top: calc(env(safe-area-inset-top, 0px) + 8px); right: 10px; left: auto; flex-direction: column; align-items: center; gap: 6px; }
+  main .bg-switch .bg-cur { width: 38px; height: 38px; border-radius: 10px; }
+  main .bg-switch .bg-strip { flex-direction: column; align-items: center; transform: translateY(-10px); }
+  main .bg-switch.open .bg-strip { transform: none; }
   main .bg-switch .bg-strip > * { flex-shrink: 0; }
   main .bg-switch.open .bg-strip { transform: none; }
   html, body { overflow-x: clip; }   /* nothing may ever make the app scroll sideways (clip keeps sticky headers working) */
@@ -2873,11 +2874,11 @@ __SOLVER_JS__
 
   // ---- palettes: [night, day]; Hills also follows the look (Pixel indigo, Game green)
   const HILLS = {
-    modern: { sky: ['#0b0a24', '#171544', '#2a2064', '#46307a', '#6a3f86'], star: '#fff6d8', moon: '#fff1c4', far: '#2b2458', cap: '#8f86c8', mid: '#1b1a3e', near: '#110f27', tree: '#12301f', treeHi: '#1f5234', bush: '#153a26', grass: '#2a2556', fly: '#ffe38a', cloud: '#3a2e70', castle: '#221d4c', win: '#ffd27a' },
+    modern: { sky: ['#0b0a24', '#171544', '#2a2064', '#46307a', '#6a3f86'], star: '#fff6d8', moon: '#fff1c4', far: '#2b2458', cap: '#8f86c8', mid: '#1b1a3e', near: '#110f27', tree: '#15163a', treeHi: '#2a2a5c', bush: '#1a1b44', grass: '#2a2556', fly: '#ffe38a', cloud: '#3a2e70', castle: '#221d4c', win: '#ffd27a' },
     modernLight: { sky: ['#f7e1c0', '#f3cfa6', '#eebb8e', '#e6a47c', '#dc8f70'], star: null, moon: '#fff6dc', far: '#d49b86', cap: '#fbe8d8', mid: '#b8786a', near: '#8e5550', tree: '#3f7a3a', treeHi: '#5e9c4c', bush: '#4a8a40', grass: '#a4695f', fly: '#fff3c0', cloud: '#fbead2', castle: '#c48a78', win: '#fff0c0' },
-    pixel: { sky: ['#07071a', '#0e0e2c', '#171742', '#232359', '#33336e'], star: '#f0f0f8', moon: '#ffd042', far: '#262660', cap: '#8888cc', mid: '#191946', near: '#0f0f2e', tree: '#10301c', treeHi: '#1e5030', bush: '#143822', grass: '#22225a', fly: '#ffd042', cloud: '#2c2c66', castle: '#1e1e52', win: '#ffd042' },
+    pixel: { sky: ['#07071a', '#0e0e2c', '#171742', '#232359', '#33336e'], star: '#f0f0f8', moon: '#ffd042', far: '#262660', cap: '#8888cc', mid: '#191946', near: '#0f0f2e', tree: '#12123a', treeHi: '#26265e', bush: '#16164a', grass: '#22225a', fly: '#ffd042', cloud: '#2c2c66', castle: '#1e1e52', win: '#ffd042' },
     pixelLight: { sky: ['#efe6cc', '#e8dbb9', '#e1cfa6', '#d9c294', '#d0b483'], star: null, moon: '#fff4d0', far: '#c4ad86', cap: '#f6efdc', mid: '#a58c62', near: '#7e6948', tree: '#4a7a3a', treeHi: '#68984e', bush: '#568a44', grass: '#8e7a54', fly: '#fff4c0', cloud: '#f6efdc', castle: '#b09874', win: '#fff4c0' },
-    game: { sky: ['#030d0a', '#06170f', '#0b2419', '#123526', '#1c4a35'], star: '#dfffe6', moon: '#e8ffd8', far: '#123326', cap: '#6fa88c', mid: '#0c2419', near: '#07150f', tree: '#0e3020', treeHi: '#1d5a38', bush: '#123a26', grass: '#15382a', fly: '#9dff7a', cloud: '#15402f', castle: '#10301f', win: '#c8ff9a' },
+    game: { sky: ['#030d0a', '#06170f', '#0b2419', '#123526', '#1c4a35'], star: '#dfffe6', moon: '#e8ffd8', far: '#123326', cap: '#6fa88c', mid: '#0c2419', near: '#07150f', tree: '#0a1f16', treeHi: '#17402c', bush: '#0e2a1d', grass: '#15382a', fly: '#9dff7a', cloud: '#15402f', castle: '#10301f', win: '#c8ff9a' },
     gameLight: { sky: ['#f2e6ce', '#ecdcbf', '#e6d1ad', '#e0c49a', '#d9b588'], star: null, moon: '#fff4d6', far: '#dcae8c', cap: '#fbf1e0', mid: '#c98a62', near: '#a8623e', tree: '#4c8040', treeHi: '#6aa052', bush: '#5a8e48', grass: '#b87450', fly: '#fff0b0', cloud: '#f7eddc', castle: '#d09a78', win: '#fff4d0' },
   };
   const BG_PAL = {
