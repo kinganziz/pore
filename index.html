@@ -1992,7 +1992,7 @@ function createSolver() {
   let iconStyle = DEFAULT_ICONS;
   // HD images load eagerly and decode synchronously: a re-rendered list (e.g. a new group filter) then paints its
   // already-cached icons in the same frame instead of flashing empty tiles.
-  const ICONS_V = '7de3bd0d6c';
+  const ICONS_V = '1b06a5c6d2';
   // Re-rendering a list would create fresh <img> elements that flash empty while they load, even from cache.
   // Loaded HD images are kept in a pool and moved into the new markup instead, so they paint at once.
   const imgPool = new Map();   // src -> [loaded <img>]
@@ -2695,12 +2695,13 @@ function createSolver() {
     // Back/Forward to a plan: return to where the page was once its results are on screen
     if (pendingScroll != null && last) { const y = pendingScroll; pendingScroll = null; jumpTo(y); }
     // animations
+    const opened = revealResults;   // an item just opened (or a stat target found): its savings get confetti
     requestAnimationFrame(() => {
       const arc = document.getElementById('ringArc');
       if (arc && newPlan && !reduced) { arc.style.transition = 'none'; arc.style.strokeDashoffset = '264'; arc.getBoundingClientRect(); arc.style.transition = ''; arc.style.strokeDashoffset = ringOffset.toFixed(1); }
-      if (newPlan) {
+      if (newPlan || opened) {
         countUp(document.getElementById('heroNum'), prevHero || standard, cost);
-        if (pct >= 20 && hadPlan) burst('confetti');
+        if (opened ? saved > 0 : pct >= 20 && hadPlan) setTimeout(() => burst('confetti'), opened ? 750 : 0);   // after the glide to the card
       }
       if (revealResults) {
         revealResults = false;
@@ -2775,7 +2776,7 @@ function createSolver() {
   /* ================= celebrations ================= */
   // One particle loop for every effect: confetti for a good plan, a sparkle for a ticked step, coins for a finished
   // level, a green sparkle for a matched result, fireworks and confetti rain when the whole item is done.
-  // Pixel theme: square pixels, no rotation. Reduced motion: nothing.
+  // The same smooth particles in every theme. Reduced motion: nothing.
   const FX = { parts: [], timers: [], running: false };
   const FX_COLORS = ['#f6c453', '#8b7cff', '#37d39a', '#d16dff', '#5cc3ff', '#ffffff'];
   const rnd = (a, b) => a + Math.random() * (b - a);
@@ -2795,7 +2796,6 @@ function createSolver() {
     let prev = performance.now();
     (function frame(t) {
       const dt = Math.min(2, (t - prev) / 16.7); prev = t;
-      const px = document.documentElement.dataset.skin === 'pixel';
       ctx.clearRect(0, 0, innerWidth, innerHeight);
       const born = [];
       FX.parts = FX.parts.filter(p => {
@@ -2807,9 +2807,8 @@ function createSolver() {
         p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.vr * dt;
         const k = p.age / p.life, a = p.fade === false ? 1 : k < .7 ? 1 : 1 - (k - .7) / .3;
         ctx.save(); ctx.globalAlpha = Math.max(0, a * (p.twinkle ? .55 + .45 * Math.sin(p.age / 40 + p.phase) : 1));
-        const x = px ? Math.round(p.x / 3) * 3 : p.x, y = px ? Math.round(p.y / 3) * 3 : p.y;
-        ctx.translate(x, y); ctx.fillStyle = p.color; ctx.strokeStyle = p.color;
-        drawPart(ctx, p, px, k);
+        ctx.translate(p.x, p.y); ctx.fillStyle = p.color; ctx.strokeStyle = p.color;
+        drawPart(ctx, p, k);
         ctx.restore();
         return true;
       });
@@ -2818,16 +2817,8 @@ function createSolver() {
       else { ctx.clearRect(0, 0, innerWidth, innerHeight); c.hidden = true; FX.running = false; }
     })(prev);
   }
-  function drawPart(ctx, p, px, k) {
+  function drawPart(ctx, p, k) {
     const z = p.size;
-    if (px) {   // pixel theme: everything is squares
-      const q = Math.max(3, Math.round(z / 3) * 3);
-      if (p.shape === 'star' || p.shape === 'spark') { ctx.fillRect(-q / 2, -q * 1.5, q, q * 3); ctx.fillRect(-q * 1.5, -q / 2, q * 3, q); }
-      else if (p.shape === 'coin') { ctx.fillRect(-q, -q, q * 2, q * 2); ctx.fillStyle = '#fff3c4'; ctx.fillRect(-q, -q, q, q); }
-      else if (p.shape === 'ring') { const R = Math.round(p.r0 + (p.r1 - p.r0) * k); ctx.fillRect(-R, -R, R * 2, 3); ctx.fillRect(-R, R - 3, R * 2, 3); ctx.fillRect(-R, -R, 3, R * 2); ctx.fillRect(R - 3, -R, 3, R * 2); }
-      else ctx.fillRect(-q / 2, -q / 2, q, q);
-      return;
-    }
     ctx.rotate(p.rot);
     switch (p.shape) {
       case 'ribbon': { const w = z * Math.abs(Math.cos(p.rot * 2.3 + p.phase)) + 1; ctx.fillRect(-w / 2, -z * .9, w, z * 1.8); break; }
