@@ -1012,17 +1012,6 @@
   .home-cta svg { width: 20px; height: 20px; }
   @keyframes home-pulse { 0% { box-shadow: 0 10px 28px rgba(139, 124, 255, .55), 0 0 0 0 rgba(255, 255, 255, .45); } 70%, 100% { box-shadow: 0 10px 28px rgba(139, 124, 255, .55), 0 0 0 16px rgba(255, 255, 255, 0); } }
   .home-hint { font-size: 12px; color: rgba(255, 255, 255, .6); }
-  .floaters { position: absolute; inset: 0; pointer-events: none; }
-  .floater { position: absolute; width: 46px; height: 46px; opacity: .9; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .35)); animation: home-bob 3.6s ease-in-out infinite; }
-  .floater .pixel { width: 100%; height: 100%; }
-  .floater.f0 { top: 14px; right: 16px; transform: rotate(-8deg); }
-  .floater.f1 { top: 74px; right: 64px; width: 38px; height: 38px; animation-delay: -1.2s; opacity: .75; }
-  .floater.f2 { top: 128px; right: 12px; width: 42px; height: 42px; animation-delay: -2.1s; }
-  .floater.f3 { bottom: 86px; right: 70px; width: 34px; height: 34px; animation-delay: -.6s; opacity: .7; }
-  .floater.f4 { bottom: 22px; right: 18px; width: 44px; height: 44px; animation-delay: -2.8s; }
-  .floater.f5 { top: 18px; right: 88px; width: 30px; height: 30px; animation-delay: -1.8s; opacity: .6; }
-  @keyframes home-bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -8px; } }
-  @media (max-width: 520px) { .floater.f1, .floater.f2, .floater.f3, .floater.f5 { display: none; } .floater.f4 { bottom: 64px; right: 16px; } }
   .home-deals .deal-row { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 4px 2px 8px; margin: 0 -4px; scrollbar-width: none; }
   .home-deals .deal-row::-webkit-scrollbar { display: none; }
   .deal { flex: 0 0 118px; scroll-snap-align: start; display: grid; justify-items: center; gap: 4px; padding: 12px 8px 10px; border-radius: 16px;
@@ -1043,7 +1032,7 @@
                 radial-gradient(90% 80% at 100% 100%, rgba(55, 211, 154, .55), transparent 60%), linear-gradient(150deg, #3a2a86, #5a2a7a 45%, #1a4a6a); }
   :root[data-skin="pixel"] .home-hero { border: 2px solid var(--line) !important; }
   :root[data-skin="pixel"] .home-cta { border-radius: 12px; }
-  @media (prefers-reduced-motion: reduce) { .home-hero::after, .floater, .home-cta { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .home-cta { animation: none; } }
   /* ---------- game theme: the pixel look in Pixel Odyssey's own colours ---------- */
   .lvr { display: none; }
   :root[data-flavor="game"] .lvn { display: none; }
@@ -1074,11 +1063,9 @@
   /* primary buttons: dark green with a bright green frame, like Take Step and Craft */
   /* doubled classes: the pixel theme's button rule is weighted up by its .seg.accent button.on branch */
   :root[data-flavor="game"][data-skin="pixel"] .btn.btn.primary, :root[data-flavor="game"][data-skin="pixel"] .btn.btn.home-cta, :root[data-flavor="game"][data-skin="pixel"] .btn.btn.guide-cta {
-    background: #0c2a1e !important; color: #c8ffd2 !important; border: 3px solid #5fd873 !important; box-shadow: 0 0 0 0 transparent !important; }
+    background: #0c2a1e !important; color: #c8ffd2 !important; border-width: 3px !important; border-style: solid !important; border-color: #5fd873 !important; box-shadow: 0 0 0 0 transparent !important; }
   :root[data-flavor="game"][data-skin="pixel"][data-theme="light"] .btn.btn.primary, :root[data-flavor="game"][data-skin="pixel"][data-theme="light"] .btn.btn.home-cta { background: #11402a !important; color: #eafff0 !important; }
   :root[data-flavor="game"] .home-cta { animation: none; }
-  /* the home hero and town-style cards: deep plum panels like the game's Town screen */
-  :root[data-flavor="game"] .home-hero { background: linear-gradient(160deg, #2a1732, #1a1024 70%) !important; border: 2px solid #3a2244 !important; }
   :root[data-flavor="game"] .home-title span { background: none; color: #ffd84a; -webkit-text-fill-color: #ffd84a; }
   /* level badges: a white Roman numeral on a chip with a corner glow in the level's colour */
   :root[data-flavor="game"][data-skin="pixel"] .chip.chip { --lvc: #3aa84a; background: radial-gradient(130% 150% at 100% 0%, color-mix(in srgb, var(--lvc) 75%, transparent) 0, transparent 58%), var(--tile) !important; border-color: var(--line) !important; }
@@ -1107,6 +1094,27 @@
   :root[data-skin="pixel"] :is(.seg, .step, .lvl-head, .pick-trigger) { border-image: none !important; }
   :root[data-skin="pixel"] .deal-save { border-image: none !important; }
   :root[data-flavor="game"][data-skin="pixel"] :is(.btn.btn.primary, .btn.btn.home-cta, .btn.btn.guide-cta) { border-image-source: var(--pf-good) !important; }
+  /* ---------- home as a game title screen over an animated landscape ---------- */
+  #scene { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; display: none; image-rendering: pixelated; pointer-events: none; }
+  body:not(.has-item) #scene { display: block; }
+  body:not(.has-item) { background: #07061a; }
+  .home-hero.home-hero, :root[data-skin="pixel"] .home-hero.home-hero, :root[data-flavor="game"] .home-hero.home-hero {
+    background: none !important; border: 0 !important; box-shadow: none !important; border-image: none !important; overflow: visible; padding: 34px 6px 26px; color: #fff; }
+  .home-hero::after { display: none; }
+  .home-hero .home-copy { justify-items: center; text-align: center; margin: 0 auto; }
+  .home-hero .home-title { text-shadow: 3px 3px 0 rgba(0, 0, 0, .55); font-size: clamp(32px, 9.4vw, 48px); }
+  .home-hero .home-title span { filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, .55)); }
+  .home-hero .home-sub { text-shadow: 1px 1px 0 rgba(0, 0, 0, .7); color: rgba(255, 255, 255, .88); }
+  .home-hero .home-kicker { color: #ffe08a; text-shadow: 1px 1px 0 rgba(0, 0, 0, .6); }
+  .home-hero .home-best { background: rgba(8, 6, 26, .62); backdrop-filter: none; }
+  .home-hero .home-hint { text-shadow: 1px 1px 0 rgba(0, 0, 0, .7); color: rgba(255, 255, 255, .75); }
+  :root[data-theme="light"] .home-hero .home-kicker { color: #fff4c0; }
+  body:not(.has-item) #resultsBody > .card { background: color-mix(in srgb, var(--surface) 84%, transparent) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+  body:not(.has-item) .tip { background: color-mix(in srgb, var(--surface) 88%, transparent); }
+  :root[data-skin="pixel"] .home-hero .home-title { font-size: clamp(22px, 6.6vw, 32px); }
+  /* game look: deep forest green for filled highlights (the full bright green was too loud) */
+  :root[data-flavor="game"][data-skin="pixel"] :is(.logo, .step-num, .skin-btn[aria-pressed="true"], .hd-btn[aria-pressed="true"], .toast.tappable, .filter.on, .chip-btn.on:not(.gold)) {
+    background: #1f5a3c !important; color: #d8ffe2 !important; border-color: #3f9a62 !important; }
 </style>
 </head>
 <body>
@@ -1255,6 +1263,7 @@
 </div>
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
+<canvas id="scene" aria-hidden="true"></canvas>
 <canvas id="fx" class="fx" hidden></canvas>
 
 <script>const ITEM_DB = __ITEMS_JSON__;</script>
@@ -2166,9 +2175,123 @@ __SOLVER_JS__
     </div>`;
   }
 
+  /* ================= home scene: an animated pixel landscape behind the home screen ================= */
+  // Drawn live at low resolution and scaled up (crisp pixels): sky, stars or clouds, a moon or sun, three parallax
+  // layers (far mountains, pine hills, rocky ground) scrolling slowly, and fireflies drifting up. Colours follow
+  // the look and theme. Runs only on the home screen, pauses when hidden, and stays still with reduced motion.
+  const scene = { el: null, ctx: null, raf: 0, key: '', W: 0, H: 0, x: 0, last: 0, stars: [], flies: [], trees: [], rocks: [] };
+  const SCENES = {
+    modern: { sky: ['#0b0a24', '#171544', '#2a2064', '#46307a', '#6a3f86'], star: '#fff6d8', moon: '#fff1c4', far: '#2b2458', mid: '#1b1a3e', near: '#110f27', tree: '#15163a', fly: '#ffe38a', cloud: '#3a2e70' },
+    modernLight: { sky: ['#f7e1c0', '#f3cfa6', '#eebb8e', '#e6a47c', '#dc8f70'], star: null, moon: '#fff6dc', far: '#d49b86', mid: '#b8786a', near: '#8e5550', tree: '#9c6258', fly: '#fff3c0', cloud: '#fbead2' },
+    pixel: { sky: ['#07071a', '#0e0e2c', '#171742', '#232359', '#33336e'], star: '#f0f0f8', moon: '#ffd042', far: '#262660', mid: '#191946', near: '#0f0f2e', tree: '#12123a', fly: '#ffd042', cloud: '#2c2c66' },
+    pixelLight: { sky: ['#efe6cc', '#e8dbb9', '#e1cfa6', '#d9c294', '#d0b483'], star: null, moon: '#fff4d0', far: '#c4ad86', mid: '#a58c62', near: '#7e6948', tree: '#8a744f', fly: '#fff4c0', cloud: '#f6efdc' },
+    game: { sky: ['#030d0a', '#06170f', '#0b2419', '#123526', '#1c4a35'], star: '#dfffe6', moon: '#e8ffd8', far: '#123326', mid: '#0c2419', near: '#07150f', tree: '#0a1f16', fly: '#9dff7a', cloud: '#15402f' },
+    gameLight: { sky: ['#f2e6ce', '#ecdcbf', '#e6d1ad', '#e0c49a', '#d9b588'], star: null, moon: '#fff4d6', far: '#dcae8c', mid: '#c98a62', near: '#a8623e', tree: '#b8744c', fly: '#fff0b0', cloud: '#f7eddc' },
+  };
+  function scenePalette() {
+    const d = document.documentElement, light = d.dataset.theme === 'light';
+    const base = d.dataset.flavor === 'game' ? 'game' : d.dataset.skin === 'pixel' ? 'pixel' : 'modern';
+    return SCENES[base + (light ? 'Light' : '')];
+  }
+  function sceneRand(seed) { let t = seed >>> 0; return () => { t += 0x6D2B79F5; let r = Math.imul(t ^ (t >>> 15), 1 | t); r ^= r + Math.imul(r ^ (r >>> 7), 61 | r); return ((r ^ (r >>> 14)) >>> 0) / 4294967296; }; }
+  function sceneSetup() {
+    const c = scene.el || (scene.el = document.getElementById('scene'));
+    if (!c) return false;
+    const W = 180, H = Math.max(200, Math.round(W * innerHeight / Math.max(1, innerWidth)));
+    if (scene.W !== W || scene.H !== H) {
+      scene.W = W; scene.H = H; c.width = W; c.height = H;
+      scene.ctx = c.getContext('2d');
+      const r = sceneRand(7);
+      scene.stars = Array.from({ length: 70 }, () => ({ x: r() * W, y: r() * H * 0.5, p: r() * 6.28, b: r() < 0.2 }));
+      scene.flies = Array.from({ length: 22 }, () => ({ x: r() * W, y: H * (0.55 + r() * 0.45), s: 0.08 + r() * 0.16, p: r() * 6.28 }));
+      scene.trees = Array.from({ length: 26 }, (_, i) => ({ x: i * 14 + r() * 8, h: 7 + Math.floor(r() * 7) }));
+      scene.rocks = Array.from({ length: 9 }, (_, i) => ({ x: i * 40 + r() * 20, w: 3 + Math.floor(r() * 4), h: 4 + Math.floor(r() * 10) }));
+    }
+    return true;
+  }
+  const ridge = (x, P, base, amps, H) => base * H + amps.reduce((t, [a, k, ph]) => t + a * H * Math.sin(2 * Math.PI * k * x / P + ph), 0);
+  function sceneDraw(dt) {
+    const { ctx: g, W, H } = scene, pal = scenePalette(), P = 360;
+    scene.x += dt * 0.012;                                   // walking speed
+    const now = performance.now() / 1000;
+    // sky in flat bands
+    const bands = pal.sky.length, top = H * 0.62;
+    pal.sky.forEach((c, i) => { g.fillStyle = c; g.fillRect(0, Math.floor(top * i / bands), W, Math.ceil(top / bands) + 1); });
+    g.fillStyle = pal.sky[bands - 1]; g.fillRect(0, Math.floor(top), W, H - top);
+    // stars (night) or clouds (day)
+    if (pal.star) for (const st of scene.stars) {
+      const tw = Math.sin(now * 1.6 + st.p);
+      if (tw < -0.55) continue;
+      g.fillStyle = pal.star; g.globalAlpha = 0.45 + 0.55 * Math.max(0, tw);
+      g.fillRect(Math.round(st.x), Math.round(st.y), 1, 1);
+      if (st.b && tw > 0.6) { g.fillRect(Math.round(st.x) - 1, Math.round(st.y), 3, 1); g.fillRect(Math.round(st.x), Math.round(st.y) - 1, 1, 3); }
+    }
+    g.globalAlpha = 1;
+    // moon or sun, with a soft stepped halo
+    const mx = Math.round(W * 0.74), my = Math.round(H * 0.13), mr = 8;
+    g.fillStyle = pal.moon; g.globalAlpha = 0.12;
+    for (let y = -mr - 5; y <= mr + 5; y++) for (let x = -mr - 5; x <= mr + 5; x++) if (x * x + y * y <= (mr + 5) * (mr + 5)) g.fillRect(mx + x, my + y, 1, 1);
+    g.globalAlpha = 1;
+    for (let y = -mr; y <= mr; y++) for (let x = -mr; x <= mr; x++) if (x * x + y * y <= mr * mr) g.fillRect(mx + x, my + y, 1, 1);
+    if (pal.star) { g.fillStyle = pal.far; g.globalAlpha = 0.35; g.fillRect(mx - 3, my - 2, 2, 2); g.fillRect(mx + 2, my + 2, 3, 2); g.fillRect(mx - 1, my + 4, 2, 1); g.globalAlpha = 1; }
+    // drifting clouds
+    g.fillStyle = pal.cloud; g.globalAlpha = pal.star ? 0.55 : 0.9;
+    for (let i = 0; i < 4; i++) {
+      const cx = ((i * 71 + scene.x * 0.25) % (W + 60)) - 30, cy = Math.round(H * (0.08 + i * 0.07));
+      g.fillRect(Math.round(cx), cy, 26, 3); g.fillRect(Math.round(cx) + 5, cy - 2, 14, 2); g.fillRect(Math.round(cx) + 9, cy - 4, 7, 2);
+    }
+    g.globalAlpha = 1;
+    // three parallax layers
+    const layer = (speed, base, amps, color) => {
+      g.fillStyle = color;
+      for (let x = 0; x < W; x++) { const h = Math.round(ridge(x + scene.x * speed, P, base, amps, H)); g.fillRect(x, h, 1, H - h); }
+    };
+    layer(0.35, 0.5, [[0.05, 1, 0.3], [0.035, 2, 1.7], [0.02, 5, 0.9]], pal.far);
+    const midSpeed = 0.7, midAmps = [[0.03, 2, 2.2], [0.02, 3, 0.4], [0.01, 7, 1.1]];
+    layer(midSpeed, 0.63, midAmps, pal.mid);
+    g.fillStyle = pal.tree;                                  // pines on the hills
+    for (const t of scene.trees) {
+      const x = Math.round(((t.x - scene.x * midSpeed) % P + P) % P);
+      if (x > W + 6) continue;
+      const base = Math.round(ridge(x + scene.x * midSpeed, P, 0.63, midAmps, H));
+      for (let k = 0; k < t.h; k++) { const w = Math.max(1, Math.floor((k + 2) / 2.2)); g.fillRect(x - w, base - t.h + k, w * 2 + 1, 1); }
+      g.fillRect(x, base, 1, 2);
+    }
+    const nearSpeed = 1.2, nearAmps = [[0.012, 3, 0.2], [0.008, 8, 2.4]];
+    layer(nearSpeed, 0.8, nearAmps, pal.near);
+    g.fillStyle = pal.near;                                  // standing stones and broken pillars
+    for (const rk of scene.rocks) {
+      const x = Math.round(((rk.x - scene.x * nearSpeed) % P + P) % P);
+      if (x > W + 8) continue;
+      const base = Math.round(ridge(x + scene.x * nearSpeed, P, 0.8, nearAmps, H));
+      g.fillRect(x, base - rk.h, rk.w, rk.h + 1);
+      g.fillRect(x - 1, base - rk.h, rk.w + 2, 1);
+    }
+    // fireflies drifting up
+    for (const f of scene.flies) {
+      f.y -= f.s * dt * 0.06; if (f.y < H * 0.45) { f.y = H + 2; f.x = Math.random() * W; }
+      const x = Math.round(f.x + Math.sin(now * 0.9 + f.p) * 3), y = Math.round(f.y), glow = 0.5 + 0.5 * Math.sin(now * 2.2 + f.p);
+      g.fillStyle = pal.fly; g.globalAlpha = 0.18 * glow; g.fillRect(x - 1, y - 1, 3, 3);
+      g.globalAlpha = 0.5 + 0.5 * glow; g.fillRect(x, y, 1, 1);
+    }
+    g.globalAlpha = 1;
+  }
+  function sceneLoop(t) {
+    const dt = Math.min(100, t - (scene.last || t)); scene.last = t;
+    sceneDraw(dt);
+    scene.raf = requestAnimationFrame(sceneLoop);
+  }
+  function sceneShow() {
+    if (!sceneSetup()) return;
+    if (reduced || document.hidden) { sceneDraw(0); return; }
+    if (!scene.raf) { scene.last = 0; scene.raf = requestAnimationFrame(sceneLoop); }
+  }
+  function sceneHide() { if (scene.raf) cancelAnimationFrame(scene.raf); scene.raf = 0; }
+  document.addEventListener('visibilitychange', () => { if (document.hidden) sceneHide(); else if (!state.item) sceneShow(); });
+  addEventListener('resize', () => { if (!state.item && scene.el) { scene.W = 0; sceneShow(); } });
+
   /* ================= home screen ================= */
   // A hero with the best real saving and one big button, your projects, the best deals and the item groups.
-  const HOME_FLOATERS = ['Gilded Dominion', 'Frostheart Claymore', 'Gold Chestplate', 'Fire Gold Ring', 'Wizard Hat', 'Sun Demon Amulet'];
   function homeDeals() {
     return ITEMS.filter(it => badges[it.key] != null && !noShortcut(it))
       .sort((x, y) => costShare(x) - costShare(y) || x.name.localeCompare(y.name)).slice(0, 12);
@@ -2177,12 +2300,9 @@ __SOLVER_JS__
     const deals = homeDeals(), best = deals[0];
     const std = it => Math.pow(2, maxOf(it) - 1);
     const pct = it => Math.round((1 - badges[it.key] / std(it)) * 100);
-    const floaters = HOME_FLOATERS.map(n => ITEMS.find(it => it.name === n)).filter(Boolean)
-      .map((it, i) => `<span class="floater f${i}">${iconSVG(it.key)}</span>`).join('');
-    const hero = `<section class="card home-hero">
-        <div class="floaters" aria-hidden="true">${floaters}</div>
+    const hero = `<section class="home-hero">
         <div class="home-copy">
-          <span class="home-kicker">Pixel Odyssey refining</span>
+          <span class="home-kicker">~ Pixel Odyssey ~</span>
           <h1 class="home-title">Max your gear<br><span>for a fraction.</span></h1>
           <p class="home-sub">A perfect P10 normally eats <b>512</b> base items. PORE finds the cheapest path, step by step.</p>
           ${best ? `<button class="home-best" type="button" data-action="pick" data-key="${best.key}">
@@ -2196,7 +2316,7 @@ __SOLVER_JS__
           <span class="home-hint">${ITEMS.length} items from the wiki, or your own stats</span>
         </div>
       </section>`;
-    const dealRow = deals.length ? `<section class="card home-deals">
+    const dealRow = deals.length ? `<section class="card home-panel home-deals">
         <div class="section-title"><h3>Best deals</h3><span class="hint">cheapest to max</span></div>
         <div class="deal-row">${deals.map(it => `<button class="deal" type="button" data-action="pick" data-key="${it.key}">
           <span class="deal-icon">${iconSVG(it.key)}</span>
@@ -2206,7 +2326,7 @@ __SOLVER_JS__
         </button>`).join('')}</div>
       </section>` : '';
     const types = TYPES.map(([k, label]) => `<button class="type-tile" type="button" data-action="browse" data-type="${k}">${filterIcon(k)}<span>${esc(label)}</span></button>`).join('');
-    const browse = `<section class="card home-types">
+    const browse = `<section class="card home-panel home-types">
         <div class="section-title"><h3>Browse</h3><span class="hint">by type</span></div>
         <div class="type-grid">${types}<button class="type-tile" type="button" data-action="browse" data-type="CUSTOM">${filterIcon('CUSTOM')}<span>Custom</span></button></div>
       </section>`;
@@ -2225,9 +2345,11 @@ __SOLVER_JS__
 
   function renderResults() {
     const item = last ? last.item : resolveItem();
+    if (item) sceneHide();
     if (!item) {
       ui.resultsBody.innerHTML = homeHTML();
       countUpHome();
+      sceneShow();
       maybeIntro();
       return;
     }
