@@ -8,43 +8,47 @@ e #430b0f
 f #f26c70
 g #bb2631
 h #0c2c10
-i #9bdf79
-j #67c752
-k #45a13d
-l #4a0f12
+i #4a0f12
+j #9bdf79
+k #67c752
+l #45a13d
 m #d0f7a0
 n #28782c
-o #345e2d
-p #255722
-q #1c4d1d
-r #436538
+o #9a2a34
+p #b9323b
+q #226126
+r #345e2d
+s #255722
+t #1c4d1d
+u #8ca56f
+v #436538
 --
 ................................
 ..............................a.
 .............................aba
 ............................acda
 ...........................aceba
-..........................afgeba
-................hhhhhh....afegba
-..............hhiiijjkhh.afceba.
-............hhiijjjkkkjkhaflgba.
-...........hmmjjjjjkkkkkncclgba.
-..........hmiijjjjjkkkkknnhcba..
-.........hmiiijjjjjkkkkknnhcba..
-........hmiiiijjjjjkkkkknnhcba..
-........hmiiiijjjjjkkkkknnhga...
-.......hmiiiiijjjjjkkkkknnnca...
-......hmmiiiiijjjjjkkkkknnnca...
-......hmmiiiiijjjjjkkkkknnnhh...
-......hmmiiiiijjjjjkkkkkhhkknh..
-......hmmiiiiijjjjjkkkhhjjnnnnh.
-.....hmmmiiiiijhhhhhhhjjkknnnnh.
-.....hmhhhhhhhhiooopppqqkknnnnh.
-...hhhmrrrrrooojjjjkkkkkkknnnnh.
-.hhmmmmiiiiijjjjjjjkkkkkkknnnh..
-hmmmmiiiiiiijjjjjjjkkkkkkknnh...
-.hhmijiiiiiijjjjjjjkkkkkknnh....
-...hhhijjjjjkkkkkkknnnnnnhh.....
+..........................afgdba
+................hhhhhh....afigba
+..............hhjjjkklhh.affeba.
+............hhjjjkjlklklhafibba.
+...........hmmkjkkklllllnocigba.
+..........hmmjkkkkklllllnnhcba..
+.........hmmjjkkkkklllllnnhcba..
+........hmmjjjkkkkklllllnnhcba..
+........hmjjjjkkkkklllllnnhga...
+.......hmjjjjjkkkkklllllnnnpa...
+......hmmjjjjjkkkkklllllnnnpa...
+......hmmjjjjjkkkkklllllnnqhh...
+......hmmjjjjjkkkkkllllnhhllnh..
+......hmmjjjjjkklkllnlhhkklnnnh.
+.....hmmmkjkjkkhhhhhhhkklknnnnh.
+.....hmhhhhhhhhjrrrsssstllnnnnh.
+...hhhuvvvvvrrrjkjkklkllllnnnnh.
+.hhmmmmjmjmjjkjkkkklllllllnnnh..
+hmmmmjjjjjjjkkkkkkkllllllnnnh...
+.hhmjkkjkjkjlklklkllnlnlnnnh....
+...hhhjkkkkklllllllnnnnnnhh.....
 ......hhhhhhhhhhhhhhhhhhh.......
 ................................
 ................................

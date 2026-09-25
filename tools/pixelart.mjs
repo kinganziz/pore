@@ -3,8 +3,10 @@
 //
 // Each SVG element becomes its own pixel region in paint order, so the pixel icon keeps the HD icon's
 // layout, orientation and colours. A region is shaded from its own gradient ramp (light on its top/left
-// rim, shadow on its bottom/right rim), dark outline strokes are dropped and one clean 1-pixel outline is
-// drawn around the whole silhouette. Small details (gems, eyes, studs) always keep at least one pixel.
+// rim, shadow on its bottom/right rim, a second dithered step inside each), parts lying under another part
+// darken where it covers them (ambient occlusion), dark outline strokes are dropped and one clean 1-pixel
+// outline is drawn around the whole silhouette. Small details (gems, eyes, studs) always keep at least one
+// pixel. The rendered icon gets a soft 1-pixel cast shadow down-right.
 //
 // Hand edits: a grid without the "generated" line is never overwritten, so any icon can be finished by
 // hand in its .txt file (one character per pixel, colours listed above the grid).
@@ -289,14 +291,37 @@ function compile(svg) {
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
     const li = own[y][x]; if (li < 0) continue;
     const L = layers[li], R = L.ramp;
-    if (!R.grad || size[li] < 5) { col[y][x] = R.mid; continue; }
+    if (size[li] < 5) { col[y][x] = R.mid; continue; }
     const same = (dx, dy) => { const nx = x + dx, ny = y + dy; return nx >= 0 && ny >= 0 && nx < N && ny < N && own[ny][nx] === li; };
     const light = !same(0, -1) || !same(-1, 0), dark = !same(0, 1) || !same(1, 0);
-    let band = Math.round(gradT(L, (x + .5) * U, (y + .5) * U) * 4);
-    if (light && !dark) band -= 1; else if (dark && !light) band += 1;
+    // the second ring in from each rim: half its pixels (a checkerboard) take the rim's step too
+    const light2 = !light && (!same(0, -2) || !same(-2, 0) || !same(-1, -1)), dark2 = !dark && (!same(0, 2) || !same(2, 0) || !same(1, 1));
+    const dith = (x + y) % 2 === 0;
+    let step = 0;
+    if (light && !dark) step = -1; else if (dark && !light) step = 1;
+    else if (light2 && !dark2 && dith) step = -1; else if (dark2 && !light2 && dith) step = 1;
+    if (!R.grad) {   // a flat colour: its own lighter and darker tone
+      col[y][x] = step < 0 ? mix(R.mid, [255, 255, 255], 0.22) : step > 0 ? mix(R.mid, [0, 0, 0], 0.26) : R.mid;
+      continue;
+    }
+    let band = Math.round(gradT(L, (x + .5) * U, (y + .5) * U) * 4) + step;
     if (L.kind === 'stroke') band = Math.min(band, 2);   // thin bands (rings, cords) stay bright: light to mid only
     col[y][x] = tone(R.G, Math.max(0, Math.min(4, band)) / 4);
   }
+  // ambient occlusion: a part lying under another part darkens where that part sits on it
+  const occ = col.map(r => r.slice());
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const li = own[y][x]; if (li < 0 || !col[y][x] || size[li] < 5) continue;
+    let over = 0;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + dx, ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue;
+      const nj = own[ny][nx];
+      if (nj > li && size[nj] >= 2) over++;
+    }
+    if (over) occ[y][x] = mix(col[y][x], [8, 6, 16], over >= 2 ? 0.34 : 0.2);
+  }
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) col[y][x] = occ[y][x];
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (tint[y][x] && col[y][x])
     for (const li of tint[y][x]) col[y][x] = mix(col[y][x], layers[li].ramp.mid, Math.min(1, layers[li].op * 1.2));
   // parts drawn with a dark outline over another part keep that outline where they overlap it (knee guards,
@@ -372,7 +397,11 @@ function toSvg(grid) {
   const runs = new Map();
   grid = grid.map(r => r.map(c => (c ? vivid(c) : c)));
   grid.forEach((r, y) => { let x = 0; while (x < r.length) { const c = r[x]; if (!c) { x++; continue; } let x1 = x + 1; while (x1 < r.length && r[x1] === c) x1++; if (!runs.has(c)) runs.set(c, []); runs.get(c).push(`M${x} ${y}h${x1 - x}v1h-${x1 - x}z`); x = x1; } });
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${N} ${N}" shape-rendering="crispEdges">${[...runs].map(([c, d]) => `<path fill="${c}" d="${d.join('')}"/>`).join('')}</svg>`;
+  // cast shadow: every empty pixel just down-right of the drawing, soft and dark, drawn first (underneath)
+  const sh = [];
+  for (let y = 1; y < N; y++) { let x = 1; while (x < N) { const on = xx => xx < N && !grid[y][xx] && grid[y - 1][xx - 1]; if (!on(x)) { x++; continue; } let x1 = x + 1; while (on(x1)) x1++; sh.push(`M${x} ${y}h${x1 - x}v1h-${x1 - x}z`); x = x1; } }
+  const shadow = sh.length ? `<path fill="#0b0816" fill-opacity=".32" d="${sh.join('')}"/>` : '';
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${N} ${N}" shape-rendering="crispEdges">${shadow}${[...runs].map(([c, d]) => `<path fill="${c}" d="${d.join('')}"/>`).join('')}</svg>`;
 }
 
 /* ------------------------------------------------------------------ main */
