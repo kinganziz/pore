@@ -1668,6 +1668,9 @@
   .map-pic.in { animation: map-in .3s ease-out; }
   @keyframes map-in { from { opacity: 0; } }
   @media (prefers-reduced-motion: reduce) { .map-pic.in { animation: none; } }
+  .map-head .map-ores { color: var(--text); } .map-head .map-ores i { color: var(--muted); font-style: normal; }
+  .fs-btn .ico-fs-out { display: none; } .fs-btn.on .ico-fs-out { display: block; } .fs-btn.on .ico-fs-in { display: none; }
+  .pm-row[hidden] { display: none !important; }
 </style>
 </head>
 <body>
@@ -1697,6 +1700,7 @@
     <div class="pm-list">
       <button class="pm-row" id="themeBtn" type="button" title="Day or night"><svg class="ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><svg class="ico-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><span>Day or night</span></button>
       <button class="pm-row skin-btn" type="button" data-action="skin" aria-pressed="false" title="Look"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h12a4 4 0 0 1 4 4v2a4 4 0 0 1-7 2.6L14 16h-4l-1 .6A4 4 0 0 1 2 14v-2a4 4 0 0 1 4-4z"/><path d="M7 11v3M5.5 12.5h3"/><path d="M16 12h.01M18 14h.01"/></svg><span>Look</span><small id="pmLook"></small></button>
+      <button class="pm-row fs-btn" type="button" data-action="fullscreen" title="Full screen" hidden><svg class="ico-fs-in" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><svg class="ico-fs-out" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg><span>Full screen</span></button>
       <button class="pm-row" id="infoBtn" type="button" title="About PORE"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17h.01"/></svg><span>About</span></button>
     </div>
   </nav>
@@ -3727,6 +3731,23 @@ __SOLVER_JS__
   // Swipe sideways on an empty part of any screen to move between the tab pages (Home, Items, Projects, Charms, Settings).
   // Ignored where something scrolls sideways already, on inputs, at the screen edges (the phone's own back
   // gesture) and for mostly vertical moves.
+  // Full screen: hides the browser's address bar where the browser allows it (Android Chrome and most desktop
+  // browsers; not iPhone Safari). Not offered when PORE already runs as an installed app without the bar.
+  const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
+  function toggleFullscreen() {
+    const d = document.documentElement;
+    try {
+      if (fsEl()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+      else { const r = (d.requestFullscreen || d.webkitRequestFullscreen).call(d, { navigationUI: 'hide' }); if (r && r.catch) r.catch(() => toast('This browser does not allow full screen')); }
+    } catch (e) { toast('This browser does not allow full screen'); }
+    poreMenu(false);
+  }
+  function syncFullscreen() {
+    const can = !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen) && !matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches;
+    document.querySelectorAll('.fs-btn').forEach(b => { b.hidden = !can && !fsEl(); b.classList.toggle('on', !!fsEl()); const t = b.querySelector('span'); if (t) t.textContent = fsEl() ? 'Exit full screen' : 'Full screen'; });
+  }
+  document.addEventListener('fullscreenchange', syncFullscreen); document.addEventListener('webkitfullscreenchange', syncFullscreen);
+  syncFullscreen();
   const TAB_ORDER = ['home', 'items', 'projects', 'inventory', 'settings'];
   let swipe = null;
   function swipeBlocked(el) {
@@ -3745,6 +3766,14 @@ __SOLVER_JS__
     const t = e.changedTouches[0], dx = t.clientX - swipe.x, dy = t.clientY - swipe.y, quick = performance.now() - swipe.at < 700;
     swipe = null;
     if (!quick || Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.8) return;
+    // in Items and Inventory a swipe steps through the categories at the foot instead of the pages
+    const catStrip = currentTab() === 'items' ? document.getElementById('filters') : currentTab() === 'inventory' ? document.querySelector('#charmsSheet .inv-cats') : null;
+    if (catStrip) {
+      const cats = [...catStrip.querySelectorAll('button')], on = cats.findIndex(b => b.classList.contains('on'));
+      const next = cats[(on < 0 ? 0 : on) + (dx < 0 ? 1 : -1)];
+      if (next) { next.click(); haptic(6); const now = (currentTab() === 'items' ? document.getElementById('filters') : document.querySelector('#charmsSheet .inv-cats')); const b = now && now.querySelector('button.on'); if (b) b.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' }); }
+      return;
+    }
     const at = TAB_ORDER.indexOf(currentTab()); if (at < 0) return;   // Help is not a tab page
     const i = at + (dx < 0 ? 1 : -1);
     if (i >= 0 && i < TAB_ORDER.length) tabGo(TAB_ORDER[i]);
@@ -5012,7 +5041,8 @@ __SOLVER_JS__
     const mp = onMap && MAPS.find(m => m.name === invMap);
     box.innerHTML = (onMap ? `<button type="button" class="inv-back" data-action="inv-map-back">‹ All maps</button>` +
       (mp ? `<div class="map-head">${mapImg(mp)}` +
-        `<div><small>${mp.steps ? fmt(mp.steps) + ' steps to unlock' : 'where it starts'} · ${onMap.size} items</small>${mp.desc ? `<p>${esc(mp.desc)}</p>` : ''}</div></div>` : '') : '') +
+        `<div><small>${mp.steps ? fmt(mp.steps) + ' steps to unlock' : 'where it starts'} · ${onMap.size} items</small>${mp.desc ? `<p>${esc(mp.desc)}</p>` : ''}` +
+        `${(MAP_ORES.get(mp.name) || []).length ? `<p class="map-ores">Ores: ${MAP_ORES.get(mp.name).map(([k, pw]) => `${esc(((anyItem(k) || {}).name || '').replace(/ Node$/, ''))}${pw ? ` <i>(power ${pw})</i>` : ''}`).join(' · ')}</p>` : ''}</div></div>` : '') : '') +
       (rows.length ? html : '<p class="inv-hint">Nothing matches.</p>') + `<p class="inv-hint">${onMap ? `Everything you can get in ${esc(invMap)}. Tap an item for where exactly.` : hint}</p>`;
     invRenderPop();
   }
@@ -5208,6 +5238,7 @@ __SOLVER_JS__
         }
         delete inv.items[el.dataset.key]; invSave(); invRenderGrid(); if (state.item === el.dataset.key) { state.stock = 0; persist(); renderResults(); } break;
       case 'clear-search': picker.q = ''; ui.searchInput.value = ''; el.hidden = true; renderPickerList(); ui.searchInput.focus(); break;
+      case 'fullscreen': toggleFullscreen(); break;
       case 'filter': picker.type = el.dataset.type; renderFilters(); renderPickerList(); break;
       case 'sort': picker.sort = el.dataset.sort; renderPickerList(); break;
       case 'picker-view': picker.view = ['grid', 'icons'].includes(el.dataset.view) ? el.dataset.view : 'list'; try { localStorage.setItem('pore.pickerview.v2', picker.view); } catch (e2) { /* ignore */ } renderPickerList(); break;
