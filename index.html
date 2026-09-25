@@ -2891,8 +2891,17 @@ function createSolver() {
     return ITEMS.filter(it => badges[it.key] != null && !noShortcut(it))
       .sort((x, y) => costShare(x) - costShare(y) || x.name.localeCompare(y.name)).slice(0, 12);
   }
+  // the title screen shows one of the best deals at random: a new one each visit, steady while you are there
+  let homePick = null;
+  function homeSpot() {
+    if (!homePick || !ITEM_BY_KEY.has(homePick)) {
+      const pool = homeDeals();
+      homePick = pool.length ? pool[Math.floor(Math.random() * pool.length)].key : null;
+    }
+    return homePick ? ITEM_BY_KEY.get(homePick) : null;
+  }
   function homeHTML() {
-    const deals = homeDeals(), best = deals[0];
+    const deals = homeDeals(), best = homeSpot() || deals[0];
     const std = it => Math.pow(2, maxOf(it) - 1);
     const pct = it => Math.round((1 - badges[it.key] / std(it)) * 100);
     const hero = `<section class="home-hero">
@@ -3382,6 +3391,7 @@ function createSolver() {
   }
   function showHome() {
     if (state.item) lastPlanY = window.scrollY;
+    homePick = null;   // a new item on the title screen
     state.item = null; state.t = {}; state.o = []; state.stock = 0; state.k = {};
     resetPlan(); pendingScroll = null;
     closePicker({ fromHistory: true }); closeInfo({ fromHistory: true }); closeGuide({ fromHistory: true });
