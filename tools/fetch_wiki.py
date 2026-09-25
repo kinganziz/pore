@@ -280,6 +280,19 @@ def monsters_of(index):
     return out
 
 
+def encounters_of(index):
+    """The encounters (things met while exploring) with their description; what they give is in `where`."""
+    out = []
+    for path, meta in index.items():
+        fm = (meta or {}).get("frontmatter") or {}
+        if fm.get("fileClass") != "encounter" or not fm.get("name"):
+            continue
+        desc = str(fm.get("description") or "").strip()
+        out.append({"name": fm["name"], "desc": "" if desc == "None" else desc})
+    out.sort(key=lambda e: e["name"])
+    return out
+
+
 def main() -> None:
     offline = "--offline" in sys.argv
     CACHE_DIR.mkdir(exist_ok=True)
@@ -405,6 +418,7 @@ def main() -> None:
 
     bosses = bosses_of(index)
     monsters = monsters_of(index)
+    encounters = encounters_of(index)
 
     stat_names = sorted({name for it in items for name in it["stats"]})
     payload = {
@@ -420,6 +434,7 @@ def main() -> None:
         "places": places,
         "bosses": bosses,
         "monsters": monsters,
+        "encounters": encounters,
     }
     OUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     OUT_FILE.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
