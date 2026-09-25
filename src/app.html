@@ -2791,8 +2791,8 @@ __SOLVER_JS__
   // Home moves fully; plans and sheets hold the land still with only small things moving, about six frames a
   // second; hidden pages, Motion off and reduced motion draw one still frame.
   const scene = { el: null, ctx: null, raf: 0, timer: 0, W: 0, H: 0, px: 2, x: 0, last: 0, key: '', st: null, sky: null, skyKey: '' };
-  const BG_SCENES = ['hills', 'sea', 'desert', 'snow', 'town'];
-  const BG_NAMES = { auto: 'Auto', hills: 'Hills', sea: 'Sea', desert: 'Desert', snow: 'Snow', town: 'Town', none: 'None' };
+  const BG_SCENES = ['hills', 'sea', 'desert', 'snow', 'town', 'forest', 'cave', 'shrooms'];
+  const BG_NAMES = { auto: 'Auto', hills: 'Hills', sea: 'Sea', desert: 'Desert', snow: 'Snow', town: 'Town', forest: 'Forest', cave: 'Cave', shrooms: 'Mushrooms', none: 'None' };
   let bgPref = 'sea', bgMotion = true, bgNow = 'sea';
   function bgLoad() {
     try { bgPref = localStorage.getItem('pore.bg.v1') || 'sea'; bgMotion = localStorage.getItem('pore.bgmotion.v1') !== 'off'; } catch (e) { /* ignore */ }
@@ -2899,6 +2899,27 @@ __SOLVER_JS__
       { sky: ['#9ed2fa', '#b6ddfb', '#cfe8fc', '#e6f3fd', '#fdf6ea'], star: null, moon: '#fff6cc', cloud: '#ffffff', far: '#a3b2cf', farWin: '#c6d2e6', house: '#e4d4b6', roof: '#b4584c', win: '#6a7c9c', winOff: '#8a9ab8', lamp: '#fff4d0', ground: '#8c8474', bat: '#3a3a48' },
     ],
   };
+  // the Red Forest, the crystal caves and Mycropolis
+  Object.assign(BG_PAL, {
+    forest: [
+      { sky: ['#0c0718', '#1d0f2c', '#35183a', '#55223f', '#7a3341'], star: '#fff0e0', moon: '#ffe6c4', cloud: '#3a1f40', far: '#2a1428', farTree: '#3a1830', mid: '#1e0d1c', trunk: '#140810',
+        leaf: ['#7a2420', '#8e3a1c', '#6a1a28'], leafHi: ['#a0382a', '#b85a24', '#8a2836'], near: '#12060f', bush: '#34121a' },
+      { sky: ['#8cc8f0', '#a8d6f2', '#c8e4f0', '#f0e2c8', '#f6d0a0'], star: null, moon: '#fff6d0', cloud: '#ffffff', far: '#c07a5c', farTree: '#cc8450', mid: '#8a4a36', trunk: '#4a2a1a',
+        leaf: ['#d8452c', '#f08a2a', '#f2c030'], leafHi: ['#f07050', '#ffb050', '#ffe070'], near: '#6a3a26', bush: '#b84a2a' },
+    ],
+    cave: [
+      { sky: ['#07060e', '#0c0a18', '#120f22', '#18142c', '#1e1834'], star: null, far: '#1e1a34', mid: '#120f20', near: '#09080f',
+        cry: ['#3ad0ff', '#a060ff', '#48f0a0'], cryHi: ['#d8faff', '#ecd8ff', '#d8ffe8'], drop: '#8ad8ff', mote: '#8ae8ff', shaft: null },
+      { sky: ['#d4ccdf', '#c4bcd4', '#b2aac6', '#a098b8', '#8e86aa'], star: null, far: '#8c84a8', mid: '#6e6690', near: '#4a4468',
+        cry: ['#2ab8ee', '#9050f0', '#30d890'], cryHi: ['#e8fcff', '#f4e8ff', '#e8fff2'], drop: '#5ab0e8', mote: '#ffffff', shaft: '#fff6d8' },
+    ],
+    shrooms: [
+      { sky: ['#06101a', '#0a1c2a', '#10283a', '#18364a', '#22465a'], star: '#e8fff8', moon: '#e8fff4', cloud: '#1a3040', far: '#12283a', mid: '#0a1a28', near: '#06121c',
+        stem: '#3a5a62', stemSh: '#26404a', cap: ['#1a9a94', '#6a40c8', '#c84080'], capHi: ['#3ed4c8', '#9a6cf0', '#f06aa4'], spot: '#d8fff8', spore: '#8affe8' },
+      { sky: ['#a8d8f0', '#bce2f2', '#d0ecf2', '#e6f2e8', '#f4f0d8'], star: null, moon: '#fff6d0', cloud: '#ffffff', far: '#88ae96', mid: '#6a9478', near: '#4a7658',
+        stem: '#f4ecdc', stemSh: '#c8bca4', cap: ['#e04a3a', '#e08a2a', '#b85ad8'], capHi: ['#ff7a6a', '#ffb05a', '#d88af0'], spot: '#ffffff', spore: '#fff4c0' },
+    ],
+  });
   function bgPalette() {
     const d = document.documentElement, light = d.dataset.sky === 'day';   // day or night world
     if (bgNow === 'hills') return HILLS[(d.dataset.flavor === 'game' ? 'game' : d.dataset.flavor === 'pixel' ? 'pixel' : 'modern') + (light ? 'Light' : '')];
@@ -2948,6 +2969,21 @@ __SOLVER_JS__
       st.pines = Array.from({ length: 26 }, (_, i) => ({ x: i * 14 + r() * 8, h: 10 + Math.floor(r() * 10) }));
       st.flakes = Array.from({ length: 90 }, () => ({ x: r() * W, y: r() * H, s: 0.2 + r() * 0.5, p: r() * 6.28, big: r() < 0.2 }));
       st.smoke = [];
+    } else if (key === 'forest') {
+      st.farTrees = Array.from({ length: 40 }, (_, i) => ({ x: i * 9 + r() * 5, r: 3 + Math.floor(r() * 3) }));
+      st.trees = Array.from({ length: 28 }, (_, i) => ({ x: i * 13 + r() * 8, h: 5 + Math.floor(r() * 9), r: 6 + Math.floor(r() * 6), c: Math.floor(r() * 3) }));
+      st.bushes = Array.from({ length: 12 }, (_, i) => ({ x: i * 30 + r() * 16, r: 3 + Math.floor(r() * 3) }));
+      st.leaves = Array.from({ length: 34 }, () => ({ x: r() * W, y: r() * H, s: 0.4 + r() * 0.8, p: r() * 6.28, c: Math.floor(r() * 3) }));
+    } else if (key === 'cave') {
+      st.crystals = Array.from({ length: 12 }, (_, i) => ({ x: i * 30 + r() * 14, h: 7 + Math.floor(r() * 7), c: Math.floor(r() * 3), p: r() * 6.28 }));
+      st.crystals2 = Array.from({ length: 8 }, (_, i) => ({ x: i * 45 + r() * 20, h: 14 + Math.floor(r() * 12), c: Math.floor(r() * 3), p: r() * 6.28 }));
+      st.drops = Array.from({ length: 7 }, () => ({ x: r() * W, y: -r() * H, s: 0.5 + r() * 0.6 }));
+      st.motes = Array.from({ length: 30 }, () => ({ x: r() * W, y: r() * H, s: 0.05 + r() * 0.1, p: r() * 6.28 }));
+    } else if (key === 'shrooms') {
+      st.farCaps = Array.from({ length: 22 }, (_, i) => ({ x: i * 16 + r() * 8, r: 3 + Math.floor(r() * 4), h: 3 + Math.floor(r() * 5), c: Math.floor(r() * 3) }));
+      st.giants = Array.from({ length: 6 }, (_, i) => ({ x: i * 60 + r() * 26, r: 10 + Math.floor(r() * 9), h: 18 + Math.floor(r() * 18), c: Math.floor(r() * 3), p: r() * 6.28 }));
+      st.smalls = Array.from({ length: 16 }, (_, i) => ({ x: i * 22 + r() * 12, r: 3 + Math.floor(r() * 3), h: 3 + Math.floor(r() * 4), c: Math.floor(r() * 3) }));
+      st.spores = Array.from({ length: 40 }, () => ({ x: r() * W, y: r() * H, s: 0.1 + r() * 0.25, p: r() * 6.28 }));
     } else if (key === 'town') {
       st.far = []; for (let x = 0; x < P;) { const w = 8 + Math.floor(r() * 12); st.far.push({ x, w, h: 20 + Math.floor(r() * 34), wins: r() }); x += w + 1; }
       st.houses = []; for (let x = 0; x < P;) { const w = 16 + Math.floor(r() * 14); st.houses.push({ x, w, h: 14 + Math.floor(r() * 14), roof: r() < 0.7, chim: r() < 0.5, seed: Math.floor(r() * 9999) }); x += w + 2 + Math.floor(r() * 6); }
@@ -3038,8 +3074,115 @@ __SOLVER_JS__
     g.fillStyle = col; g.fillRect(x, base, 1, 2);
   }
 
+  function blob(g, cx, cy, r, col) {   // a round canopy or bush
+    g.fillStyle = col;
+    for (let y = -r; y <= r; y++) { const w = Math.round(Math.sqrt(r * r - y * y)); g.fillRect(cx - w, cy + y, w * 2 + 1, 1); }
+  }
+  function dome(g, cx, top, r, col) {   // a mushroom cap: a half circle, flat underneath
+    g.fillStyle = col;
+    for (let k = 0; k <= r; k++) { const w = Math.round(Math.sqrt(r * r - (r - k) * (r - k))); g.fillRect(cx - w, top + k, w * 2 + 1, 1); }
+  }
+  function crystal(g, x, b, h, col, hi, glow) {   // a glowing cluster of three shards standing on the ground at (x, b)
+    g.globalAlpha = 0.08 * glow; blob(g, x, b - Math.round(h / 2), Math.round(h * 0.8) + 3, col);   // a soft round glow
+    g.globalAlpha = 0.12 * glow; blob(g, x, b - Math.round(h / 2), Math.round(h * 0.5) + 2, col);
+    g.globalAlpha = 1;
+    const shard = (sx, sh) => { for (let k = 0; k < sh; k++) { const w = k < 2 ? 1 : 2; g.fillStyle = col; g.fillRect(sx - (w - 1), b - sh + k, w * 2, 1); g.fillStyle = hi; g.fillRect(sx - (w - 1), b - sh + k, 1, 1); } };
+    shard(x - 3, Math.round(h * 0.6)); shard(x + 4, Math.round(h * 0.7)); shard(x, h);
+  }
+
   // ---- the scenes
   const SCENE_DRAW = {
+    forest(g, W, H, pal, now, dt) {
+      drawSky(g, W, H, pal, H * 0.62); drawStars(g, pal, now, H * 0.45); drawShootingStar(g, pal, dt, W, H);
+      drawMoon(g, pal, W, H, pal.far); drawClouds(g, pal, W, H, 0.2);
+      const farA = [[0.05, 1, 1.1], [0.03, 3, 0.2], [0.015, 7, 2]];
+      each(scene.st.farTrees, 0.2, 8, W, (t, x, o) => blob(g, x, Math.round(ridge(x + o, P, 0.5, farA, H)) - t.r + 2, t.r, pal.farTree));
+      drawRidge(g, W, H, 0.2, 0.5, farA, pal.far);
+      const midA = [[0.03, 2, 0.6], [0.015, 5, 1.9]];
+      drawRidge(g, W, H, 0.5, 0.68, midA, pal.mid);
+      each(scene.st.trees, 0.5, 16, W, (t, x, o) => {   // autumn trees: a trunk and a round crown in red, orange or gold
+        const b = Math.round(ridge(x + o, P, 0.68, midA, H)), cy = b - t.h - t.r + 3;
+        g.fillStyle = pal.trunk; g.fillRect(x, b - t.h - 2, 2, t.h + 3);
+        blob(g, x + 1, cy, t.r, pal.leaf[t.c]); blob(g, x - 1, cy - 2, Math.max(2, t.r - 3), pal.leafHi[t.c]);
+      });
+      const nearA = [[0.015, 3, 0.9], [0.008, 9, 0.2]];
+      drawRidge(g, W, H, 1.0, 0.87, nearA, pal.near);
+      each(scene.st.bushes, 1.0, 8, W, (bu, x, o) => blob(g, x, Math.round(ridge(x + o, P, 0.87, nearA, H)) - bu.r + 2, bu.r, pal.bush));
+      for (const l of scene.st.leaves) {   // leaves drifting down
+        l.y += dt * l.s * 0.012; l.x += Math.sin(now * 1.3 + l.p) * 0.12 - dt * 0.004;
+        if (l.y > H) { l.y = -3; l.x = Math.random() * W; }
+        if (l.x < -3) l.x += W + 6;
+        const flat = Math.sin(now * 3 + l.p) > 0;
+        g.fillStyle = pal.leafHi[l.c]; g.fillRect(Math.round(l.x), Math.round(l.y), flat ? 2 : 1, flat ? 1 : 2);
+      }
+    },
+    cave(g, W, H, pal, now, dt) {
+      drawSky(g, W, H, pal, H);
+      if (pal.shaft) {   // daylight falling in from an opening
+        g.fillStyle = pal.shaft;
+        for (let y = 0; y < H * 0.9; y++) { g.globalAlpha = 0.14 * (1 - y / (H * 0.9)); g.fillRect(Math.round(W * 0.58 + y * 0.35), y, Math.round(18 + y * 0.25), 1); }
+        g.globalAlpha = 1;
+      }
+      const ceil = (speed, base, big, col) => {   // a jagged ceiling with stalactites
+        const o = off(speed); g.fillStyle = col;
+        for (let x = 0; x < W; x++) { const h = Math.round(H * base + 4 * Math.sin((x + o) / 9) + big * Math.pow(Math.max(0, Math.sin((x + o) / 6.3)), 6)); g.fillRect(x, 0, 1, h); }
+      };
+      ceil(0.2, 0.12, 18, pal.far);
+      const farA = [[0.05, 2, 0.4], [0.03, 5, 1.2]];
+      drawRidge(g, W, H, 0.2, 0.56, farA, pal.far);
+      each(scene.st.crystals, 0.2, 12, W, (c, x, o) => crystal(g, x, Math.round(ridge(x + o, P, 0.56, farA, H)) + 1, c.h, pal.cry[c.c], pal.cryHi[c.c], 0.6 + 0.4 * Math.sin(now * 1.2 + c.p)));
+      ceil(0.5, 0.05, 22, pal.mid);
+      const midA = [[0.03, 3, 1.4], [0.02, 7, 0.2]];
+      drawRidge(g, W, H, 0.5, 0.72, midA, pal.mid);
+      each(scene.st.crystals2, 0.5, 16, W, (c, x, o) => crystal(g, x, Math.round(ridge(x + o, P, 0.72, midA, H)) + 1, c.h, pal.cry[c.c], pal.cryHi[c.c], 0.6 + 0.4 * Math.sin(now * 0.9 + c.p)));
+      g.fillStyle = pal.drop;
+      for (const d of scene.st.drops) {   // water dripping from the ceiling
+        d.y += dt * d.s * 0.05;
+        if (d.y > H * 0.8) { d.y = H * 0.08; d.x = Math.random() * W; }
+        if (d.y > 0) g.fillRect(Math.round(d.x), Math.round(d.y), 1, 2);
+      }
+      g.fillStyle = pal.mote;
+      for (const m of scene.st.motes) {   // glowing motes floating in the dark
+        m.y -= dt * m.s * 0.01; if (m.y < 0) { m.y = H; m.x = Math.random() * W; }
+        g.globalAlpha = 0.35 + 0.35 * Math.sin(now * 2 + m.p); g.fillRect(Math.round(m.x + 3 * Math.sin(now * 0.5 + m.p)), Math.round(m.y), 1, 1);
+      }
+      g.globalAlpha = 1;
+      drawRidge(g, W, H, 1.0, 0.9, [[0.02, 4, 0.7], [0.01, 9, 1.8]], pal.near);
+    },
+    shrooms(g, W, H, pal, now, dt) {
+      drawSky(g, W, H, pal, H * 0.62); drawStars(g, pal, now, H * 0.45); drawShootingStar(g, pal, dt, W, H);
+      drawMoon(g, pal, W, H, pal.far); drawClouds(g, pal, W, H, 0.15);
+      const farA = [[0.04, 1, 0.6], [0.02, 4, 1.8]];
+      each(scene.st.farCaps, 0.2, 8, W, (m, x, o) => {
+        const b = Math.round(ridge(x + o, P, 0.56, farA, H));
+        g.fillStyle = pal.far; g.fillRect(x, b - m.h, 1, m.h + 1); dome(g, x, b - m.h - m.r, m.r, pal.far);
+      });
+      drawRidge(g, W, H, 0.2, 0.56, farA, pal.far);
+      const midA = [[0.03, 2, 0.3], [0.015, 6, 1.4]];
+      drawRidge(g, W, H, 0.5, 0.74, midA, pal.mid);
+      each(scene.st.giants, 0.5, 24, W, (m, x, o) => {   // giant mushrooms with glowing spots
+        const b = Math.round(ridge(x + o, P, 0.74, midA, H)), top = b - m.h - m.r;
+        g.fillStyle = pal.stem; g.fillRect(x - 2, b - m.h, 5, m.h + 1); g.fillStyle = pal.stemSh; g.fillRect(x + 2, b - m.h, 1, m.h + 1);
+        dome(g, x, top, m.r, pal.cap[m.c]); dome(g, x - 1, top + 1, m.r - 3, pal.capHi[m.c]);
+        g.fillStyle = pal.spot;
+        for (const [dx, dy] of [[-m.r / 2, m.r * 0.55], [m.r / 3, m.r * 0.35], [0, m.r * 0.75], [m.r * 0.6, m.r * 0.8]]) {
+          g.globalAlpha = 0.6 + 0.4 * Math.sin(now * 1.5 + m.p + dx); g.fillRect(Math.round(x + dx), Math.round(top + dy), 2, 1);
+        }
+        g.globalAlpha = 1;
+      });
+      const nearA = [[0.015, 3, 0.9], [0.008, 9, 0.2]];
+      drawRidge(g, W, H, 1.0, 0.88, nearA, pal.near);
+      each(scene.st.smalls, 1.0, 8, W, (m, x, o) => {
+        const b = Math.round(ridge(x + o, P, 0.88, nearA, H));
+        g.fillStyle = pal.stem; g.fillRect(x, b - m.h, 1, m.h + 1); dome(g, x, b - m.h - m.r, m.r, pal.cap[m.c]);
+      });
+      g.fillStyle = pal.spore;
+      for (const sp of scene.st.spores) {   // spores drifting up
+        sp.y -= dt * sp.s * 0.02; if (sp.y < H * 0.2) { sp.y = H; sp.x = Math.random() * W; }
+        g.globalAlpha = 0.3 + 0.4 * Math.sin(now * 2.2 + sp.p); g.fillRect(Math.round(sp.x + 4 * Math.sin(now * 0.6 + sp.p)), Math.round(sp.y), 1, 1);
+      }
+      g.globalAlpha = 1;
+    },
     hills(g, W, H, pal, now, dt) {
       drawSky(g, W, H, pal, H * 0.62); drawStars(g, pal, now, H * 0.5); drawShootingStar(g, pal, dt, W, H);
       drawMoon(g, pal, W, H, pal.far); drawClouds(g, pal, W, H, 0.25);
