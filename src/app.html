@@ -1730,6 +1730,7 @@
   :root[data-sky="day"] .home-search input { color: #1b1f33; } :root[data-sky="day"] .home-search input::placeholder { color: #5a6078; }
   .home-best .hb-unit { font-size: 13px; font-weight: 400; opacity: .9; }
   .home-hero .home-best .hb-text > b { white-space: nowrap; }
+  :root .home-hero .home-best .hb-unit { display: inline; }   /* on the number's line, not a line of its own */
   .home-best .hb-was { font-size: 14px; font-weight: 400; opacity: .6; text-decoration-thickness: 2px; margin-right: 2px; }
   .home-continue { border: 0; background: none; padding: 2px 6px; font: inherit; font-size: 14px; color: #ffe08a; cursor: pointer; text-shadow: 1px 1px 0 rgba(0, 0, 0, .7); }
   .home-continue b { color: #fff; }
@@ -1738,6 +1739,7 @@
   :root .tabbar .tab.tab.on, :root[data-finish="retro"] .tabbar .tab.tab.tab.on { background: rgba(0, 0, 0, .34) !important; color: var(--gold) !important;
     box-shadow: inset 2px 2px 0 rgba(0, 0, 0, .45), inset -1px -1px 0 rgba(255, 255, 255, .06), inset 0 -3px 0 var(--gold) !important; }
   :root .tabbar .tab.on .tab-label { color: var(--gold) !important; }
+  #saverClock .sv-sub { display: block; margin-top: .2em; font-family: var(--font, inherit); font-size: max(14px, .2em); letter-spacing: 1px; opacity: .8; }
 </style>
 </head>
 <body>
@@ -3059,12 +3061,14 @@ __SOLVER_JS__
     scene.key = ''; syncBgPicker(); sceneHide(); sceneShow();
   }
   // Auto: every tap on the Home tab brings a different scene, cross-faded
-  function bgNext() {
+  function bgNext(slow) {   // slow: the screensaver's gentle fade between scenes
     if (bgPref !== 'auto' || !scene.el) return;
     const pool = BG_SCENES.filter(k => k !== bgNow), next = pool[Math.floor(Math.random() * pool.length)];
-    const swap = () => { bgNow = next; try { localStorage.setItem('pore.bg.last', next); } catch (e) { /* ignore */ } scene.key = ''; sceneHide(); sceneShow(); scene.el.style.opacity = ''; };
+    const swap = () => { bgNow = next; try { localStorage.setItem('pore.bg.last', next); } catch (e) { /* ignore */ } scene.key = ''; sceneHide(); sceneShow(); scene.el.style.opacity = '';
+      if (slow) setTimeout(() => { scene.el.style.transition = ''; }, 1600); };
     if (reduced) { swap(); return; }
-    scene.el.style.opacity = '0'; setTimeout(swap, 260);
+    if (slow) scene.el.style.transition = 'opacity 1.5s ease';
+    scene.el.style.opacity = '0'; setTimeout(swap, slow ? 1500 : 260);
   }
   function setBgMotion(on) {
     bgMotion = !!on;
@@ -3081,18 +3085,24 @@ __SOLVER_JS__
     if (saverSecs > 0) saverT = setTimeout(() => { if (!document.hidden) { document.body.classList.add('saver'); sceneHide(); sceneShow(); saverTick(); } }, saverSecs * 1000);
   }
   // while it runs: a big clock, and on Auto a new scene every 90 seconds
-  let saverClockT = 0, saverSceneAt = 0;
+  let saverClockT = 0, saverSceneAt = 0, saverSince = 0;   // saverSince: when the screensaver came up (for "away 25 min")
   function saverTick() {
     clearTimeout(saverClockT);
     if (!saverOn()) return;
     const el = document.getElementById('saverClock'), d = new Date();
-    if (el) { const h = d.getHours(); el.innerHTML = `${h % 12 || 12}:${String(d.getMinutes()).padStart(2, '0')}<small>${h < 12 ? 'AM' : 'PM'}</small>`; }   // like a phone: 9:05 PM
-    if (bgPref === 'auto') { if (!saverSceneAt) saverSceneAt = Date.now() + 90000; else if (Date.now() > saverSceneAt) { saverSceneAt = Date.now() + 90000; bgNext(); } }
+    if (!saverSince) saverSince = Date.now();
+    if (el) {   // like a phone: 9:05 PM, and under it the date and how long you have been away
+      const h = d.getHours(), away = Math.floor((Date.now() - saverSince) / 60000);
+      const awayTxt = away < 1 ? '' : away < 60 ? `away ${away} min` : `away ${Math.floor(away / 60)} h ${away % 60} min`;
+      el.innerHTML = `${h % 12 || 12}:${String(d.getMinutes()).padStart(2, '0')}<small>${h < 12 ? 'AM' : 'PM'}</small>` +
+        `<span class="sv-sub">${d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}${awayTxt ? ` · ${awayTxt}` : ''}</span>`;
+    }
+    if (bgPref === 'auto') { if (!saverSceneAt) saverSceneAt = Date.now() + 90000; else if (Date.now() > saverSceneAt) { saverSceneAt = Date.now() + 90000; bgNext(true); } }
     saverClockT = setTimeout(saverTick, 5000);
   }
   function saverWake(e) {
     if (saverOn()) {
-      document.body.classList.remove('saver'); clearTimeout(saverClockT); saverSceneAt = 0;
+      document.body.classList.remove('saver'); clearTimeout(saverClockT); saverSceneAt = 0; saverSince = 0;
       if (e && e.cancelable && (e.type === 'pointerdown' || e.type === 'click' || e.type === 'keydown')) { e.preventDefault(); e.stopPropagation(); }
       if (e && e.type === 'pointerdown') {   // swallow the click that follows the waking tap (only that one)
         const eat = ev => { ev.preventDefault(); ev.stopPropagation(); };
