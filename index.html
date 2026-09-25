@@ -1314,7 +1314,8 @@
   .charms-foot { display: grid; justify-items: center; gap: 8px; margin: 18px 4px 8px; text-align: center; color: var(--soft); }
   @media (prefers-reduced-motion: reduce) { .ci.on .ci-pick .pixel { animation: none; } }
   /* ---------- top bar: icons only, no frames; a switched-on control shows in the accent colour ---------- */
-  :root .topbar .icon-btn.icon-btn { background: none !important; border: 0 !important; box-shadow: none !important; color: var(--text); width: 38px; }
+  :root .topbar .icon-btn.icon-btn { background: none !important; border: 0 !important; box-shadow: none !important; color: var(--text); width: 32px; min-width: 32px; padding: 0 !important; }
+  :root .topbar .topbar-actions { gap: 2px; }   /* frameless icons sit close together */
   :root .topbar.topbar .icon-btn.icon-btn[aria-pressed="true"] { background: none !important; color: var(--accent) !important; box-shadow: none !important; }
   :root .topbar .icon-btn.icon-btn svg { filter: drop-shadow(1px 1px 0 rgba(0, 0, 0, .45)); }
   :root .topbar .icon-btn.icon-btn:active { transform: scale(.88) !important; }
