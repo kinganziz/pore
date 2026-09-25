@@ -2382,7 +2382,11 @@ function createSolver() {
   function mapPic(m) {
     if (mapArt[m.name]) return mapArt[m.name];
     const base = bgThumb(MAP_BG[m.kind] || 'hills', MAP_NIGHT.has(m.kind) ? 'night' : 'day');
-    const finds = (MAP_ORES.get(m.name) || []).slice(0, 4).map(f => f[0]);   // its ores (a map without ore shows its landscape alone)
+    // its ores first, then the strongest gear you can get there (by total stats), four in all
+    const ores = (MAP_ORES.get(m.name) || []).slice(0, 4).map(f => f[0]);
+    const power = it => Object.values(it.stats || {}).reduce((t, v) => t + (+v || 0), 0);
+    const gear = [...(MAP_KEYS.get(m.name) || [])].map(k => ITEM_BY_KEY.get(k)).filter(Boolean).sort((a, b) => power(b) - power(a) || a.name.localeCompare(b.name));
+    const finds = [...ores, ...gear.slice(0, 4 - ores.length).map(it => it.key)];
     if (!base || mapPic.busy?.[m.name]) return base;
     (mapPic.busy || (mapPic.busy = {}))[m.name] = 1;
     const load = src => new Promise(ok => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => ok(null); im.src = src; });
