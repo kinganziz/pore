@@ -1776,6 +1776,9 @@
   .obol-t tbody th small { display: block; color: var(--gold); font-size: 12px; }
   .obol-t td { text-align: center; padding: 1px 0; } .obol-t td .pixel { width: 34px; height: 34px; display: inline-block; vertical-align: middle; }
   .obol-note { font-size: 12px; color: var(--soft); margin: 2px 2px 8px; }
+  .lib-grid .pt-face { width: 52px; height: 52px; } .lib-grid.bare .pt-face { width: 48px; height: 48px; }
+  .lib-page .lib-body { padding: 0 4px; font-size: 14px; }
+  .obol-b { border: 0; padding: 0; background: none; cursor: pointer; line-height: 0; } .obol-b:active { transform: scale(.92); }
 </style>
 </head>
 <body>
@@ -5271,6 +5274,8 @@ __SOLVER_JS__
   let invView = 'grid';   // like the item list: 'grid' (tiles with names), 'list' (rows) or 'icons'
   try { invView = localStorage.getItem('pore.invview.v2') || 'grid'; } catch (e) { /* ignore */ }
   // Maps, NPCs, Monsters and World bosses keep their own view: a list by default, which shows the most about each
+  let libView = 'list', invLib = null;   // the Library's own view (rows, tiles or icons only) and the entry open on its page
+  try { libView = localStorage.getItem('pore.libview.v1') || 'list'; } catch (e) { /* ignore */ }
   let placeView = 'list';
   try { placeView = localStorage.getItem('pore.placeview.v1') || 'list'; } catch (e) { /* ignore */ }
   const INV_VIEW_SVG = {
@@ -5292,12 +5297,12 @@ __SOLVER_JS__
     if (invGear && invTab.startsWith('g:')) invTab = 'all';
     const cats = [['all', 'All'], ['maps', 'Maps'], ['npcs', 'NPCs'], ['monsters', 'Monsters'], ['bosses', 'World bosses'], ['chests', 'Chests'], ['encounters', 'Encounters'], ['library', 'Library'], ['charms', 'Charms'], ...TYPES.map(t => ['t:' + t[0], t[1]]), ...(invGear ? [] : GOOD_TYPES.map(t => ['g:' + t[0], t[1]])), ['coins', 'Coins']];
     const catName = (cats.find(c => c[0] === invTab) || cats[0])[1];
-    const nameEl = document.getElementById('invCatName'); if (nameEl) nameEl.textContent = invTab === 'all' ? (invGear ? 'Gear only' : '') : invTab === 'maps' && invMap ? invMap : invTab === 'npcs' && invNpc ? invNpc : invTab === 'monsters' && invMob ? invMob : invTab === 'chests' && invChest ? invChest : invTab === 'encounters' && invEnc ? invEnc : invTab === 'bosses' && invBoss ? invBoss : catName;
-    const detail = !!((invTab === 'maps' && invMap) || (invTab === 'npcs' && invNpc) || (invTab === 'monsters' && invMob) || (invTab === 'bosses' && invBoss) || (invTab === 'chests' && invChest) || (invTab === 'encounters' && invEnc) || invTab === 'library');   // one map, NPC, monster or boss open: no view buttons
+    const nameEl = document.getElementById('invCatName'); if (nameEl) nameEl.textContent = invTab === 'all' ? (invGear ? 'Gear only' : '') : invTab === 'maps' && invMap ? invMap : invTab === 'npcs' && invNpc ? invNpc : invTab === 'monsters' && invMob ? invMob : invTab === 'chests' && invChest ? invChest : invTab === 'encounters' && invEnc ? invEnc : invTab === 'bosses' && invBoss ? invBoss : invTab === 'library' && invLib ? invLib : catName;
+    const detail = !!((invTab === 'maps' && invMap) || (invTab === 'npcs' && invNpc) || (invTab === 'monsters' && invMob) || (invTab === 'bosses' && invBoss) || (invTab === 'chests' && invChest) || (invTab === 'encounters' && invEnc) || (invTab === 'library' && invLib));   // one map, NPC, monster or boss open: no view buttons
     const mapList = (invTab === 'maps' && !invMap) || (invTab === 'npcs' && !invNpc) || (invTab === 'monsters' && !invMob) || invTab === 'bosses' || (invTab === 'chests' && !invChest) || (invTab === 'encounters' && !invEnc) || invTab === 'library';   // the list of maps: no gear filter or item views to pick
     ui.charmsBody.innerHTML = `<label class="inv-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></svg><input type="search" placeholder="${mapList ? (invTab === 'npcs' ? 'Search NPCs' : invTab === 'monsters' ? 'Search monsters' : invTab === 'chests' ? 'Search chests' : invTab === 'encounters' ? 'Search encounters' : invTab === 'library' ? 'Search spells, talents, obols, books' : invTab === 'bosses' ? 'Search bosses' : 'Search maps') : 'Search items or places'}" value="${esc(invQ)}" data-field="inv-q" aria-label="Search the inventory">` +
       (mapList || detail ? '' : `<button type="button" class="inv-gear ${invGear ? 'on' : ''}" data-action="inv-gear" aria-pressed="${invGear}" aria-label="Gear only: hide what you cannot equip" title="Gear only">${iconSVG((ITEMS.find(it => it.name === 'Iron Sword') || ITEMS[0]).key)}</button>`) +
-      (detail ? '</label>' : `<span class="inv-views" role="group" aria-label="View">${['grid', 'list', 'icons'].map(v => `<button type="button" class="${(mapList ? placeView : invView) === v ? 'on' : ''}" data-action="inv-view" data-view="${v}" aria-label="${v === 'grid' ? 'Tiles with names' : v === 'list' ? 'List' : 'Icons only'}" title="${v === 'grid' ? 'Tiles' : v === 'list' ? 'List' : 'Icons'}">${INV_VIEW_SVG[v]}</button>`).join('')}</span></label>`) +
+      (detail ? '</label>' : `<span class="inv-views" role="group" aria-label="View">${['grid', 'list', 'icons'].map(v => `<button type="button" class="${(invTab === 'library' ? libView : mapList ? placeView : invView) === v ? 'on' : ''}" data-action="inv-view" data-view="${v}" aria-label="${v === 'grid' ? 'Tiles with names' : v === 'list' ? 'List' : 'Icons only'}" title="${v === 'grid' ? 'Tiles' : v === 'list' ? 'List' : 'Icons'}">${INV_VIEW_SVG[v]}</button>`).join('')}</span></label>`) +
       `<div id="invGrid"></div>`;
     // the category icons: a fixed strip at the foot of the sheet, right above the tab bar (like the game)
     const goodArt = t => { const g = GOODS.find(x => x.name === (GOOD_TYPES.find(y => y[0] === t) || [])[3]) || GOODS.find(x => x.type === t); return g ? iconSVG(g.key) : ''; };
@@ -5353,23 +5358,36 @@ __SOLVER_JS__
       return;
     }
     const collage = drops => `<span class="npc-pic">${drops.slice(0, 4).map(([k]) => iconSVG(k)).join('')}</span>`;
-    if (invTab === 'library') {   // spells, talents, obols and books: reference lists, each entry opens in place
+    if (invTab === 'library') {   // spells, talents, obols and books: rows that open in place, tiles or icons; a tile opens the entry's page
       const L = ITEM_DB.library || {}, has = t => !q || t.toLowerCase().includes(q);
-      const sec = (title, list) => list.length ? `<h3 class="lib-h">${title} <small>${list.length}</small></h3>${list.join('')}` : '';
-      const entry = (name, sub, body) => `<details class="lib-row"${name.toLowerCase() === q ? ' open' : ''}><summary>${iconSVG(libKey(name), 'lib-ic')}<b>${esc(name)}</b><small>${sub}</small></summary><div class="lib-body">${body}</div></details>`;
-      const spells = (L.spells || []).filter(x => has(`${x.name} ${x.element}`)).map(x => entry(x.name, `${x.element ? esc(ELEMENT(x.element)) + ' · ' : ''}${x.mana} mana · ${x.cooldown}s cooldown`,
+      const place = l => MAP_KEYS.has(l) ? `<button type="button" class="ip-map" data-action="inv-place" data-q="${esc(l)}">${esc(l)}</button>` : esc(l);
+      const E = (name, sub, body) => ({ name, sub, body });
+      const spells = (L.spells || []).filter(x => invLib || has(`${x.name} ${x.element}`)).map(x => E(x.name, `${x.element ? esc(ELEMENT(x.element)) + ' · ' : ''}${x.mana} mana · ${x.cooldown}s cooldown`,
         `<ol>${x.levels.map(l => `<li>${esc(l)}</li>`).join('')}</ol>` + (x.sold.length ? `<p>Sold by ${x.sold.map(([n, pr]) => `${NPCS.has(n) ? `<button type="button" class="ip-map" data-action="inv-place" data-q="${esc(n)}">${esc(n)}</button>` : esc(n)} for ${fmtGold(pr)} gold`).join(', ')}</p>` : '')));
-      const talents = (L.talents || []).filter(x => has(x.name)).map(x => entry(x.name, x.level ? `unlocks at level ${x.level}` : 'from the start', `<p>${esc(x.desc)}</p>`));
-      const obolList = (L.obols || []).filter(x => has(`${x.name} ${x.stat} ${x.tier}`));
-      const oStats = [...new Set((L.obols || []).map(x => x.stat))], oTiers = [...new Set(obolList.map(x => x.tier))].sort((a, b) => obolList.find(x => x.tier === a).value - obolList.find(x => x.tier === b).value);
-      const oCell = (t, st) => { const o = obolList.find(x => x.tier === t && x.stat === st); return o ? `<td title="${esc(o.name)}: +${o.value} ${esc(st)}">${iconSVG(libKey(o.name))}</td>` : '<td></td>'; };
-      const obols = obolList.length ? [`<table class="obol-t"><thead><tr><th></th>${oStats.map(st => `<th>${esc(st === 'hp' ? 'HP' : st)}</th>`).join('')}</tr></thead><tbody>` +
+      const talents = (L.talents || []).filter(x => invLib || has(x.name)).map(x => E(x.name, x.level ? `unlocks at level ${x.level}` : 'from the start', `<p>${esc(x.desc)}</p>`));
+      const books = (L.books || []).filter(x => invLib || has(x.name)).map(x => E(x.name, `${x.pages ? x.pages + ' pages' : 'book'}${x.where.length ? ' · ' + x.where.length + ' maps' : ''}`,
+        x.where.length ? `<p>Pages drop in ${x.where.map(place).join(', ')}.</p>` : '<p>The wiki does not say where its pages drop.</p>'));
+      const obolAll = L.obols || [], obolList = obolAll.filter(x => has(`${x.name} ${x.stat} ${x.tier}`));
+      const one = invLib && ([...spells, ...talents, ...books].find(e => e.name === invLib) || (o => o && E(o.name, `+${o.value} ${esc(o.stat)} · ${esc(o.tier)}`,
+        `<p>An obol adds +${o.value} ${esc(o.stat)}. Its material sets how much (iron +1 up to bismuth +14), its symbol which stat.</p>`))(obolAll.find(o => o.name === invLib)));
+      if (one) {   // one entry's page
+        box.innerHTML = `<button type="button" class="inv-back" data-action="inv-lib-back">‹ Library</button>` +
+          `<div class="lib-page"><div class="npc-head">${iconSVG(libKey(one.name), 'npc-face')}<small>${one.sub}</small></div><div class="lib-body">${one.body}</div></div>`;
+        invRenderPop();
+        return;
+      }
+      const oStats = [...new Set(obolAll.map(x => x.stat))], oTiers = [...new Set(obolList.map(x => x.tier))].sort((a, b) => obolList.find(x => x.tier === a).value - obolList.find(x => x.tier === b).value);
+      const oCell = (t, st) => { const o = obolList.find(x => x.tier === t && x.stat === st);
+        return o ? `<td><button type="button" class="obol-b" data-action="inv-lib" data-q="${esc(o.name)}" title="${esc(o.name)}: +${o.value} ${esc(st)}" aria-label="${esc(o.name)}">${iconSVG(libKey(o.name))}</button></td>` : '<td></td>'; };
+      const obols = obolList.length ? `<h3 class="lib-h">Obols <small>${obolList.length}</small></h3><table class="obol-t"><thead><tr><th></th>${oStats.map(st => `<th>${esc(st === 'hp' ? 'HP' : st)}</th>`).join('')}</tr></thead><tbody>` +
         oTiers.map(t => `<tr><th>${esc(t)}<small>+${obolList.find(x => x.tier === t).value}</small></th>${oStats.map(st => oCell(t, st)).join('')}</tr>`).join('') +
-        '</tbody></table><p class="obol-note">An obol adds its number to one stat: the material sets how much, the symbol which stat.</p>'] : [];
-      const books = (L.books || []).filter(x => has(x.name)).map(x => entry(x.name, `${x.pages ? x.pages + ' pages' : 'book'}${x.where.length ? ' · ' + x.where.length + ' maps' : ''}`,
-        x.where.length ? `<p>Pages drop in ${x.where.map(l => MAP_KEYS.has(l) ? `<button type="button" class="ip-map" data-action="inv-place" data-q="${esc(l)}">${esc(l)}</button>` : esc(l)).join(', ')}.</p>` : '<p>The wiki does not say where its pages drop.</p>'));
-      const html = sec('Spells', spells) + sec('Talents', talents) + (obols.length ? `<h3 class="lib-h">Obols <small>${obolList.length}</small></h3>${obols[0]}` : '') + sec('Books', books);
-      box.innerHTML = (html || '<p class="inv-hint">Nothing matches.</p>') + '<p class="inv-hint">From the wiki. Tap an entry to open it.</p>';
+        '</tbody></table><p class="obol-note">An obol adds its number to one stat: the material sets how much, the symbol which stat.</p>' : '';
+      const row = e => `<details class="lib-row"${e.name.toLowerCase() === q ? ' open' : ''}><summary>${iconSVG(libKey(e.name), 'lib-ic')}<b>${esc(e.name)}</b><small>${e.sub}</small></summary><div class="lib-body">${e.body}</div></details>`;
+      const tile = e => `<button type="button" class="place-tile" data-action="inv-lib" data-q="${esc(e.name)}" title="${esc(e.name)}"><span class="pt-pic">${iconSVG(libKey(e.name), 'pt-face')}</span>${libView === 'icons' ? '' : `<span class="pt-name">${esc(e.name)}</span>`}</button>`;
+      const sec = (title, list) => !list.length ? '' : `<h3 class="lib-h">${title} <small>${list.length}</small></h3>` +
+        (libView === 'list' ? list.map(row).join('') : `<div class="place-grid lib-grid ${libView === 'icons' ? 'bare' : ''}">${list.map(tile).join('')}</div>`);
+      const html = sec('Spells', spells) + sec('Talents', talents) + obols + sec('Books', books);
+      box.innerHTML = (html || '<p class="inv-hint">Nothing matches.</p>') + `<p class="inv-hint">From the wiki. Tap an entry to ${libView === 'list' ? 'open it' : 'see it'}.</p>`;
       invRenderPop();
       return;
     }
@@ -5698,11 +5716,13 @@ __SOLVER_JS__
       case 'close-projects': closeProjects(); break;
       case 'close-settings': closeSettings(); break;
       case 'close-charms': closeCharms(); break;
-      case 'inv-tab': invTab = el.dataset.tab; invSel = null; invMap = null; invNpc = null; invBoss = null; invMob = null; invChest = null; invEnc = null; haptic(6); renderCharms(); break;   // the category icons at the bottom
+      case 'inv-tab': invTab = el.dataset.tab; invSel = null; invLib = null; invMap = null; invNpc = null; invBoss = null; invMob = null; invChest = null; invEnc = null; haptic(6); renderCharms(); break;   // the category icons at the bottom
       case 'inv-sel': invSel = invSel === el.dataset.key ? null : el.dataset.key; haptic(6); invRenderGrid(); break;
       case 'inv-map': invMap = el.dataset.place; invQ = ''; invSel = null; haptic(6); renderCharms(); { const b = document.getElementById('charmsBody'); if (b) b.scrollTop = 0; } break;
       case 'inv-map-back': invMap = null; invSel = null; haptic(6); renderCharms(); break;
       case 'inv-npc': invNpc = el.dataset.npc; invQ = ''; invSel = null; haptic(6); renderCharms(); { const b = document.getElementById('charmsBody'); if (b) b.scrollTop = 0; } break;
+      case 'inv-lib': invLib = el.dataset.q; invSel = null; haptic(6); renderCharms(); { const b = document.getElementById('charmsBody'); if (b) b.scrollTop = 0; } break;
+      case 'inv-lib-back': invLib = null; invSel = null; haptic(6); renderCharms(); break;
       case 'inv-npc-back': invNpc = null; invSel = null; haptic(6); renderCharms(); break;
       case 'inv-chest': invChest = el.dataset.chest; invQ = ''; invSel = null; haptic(6); renderCharms(); { const b = document.getElementById('charmsBody'); if (b) b.scrollTop = 0; } break;
       case 'inv-chest-back': invChest = null; invSel = null; haptic(6); renderCharms(); break;
@@ -5713,7 +5733,7 @@ __SOLVER_JS__
       case 'inv-boss': invBoss = el.dataset.boss; invQ = ''; invSel = null; haptic(6); renderCharms(); { const b = document.getElementById('charmsBody'); if (b) b.scrollTop = 0; } break;
       case 'inv-boss-back': invBoss = null; invSel = null; haptic(6); renderCharms(); break;
       case 'inv-place': if (libNames().has(el.dataset.q) && !MOBS.has(el.dataset.q) && !NPCS.has(el.dataset.q)) {   // a spell, talent, obol or book: open it in the Library
-          invTab = 'library'; invQ = el.dataset.q; invMap = null; invNpc = null; invBoss = null; invMob = null; invChest = null; invEnc = null; invSel = null; haptic(6);
+          invTab = 'library'; invLib = el.dataset.q; invQ = ''; invMap = null; invNpc = null; invBoss = null; invMob = null; invChest = null; invEnc = null; invSel = null; haptic(6);
           if (ui.charmsSheet.hidden) tabGo('inventory'); else renderCharms();
           break;
         }
@@ -5749,7 +5769,8 @@ __SOLVER_JS__
       case 'inv-pop-close': if (el.id === 'invPop' && e.target !== el) break; invSel = null; invRenderGrid(); break;   // the × or a tap beside the card (not inside it)
       case 'inv-gear': invGear = !invGear; try { localStorage.setItem('pore.invgear.v1', invGear ? '1' : '0'); } catch (err) { /* ignore */ } haptic(6); renderCharms(); toast(invGear ? 'Gear only' : 'Everything'); break;
       case 'inv-view':
-        if (['maps', 'npcs', 'monsters', 'bosses', 'chests', 'encounters'].includes(invTab)) { placeView = el.dataset.view; try { localStorage.setItem('pore.placeview.v1', placeView); } catch (err) { /* ignore */ } }
+        if (invTab === 'library') { libView = el.dataset.view; try { localStorage.setItem('pore.libview.v1', libView); } catch (err) { /* ignore */ } }
+        else if (['maps', 'npcs', 'monsters', 'bosses', 'chests', 'encounters'].includes(invTab)) { placeView = el.dataset.view; try { localStorage.setItem('pore.placeview.v1', placeView); } catch (err) { /* ignore */ } }
         else { invView = el.dataset.view; try { localStorage.setItem('pore.invview.v2', invView); } catch (err) { /* ignore */ } }
         renderCharms(); break;
       case 'craft-qty': { const k = el.dataset.key; craftQty[k] = Math.max(1, Math.min(99999, (craftQty[k] || 1) + Number(el.dataset.d))); haptic(4);
@@ -6072,7 +6093,10 @@ __SOLVER_JS__
       return;
     }
     if (f === 'cstock' && !ui.charmsSheet.hidden) { clearTimeout(invBadgeT); invBadgeT = setTimeout(() => { const a = document.activeElement; renderCharms(); const g = document.querySelector(`[data-field="cstock"][data-key="${el.dataset.key}"]`); if (g && a === el) { g.focus(); g.setSelectionRange(g.value.length, g.value.length); } }, 700); }
-    if (f === 'inv-q') { invQ = el.value; invSel = null; invRenderGrid(); return; }
+    if (f === 'inv-q') { invQ = el.value; invSel = null;
+      if (invTab === 'library' && invLib) {   // typing on an entry's page goes back to the list, still typing
+        invLib = null; renderCharms(); const i = document.querySelector('[data-field="inv-q"]'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } return; }
+      invRenderGrid(); return; }
     if (f === 'inv-item') {
       const n = Math.max(0, Math.min(1e12, Math.round(Number(el.value)) || 0));
       invSetItem(el.dataset.key, n); invSave();
