@@ -1907,9 +1907,9 @@ __SOLVER_JS__
   }
   // Each map's picture is made from its wiki data: the landscape of its kind at the place's own time of day, with
   // the things most often found lying around there (by the wiki's chances) on the ground, drawn with our icons.
-  const MAP_FINDS = new Map(MAPS.map(m => [m.name, []]));
-  for (const [k, list] of Object.entries(WHERE)) for (const e of list) if (e[0] === 'find' && MAP_FINDS.has(e[1])) MAP_FINDS.get(e[1]).push([k, e[2]]);
-  for (const l of MAP_FINDS.values()) l.sort((a, b) => b[1] - a[1]);
+  const MAP_ORES = new Map(MAPS.map(m => [m.name, []]));   // the ore nodes on each map, easiest to mine first
+  for (const [k, list] of Object.entries(WHERE)) for (const e of list) if (e[0] === 'mine') for (const loc of e[3] || []) if (MAP_ORES.has(loc) && !MAP_ORES.get(loc).some(o => o[0] === k)) MAP_ORES.get(loc).push([k, +e[2] || 0]);
+  for (const l of MAP_ORES.values()) l.sort((a, b) => a[1] - b[1]);
   // how you get an item on one map, best chance first: [chance %, how] (ore nodes and shops count as sure things)
   function mapChance(key, map) {
     let best = [0, ''];
@@ -1935,7 +1935,7 @@ __SOLVER_JS__
   function mapPic(m) {
     if (mapArt[m.name]) return mapArt[m.name];
     const base = bgThumb(MAP_BG[m.kind] || 'hills', MAP_NIGHT.has(m.kind) ? 'night' : 'day');
-    const finds = (MAP_FINDS.get(m.name) || []).slice(0, 4).map(f => f[0]).filter(k => GOOD_BY_KEY.has(k) || ITEM_BY_KEY.has(k) || CHARMS.some(c => c.key === k));
+    const finds = (MAP_ORES.get(m.name) || []).slice(0, 4).map(f => f[0]);   // its ores (a map without ore shows its landscape alone)
     if (!base || mapPic.busy?.[m.name]) return base;
     (mapPic.busy || (mapPic.busy = {}))[m.name] = 1;
     const load = src => new Promise(ok => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => ok(null); im.src = src; });
@@ -1943,9 +1943,9 @@ __SOLVER_JS__
       if (!bg) return;
       const W = 112, H = 80, c = document.createElement('canvas'); c.width = W; c.height = H;
       const g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(bg, 0, 0, W, H);
-      const got = ics.filter(Boolean), n = got.length, sz = 22, rnd = sceneRand(m.name.length * 97 + (m.steps || 0));
-      got.forEach((im, i) => {   // spread along the ground, the most common one in front
-        const x = Math.round((i + .5) * W / n - sz / 2 + (rnd() - .5) * 8), y = H - sz - 3 - Math.round(rnd() * 6) - (i % 2) * 4;
+      const got = ics.filter(Boolean), n = got.length, sz = 24, gap = 4, x0 = Math.round((W - n * sz - (n - 1) * gap) / 2);
+      got.forEach((im, i) => {   // side by side on the ground, easiest ore on the left
+        const x = x0 + i * (sz + gap), y = H - sz - 4;
         g.fillStyle = 'rgba(0, 0, 0, .35)'; g.fillRect(x + 3, y + sz - 2, sz - 6, 3);   // a little shadow
         g.drawImage(im, x, y, sz, sz);
       });
