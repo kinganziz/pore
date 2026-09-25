@@ -1187,6 +1187,26 @@
   .bg-pick { align-items: flex-start; }
   .bg-pick .seg { flex-wrap: wrap; justify-content: flex-end; border-radius: 16px; }
   .font-pick small { font-size: 11px; color: var(--soft); }
+  /* ---------- title screen: no frames (games put little in boxes here): the item cards and the call to action sit on the world ---------- */
+  :root .home-hero .home-best.home-best { background: none !important; border: 0 !important; box-shadow: none !important; backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important; justify-content: center; padding: 6px 0; text-shadow: 1px 1px 0 rgba(0, 0, 0, .65), 0 0 12px rgba(0, 0, 0, .45); }
+  :root .home-hero .home-best .hb-icon { background: none !important; box-shadow: none !important; filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, .45)); }
+  :root .home-hero .home-best .hb-icon .pixel { width: 52px; height: 52px; }
+  :root .home-hero .home-best small { color: rgba(255, 255, 255, .82); }
+  :root .home-hero .btn.home-cta.home-cta.home-cta { background: none !important; border: 0 !important; box-shadow: none !important; color: #fff !important;
+    font-size: 22px; padding: 10px 14px; text-shadow: 2px 2px 0 rgba(0, 0, 0, .6), 0 0 16px rgba(0, 0, 0, .4); animation: cta-breathe 2.4s ease-in-out infinite; }
+  :root .home-hero .btn.home-cta.home-cta.home-cta svg { width: 24px; height: 24px; filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, .55)); }
+  :root .home-hero .btn.home-cta.home-cta.home-cta:active { transform: scale(.96) !important; }
+  @keyframes cta-breathe { 0%, 100% { opacity: 1; } 50% { opacity: .62; } }
+  /* light theme: the daytime sky is pale, so the title screen reads in dark ink with a soft light edge */
+  :root[data-theme="light"] .home-hero :is(.home-title, .home-best, .home-best b, .btn.home-cta.home-cta.home-cta) { color: #1b1f33 !important; text-shadow: 1px 1px 0 rgba(255, 255, 255, .7), 0 0 12px rgba(255, 255, 255, .6) !important; }
+  :root[data-theme="light"] .home-hero .home-title span { background: linear-gradient(90deg, #b86200, #c02d6a 55%, #16779f); -webkit-background-clip: text; background-clip: text; color: transparent !important; filter: drop-shadow(1px 1px 0 rgba(255, 255, 255, .7)); }
+  :root[data-theme="light"] .home-hero :is(.home-sub, .home-hint, .home-best small) { color: #2c3350 !important; text-shadow: 0 0 8px rgba(255, 255, 255, .8); }
+  :root[data-theme="light"] .home-hero .home-sub b { color: #1b1f33; }
+  :root[data-theme="light"] .home-hero .home-kicker { color: #8a5200 !important; text-shadow: 0 0 8px rgba(255, 255, 255, .8); }
+  :root[data-theme="light"] .home-hero .hb-num { color: #0f8a55 !important; }
+  :root[data-theme="light"] .home-hero .btn.home-cta.home-cta.home-cta svg { filter: drop-shadow(1px 1px 0 rgba(255, 255, 255, .7)); }
+  @media (prefers-reduced-motion: reduce) { :root .home-hero .btn.home-cta.home-cta.home-cta { animation: none; } }
 </style>
 </head>
 <body>
@@ -2251,16 +2271,17 @@ __SOLVER_JS__
   /* ================= backgrounds: animated pixel scenes behind every screen ================= */
   // Five original pixel scenes (Hills, Sea, Desert, Snow, Town), each with a night (dark theme) and a day (light
   // theme) palette, drawn live at low resolution and scaled up with crisp pixels. Layers scroll in whole pixels.
-  // Settings (help page): which scene (Auto = a different one each time the app opens, or None) and Motion on/off.
+  // Settings (help page): which scene (Sea by default; Auto = a different one each time the app opens; None) and
+  // Motion on/off.
   // Home moves fully; plans and sheets hold the land still with only small things moving, about six frames a
   // second; hidden pages, Motion off and reduced motion draw one still frame.
   const scene = { el: null, ctx: null, raf: 0, timer: 0, W: 0, H: 0, px: 2, x: 0, last: 0, key: '', st: null, sky: null, skyKey: '' };
   const BG_SCENES = ['hills', 'sea', 'desert', 'snow', 'town'];
   const BG_NAMES = { auto: 'Auto', hills: 'Hills', sea: 'Sea', desert: 'Desert', snow: 'Snow', town: 'Town', none: 'None' };
-  let bgPref = 'auto', bgMotion = true, bgNow = 'hills';
+  let bgPref = 'sea', bgMotion = true, bgNow = 'sea';
   function bgLoad() {
-    try { bgPref = localStorage.getItem('pore.bg.v1') || 'auto'; bgMotion = localStorage.getItem('pore.bgmotion.v1') !== 'off'; } catch (e) { /* ignore */ }
-    if (!BG_NAMES[bgPref]) bgPref = 'auto';
+    try { bgPref = localStorage.getItem('pore.bg.v1') || 'sea'; bgMotion = localStorage.getItem('pore.bgmotion.v1') !== 'off'; } catch (e) { /* ignore */ }
+    if (!BG_NAMES[bgPref]) bgPref = 'sea';
     if (bgPref === 'auto') {   // a different scene each time the app opens
       let lastBg = null; try { lastBg = localStorage.getItem('pore.bg.last'); } catch (e) { /* ignore */ }
       const pool = BG_SCENES.filter(k => k !== lastBg);
@@ -2270,7 +2291,7 @@ __SOLVER_JS__
     document.documentElement.toggleAttribute('data-nobg', bgNow === 'none');
   }
   function setBg(pref) {
-    bgPref = BG_NAMES[pref] ? pref : 'auto';
+    bgPref = BG_NAMES[pref] ? pref : 'sea';
     try { localStorage.setItem('pore.bg.v1', bgPref); } catch (e) { /* ignore */ }
     bgNow = bgPref === 'auto' ? (BG_SCENES.includes(bgNow) ? bgNow : 'hills') : bgPref;
     document.documentElement.toggleAttribute('data-nobg', bgNow === 'none');
