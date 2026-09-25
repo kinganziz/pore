@@ -1680,6 +1680,7 @@
   .fuse-grid span { color: var(--soft); } .fuse-grid b { color: var(--gold); text-align: right; }
   .ip-head b, .ip-head small { white-space: normal; overflow: visible; text-overflow: clip; }
   :is(#pickerSheet, #projectsSheet, #charmsSheet, #settingsSheet) .sheet-head [data-action^="close-"] { display: none !important; }
+  .home-best .hb-icon { --pk-shadow: 0; }
 </style>
 </head>
 <body>
@@ -2404,10 +2405,21 @@ __SOLVER_JS__
       if (old) { old.className = img.className; img.replaceWith(old); }
     });
   }   // content hash of the icon files (tools/build.py): new icons never come from a stale cache
+  let spriteInline = false;
+  (function inlineSprite() {
+    const sprite = ICON_STYLES.pixelhd.sprite;
+    fetch(`icons/${sprite}.svg?v=${ICONS_V}`).then(r => r.ok ? r.text() : Promise.reject()).then(t => {
+      const box = document.createElement('div'); box.innerHTML = t;
+      const svg = box.firstElementChild; if (!svg) return;
+      svg.setAttribute('aria-hidden', 'true'); svg.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden';
+      document.body.prepend(svg); spriteInline = true;
+      document.querySelectorAll('svg.pixel use').forEach(u => { const h = u.getAttribute('href') || ''; const i = h.indexOf('#'); if (i > 0) u.setAttribute('href', h.slice(i)); });
+    }).catch(() => { /* the file references keep working */ });
+  })();
   function iconSVG(key, cls) {
     const sprite = ICON_STYLES[iconStyle].sprite;
     if (!sprite) return `<img class="pixel ${cls || ''}" src="icons/modern/${key}.svg?v=${ICONS_V}" alt="" decoding="sync" draggable="false">`;
-    return `<svg class="pixel ${cls || ''}" aria-hidden="true"><use href="icons/${sprite}.svg?v=${ICONS_V}#${key}"/></svg>`;
+    return `<svg class="pixel ${cls || ''}" aria-hidden="true"><use href="${spriteInline ? '' : `icons/${sprite}.svg?v=${ICONS_V}`}#${key}"/></svg>`;
   }
   function applyLook() {
     document.documentElement.setAttribute('data-icons', iconStyle);

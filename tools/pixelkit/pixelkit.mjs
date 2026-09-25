@@ -403,7 +403,8 @@ export function pixelKit(options = {}) {
     // cast shadow: every empty pixel just down-right of the drawing, soft and dark, drawn first (underneath)
     const sh = [];
     if (SHADOW) for (let y = 1; y < N; y++) { let x = 1; while (x < N) { const on = xx => xx < N && !grid[y][xx] && grid[y - 1][xx - 1]; if (!on(x)) { x++; continue; } let x1 = x + 1; while (on(x1)) x1++; sh.push(`M${x} ${y}h${x1 - x}v1h-${x1 - x}z`); x = x1; } }
-    const shadow = sh.length ? `<path fill="#0b0816" fill-opacity="${String(SHADOW).replace(/^0\./, '.')}" d="${sh.join('')}"/>` : '';
+    const op = String(SHADOW).replace(/^0\./, '.');
+    const shadow = sh.length ? `<path fill="#0b0816" style="fill-opacity:var(--pk-shadow,${op})" d="${sh.join('')}"/>` : '';
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${N} ${N}" shape-rendering="crispEdges">${shadow}${[...runs].map(([c, d]) => `<path fill="${c}" d="${d.join('')}"/>`).join('')}</svg>`;
   }
 
