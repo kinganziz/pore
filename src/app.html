@@ -1639,6 +1639,7 @@
   .map-head .map-pic { width: 112px; height: 80px; }
   .map-head small { color: var(--gold); font-size: 13px; }
   .map-head p { margin: 4px 0 0; color: var(--soft); font-size: 13px; line-height: 1.35; }
+  .named-slot .ns-ch { display: block; text-align: center; font-size: 11px; color: var(--gold); opacity: .85; margin-top: 1px; }
 </style>
 </head>
 <body>
@@ -1897,6 +1898,7 @@ __SOLVER_JS__
     return best;
   }
   const chanceTxt = ([c, how]) => how === 'found' ? `found ${c}%` : how === 'mined' || how.startsWith('sold') ? how : `${how} ${c}%`;
+  const chanceShort = ([c, how]) => how === 'mined' ? 'mine' : how.startsWith('sold') ? 'shop' : c + '%';
   const mapArt = {};
   function mapPic(m) {
     if (mapArt[m.name]) return mapArt[m.name];
@@ -4946,6 +4948,7 @@ __SOLVER_JS__
         .forEach(it => {
           const gear = ITEM_BY_KEY.has(it.key);
           rows.push({ key: it.key, icon: iconSVG(it.key), n: has(it) ? invQty(inv.items[it.key]) : '', cls: has(it) ? '' : 'off', glow: gear ? '#3aa84a' : '#4aa8ff', label: it.name, lv: gear && has(it) ? 'I' : '',
+            ch: mc && mc.get(it.key)[0] ? chanceShort(mc.get(it.key)) : '',
             sub: (mc && mc.get(it.key)[0] ? chanceTxt(mc.get(it.key)) + ' · ' : '') + (gear ? `${TYPE_SINGULAR[it.type] || ''} · ${statsLine(it)}` : `${GOOD_SINGULAR[it.type] || ''}${it.rarity ? ' · ' + it.rarity : ''}${it.desc ? ' · ' + it.desc : ''}`) });
         });
     }
@@ -4953,7 +4956,7 @@ __SOLVER_JS__
     let html;
     if (invView === 'list') html = `<div class="inv-list">${rows.map(r => `<button type="button" class="inv-row ${r.cls} ${sel(r)}" data-action="inv-sel" data-key="${r.key}" title="${esc(r.label)}">` +
         `<span class="ir-ic">${r.icon}</span><span class="ir-main"><b>${esc(r.label)}</b><small>${esc(r.sub || '')}</small></span><span class="ir-n">${r.n || ''}</span></button>`).join('')}</div>`;
-    else if (invView === 'grid') html = `<div class="slots named">${rows.map(r => `<div class="named-slot">${invSlot(r.key, r.icon, r.n, r)}<span class="ns-name">${esc(r.label)}</span></div>`).join('')}</div>`;
+    else if (invView === 'grid') html = `<div class="slots named">${rows.map(r => `<div class="named-slot">${invSlot(r.key, r.icon, r.n, r)}<span class="ns-name">${esc(r.label)}</span>${r.ch ? `<small class="ns-ch">${r.ch}</small>` : ''}</div>`).join('')}</div>`;
     else html = `<div class="slots">${rows.map(r => invSlot(r.key, r.icon, r.n, r)).join('')}</div>`;
     const hint = invTab.startsWith('g:') ? 'Tap an item to see where to get it and set how many you own.' : { all: 'Tap anything to see where to get it and set how many you own. Dim means you have none. Search finds places too.', charms: 'Tap a charm to set your stock or keep it out of plans.', coins: 'Gold pays fees, world boss (WB) tokens pay boss weapons.' }[invTab] || 'Tap an item to see it and set how many base (P1) copies you own.';
     const mp = onMap && MAPS.find(m => m.name === invMap);
