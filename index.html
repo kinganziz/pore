@@ -2843,7 +2843,7 @@ function createSolver() {
   const FXK = {
     // a good plan: ribbons thrown up from the result card
     confetti(at) {
-      return Array.from({ length: 90 }, () => part({ x: at.x, y: at.y, vx: rnd(-7, 7), vy: rnd(-13, -3), g: .36, life: rnd(1400, 2200), size: rnd(5, 9), shape: pick(['ribbon', 'ribbon', 'rect']) }));
+      return Array.from({ length: 110 }, () => part({ x: at.x, y: at.y, vx: rnd(-7, 7), vy: rnd(-13, -3), g: .36, life: rnd(1400, 2200), size: rnd(2.6, 4.6), shape: pick(['ribbon', 'ribbon', 'rect']) }));
     },
     // a ticked step: a ring and a handful of stars from the checkbox
     pop(at, color) {
@@ -2857,7 +2857,7 @@ function createSolver() {
     },
     // the whole item done: confetti rain from the top
     rain() {
-      return Array.from({ length: 150 }, () => part({ x: rnd(0, innerWidth), y: rnd(-120, -10), vx: rnd(-1, 1), vy: rnd(2, 5), g: .05, drag: .995, sway: .05, life: rnd(2800, 4200), size: rnd(5, 9), shape: pick(['ribbon', 'ribbon', 'rect']), age: -rnd(0, 900) }));
+      return Array.from({ length: 150 }, () => part({ x: rnd(0, innerWidth), y: rnd(-120, -10), vx: rnd(-1, 1), vy: rnd(2, 5), g: .05, drag: .995, sway: .05, life: rnd(2800, 4200), size: rnd(2.6, 4.6), shape: pick(['ribbon', 'ribbon', 'rect']), age: -rnd(0, 900) }));
     },
     // ...and fireworks: rockets that burst into twinkling sparks
     firework(x, peak, delay, color) {
