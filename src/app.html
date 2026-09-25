@@ -1115,6 +1115,7 @@ __SOLVER_JS__
   // cost as a share of the standard 2^(max-1) base items, so P5 and P10 items sort and colour fairly
   const costShare = it => badges[it.key] == null ? 1e9 : badges[it.key] / Math.pow(2, maxOf(it) - 1);
   const isHot = it => costShare(it) <= 160 / 512;
+  const noShortcut = it => badges[it.key] != null && badges[it.key] >= Math.pow(2, maxOf(it) - 1);
   const ITEM_BY_KEY = new Map(ITEMS.map(it => [it.key, it]));
   const CHARMS = (ITEM_DB.charms || []).map(c => Object.assign({ key: 'c' + c.id }, c));
   const TYPES = [['WEAPON', 'Weapons', 'Weapon'], ['BOSS', 'Boss weapons', 'Boss weapon'], ['HELMET', 'Helmets', 'Helmet'], ['CHEST', 'Chest', 'Chest'], ['LEGGEAR', 'Leg gear', 'Leg gear'],
@@ -1674,10 +1675,17 @@ __SOLVER_JS__
         <div class="target-rows">${rows}</div>
         ${isPerfect ? '' : `<div style="margin-top:8px"><button class="btn small ghost" type="button" data-action="target-reset">Reset to perfect</button></div>`}
       </details>
-      <div class="safety">
+      ${plainPlan(item) || (item.maxL < 10 && state.m === 'exact' && /\(same plan\)$/.test(safetyCosts())) ? '' : `<div class="safety">
         <div class="nm">Rounding safety<small>${other ? `Formula: ${esc(S.models.find(m => m.key === state.m).label)}` : safetyCosts() || (safe ? 'Only refines that are safe under every rounding variant' : 'Exact formula, cheapest plan')}</small></div>
         <div class="seg ${safe ? 'safe' : 'accent'}"><button type="button" class="${!safe && !other ? 'on' : ''}" data-action="model" data-model="exact">Exact</button><button type="button" class="${safe ? 'on' : ''}" data-action="model" data-model="robust">Safe</button></div>
-      </div>`;
+      </div>`}`;
+  }
+  // The plan is just the standard pairing (no cheaper path exists): known from the solved plan, or up front from
+  // the badge when aiming for a perfect max level (boss weapons).
+  function plainPlan(item) {
+    if (state.m !== 'exact' || state.o.length || Object.keys(state.t).length) return false;
+    if (last && last.item.key === item.key && last.analysis && last.req.level === state.L) return last.analysis.p1 >= Math.pow(2, state.L - 1);
+    return state.L === item.maxL && item.key !== 'custom' && noShortcut(ITEM_BY_KEY.get(item.key));
   }
 
   function safetyCosts() {
@@ -2018,6 +2026,7 @@ __SOLVER_JS__
 
     const cost = a.p1;
     const saved = standard - cost;
+    const plain = saved <= 0 && !a.ownedUse.some(n => n > 0);
     const pct = standard > 0 ? Math.round((saved / standard) * 100) : 0;
     const stock = Math.min(state.stock || 0, cost);
     const toCollect = cost - stock;
@@ -2113,38 +2122,40 @@ __SOLVER_JS__
       return `<div class="shop-row"><div class="qty">${used}</div><div class="what">${chipHTML(nd, item)}<small>from your inventory${used < o.q ? ` (${o.q - used} left over)` : ''}</small></div></div>`;
     }).join('');
 
+    const cheaper = res.ladder.some(r => r.level <= item.maxL && r.cost != null && r.cost < r.standard);
+    const showLadder = cheaper && item.maxL >= 10, costCols = cheaper;
     const refRows = [];
     for (let L = 1; L <= item.maxL; L++) {
       const lad = res.ladder.find(r => r.level === L);
-      refRows.push(`<tr class="${L === state.L ? 'on' : ''}"><td class="lv">P${L}</td><td>${item.chain[L].map((v, i) => `<span class="nb">${v}&nbsp;${item.stats[i].short}</span>`).join(' · ')}</td><td class="r">${fmt(Math.pow(2, L - 1))}</td><td class="r"><b>${lad ? (lad.cost == null ? '–' : fmt(lad.cost)) : 1}</b></td></tr>`);
+      refRows.push(`<tr class="${L === state.L ? 'on' : ''}"><td class="lv">P${L}</td><td>${item.chain[L].map((v, i) => `<span class="nb">${v}&nbsp;${item.stats[i].short}</span>`).join(' · ')}</td>${costCols ? `<td class="r">${fmt(Math.pow(2, L - 1))}</td><td class="r"><b>${lad ? (lad.cost == null ? '–' : fmt(lad.cost)) : 1}</b></td>` : ''}</tr>`);
     }
 
     patchHTML(ui.resultsBody, `${compareKey ? compareHTML() : ''}
       <div class="card hero">
         <div class="hero-top">
-          <span class="hero-label">Cheapest path · ${esc(item.name)} → P${state.L}</span>
+          <span class="hero-label">${plain ? 'No shortcut' : 'Cheapest path'} · ${esc(item.name)} → P${state.L}</span>
           ${solving ? '<span class="solving"><span class="dot"></span>updating</span>' : ''}
         </div>
         <div class="hero-body">
           <div>
             <div class="hero-num"><span id="heroNum">${fmt(cost)}</span><small>base items</small></div>
-            <div class="hero-sub">instead of <b>${fmt(standard)}</b> the standard way${targetPerfect ? '' : ' · custom target'}</div>
+            <div class="hero-sub">${plain ? `No cheaper path exists: the standard way is the cheapest. Refine identical copies in pairs, level by level (${Array.from({ length: state.L }, (_, i) => fmt(Math.pow(2, state.L - 1 - i))).join(' → ')}).` : `instead of <b>${fmt(standard)}</b> the standard way${targetPerfect ? '' : ' · custom target'}`}</div>
             <div class="pills">
-              ${saved > 0 ? `<span class="pill good">− ${fmt(saved)} items</span>` : `<span class="pill info">already optimal</span>`}
+              ${saved > 0 ? `<span class="pill good">− ${fmt(saved)} items</span>` : plain ? '' : `<span class="pill info">already optimal</span>`}
               ${ownedUsed ? `<span class="pill info">${ownedUsed} owned used</span>` : ''}
               ${state.m === 'robust' ? `<span class="pill gold">safe rounding</span>` : state.m !== 'exact' ? `<span class="pill gold">formula: ${esc(modelInfo.label)}</span>` : ''}
               ${res.overrideHits ? `<span class="pill info">${obs.length} observation${obs.length > 1 ? 's' : ''} applied</span>` : ''}
               ${res.approximate ? `<span class="pill warn" title="Large inventory: search was capped, plan is valid but may not be the absolute optimum">approximate</span>` : ''}
             </div>
           </div>
-          <div class="ring" aria-label="${pct}% saved">
+          ${plain ? '' : `<div class="ring" aria-label="${pct}% saved">
             <svg viewBox="0 0 100 100"><defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#37d39a"/><stop offset="1" stop-color="#8b7cff"/></linearGradient></defs><circle class="disc" cx="50" cy="50" r="37"/><circle class="track" cx="50" cy="50" r="42"/><circle class="arc" id="ringArc" cx="50" cy="50" r="42" style="stroke-dashoffset:${ringOffset.toFixed(1)}"/></svg>
             <div class="lbl"><b>${pct}%</b><small>saved</small></div>
-          </div>
+          </div>`}
         </div>
         <div class="tiles">
-          <div class="tile"><small>Refines</small><b>${fmt(a.refines)}</b><i>vs ${fmt(standard - 1)}</i></div>
-          <div class="tile"><small>Gold</small><b>${fmtGold(a.gold)}</b><i>vs ${fmtGold(goldStd)}</i></div>
+          <div class="tile"><small>Refines</small><b>${fmt(a.refines)}</b><i>${plain ? 'in total' : `vs ${fmt(standard - 1)}`}</i></div>
+          <div class="tile"><small>Gold</small><b>${fmtGold(a.gold)}</b><i>${plain ? 'in fees' : `vs ${fmtGold(goldStd)}`}</i></div>
           <div class="tile"><small>Collect</small><b>${fmt(toCollect)}</b><i>${stock ? `${stock} in stock` : 'base items'}</i></div>
         </div>
         <div class="note">Result: ${chipHTML(res.plan.nodes[res.plan.root], item, 'result')}${res.ms > 400 ? ` · solved in ${(res.ms / 1000).toFixed(1)}s` : ''}</div>
@@ -2160,11 +2171,11 @@ __SOLVER_JS__
         </div>
       </div>
 
-      <div class="card">
+      ${showLadder ? `<div class="card">
         <div class="section-title"><h3>Cost by target level</h3><span class="hint">tap a level to plan it</span></div>
         <div class="ladder">${ladder}</div>
         <div class="legend"><span><i style="background:linear-gradient(90deg,var(--accent),var(--good))"></i>PORE plan</span><span><i style="background:repeating-linear-gradient(135deg, rgba(150,150,170,.5) 0 4px, transparent 4px 8px);border:1px solid var(--line-2)"></i>standard 2^(level−1)</span></div>
-      </div>
+      </div>` : ''}
 
       <div class="card" id="guideCard">
         <div class="section-title"><h3>Crafting guide</h3><span class="hint">${actionsView} refine action${actionsView === 1 ? '' : 's'}</span></div>
@@ -2200,8 +2211,8 @@ __SOLVER_JS__
       </div>
 
       <div class="card">
-        <div class="section-title"><h3>Perfect stats by level</h3><span class="hint">standard vs PORE cost</span></div>
-        <div class="table-wrap"><table class="ref"><thead><tr><th>Lv</th><th>Perfect stats</th><th class="r">Standard</th><th class="r">PORE</th></tr></thead><tbody>${refRows.join('')}</tbody></table></div>
+        <div class="section-title"><h3>Perfect stats by level</h3>${costCols ? '<span class="hint">standard vs PORE cost</span>' : ''}</div>
+        <div class="table-wrap"><table class="ref"><thead><tr><th>Lv</th><th>Perfect stats</th>${costCols ? '<th class="r">Standard</th><th class="r">PORE</th>' : ''}</tr></thead><tbody>${refRows.join('')}</tbody></table></div>
       </div>
 
       ${labHTML(item, obs)}`);
@@ -2382,10 +2393,10 @@ __SOLVER_JS__
     const row = it => `<button class="row ${state.item === it.key ? 'on' : ''}" type="button" data-action="pick" data-key="${it.key}">
         <div class="icon-frame sm">${iconSVG(it.key)}</div>
         <div style="min-width:0"><div class="nm">${esc(it.name)}</div><div class="st">${esc(TYPE_SINGULAR[it.type])}${it.boss ? ' · max P' + maxOf(it) : ''}${it.affinity ? ' · ' + esc(AFF_LABEL(it.affinity)) : ''} · ${statsLine(it)}</div></div>
-        <div class="badge">${badges[it.key] != null ? `<b class="${isHot(it) ? 'hot' : ''}">${fmt(badges[it.key])}</b>P${maxOf(it)} cost` : `<b>·</b>`}</div>
+        <div class="badge">${badges[it.key] != null ? `<b class="${isHot(it) ? 'hot' : ''}">${fmt(badges[it.key])}</b>${noShortcut(it) ? 'no shortcut' : `P${maxOf(it)} cost`}` : `<b>·</b>`}</div>
       </button>`;
     const tile = it => `<button class="tile-item ${state.item === it.key ? 'on' : ''}" type="button" data-action="pick" data-key="${it.key}" title="${esc(it.name)} · ${esc(statsLine(it))}">
-        ${iconSVG(it.key)}<span class="tn">${esc(it.name)}</span>${badges[it.key] != null ? `<span class="tc ${isHot(it) ? 'hot' : ''}">P${maxOf(it)} · ${fmt(badges[it.key])}</span>` : ''}
+        ${iconSVG(it.key)}<span class="tn">${esc(it.name)}</span>${badges[it.key] != null ? `<span class="tc ${isHot(it) ? 'hot' : ''}">P${maxOf(it)} · ${noShortcut(it) ? 'no shortcut' : fmt(badges[it.key])}</span>` : ''}
       </button>`;
     // icons only: the name is in the tooltip / screen-reader label
     const bare = it => `<button class="icon-only ${state.item === it.key ? 'on' : ''}" type="button" data-action="pick" data-key="${it.key}" aria-label="${esc(it.name)}" title="${esc(it.name)} · ${esc(statsLine(it))}${badges[it.key] != null ? ` · P${maxOf(it)} ${fmt(badges[it.key])}` : ''}">${iconSVG(it.key)}</button>`;
@@ -2727,7 +2738,7 @@ __SOLVER_JS__
     const bw = g.measureText(big).width;
     g.fillStyle = col('--muted'); g.font = `50px ${font}`; g.fillText('base items', pad + 90 + bw, pad + 520);
     const saved = res.standard - a.p1, pct = res.standard ? Math.round(saved / res.standard * 100) : 0;
-    g.fillStyle = col('--good'); g.font = `54px ${font}`; g.fillText(`instead of ${fmt(res.standard)}: ${pct}% saved`, pad + 60, pad + 610);
+    g.fillStyle = col('--good'); g.font = `54px ${font}`; g.fillText(saved > 0 ? `instead of ${fmt(res.standard)}: ${pct}% saved` : 'no shortcut: the standard way is the cheapest', pad + 60, pad + 610);
     // result stats
     const root = res.plan.nodes[res.plan.root];
     const statTxt = root.s.map((v, i) => `${v} ${item.stats[i].short}`).join(' · ');
@@ -2818,7 +2829,7 @@ __SOLVER_JS__
     const item = last.item, a = last.analysis, res = last.res;
     const lines = [];
     lines.push(`PORE plan — ${item.name} → P${state.L} (${res.plan.nodes[res.plan.root].s.map((v, i) => `${v} ${item.stats[i].short}`).join(', ')})`);
-    lines.push(`Base items: ${a.p1} (standard ${res.standard}) — save ${res.standard - a.p1} (${Math.round((res.standard - a.p1) / res.standard * 100)}%) · ${a.refines} refines · ${fmt(a.gold)} gold${state.m !== 'exact' ? ` · formula: ${(S.models.find(m => m.key === state.m) || {}).label}` : ''}`);
+    lines.push(`Base items: ${a.p1}${a.p1 < res.standard ? ` (standard ${res.standard}) — save ${res.standard - a.p1} (${Math.round((res.standard - a.p1) / res.standard * 100)}%)` : ' (no shortcut: the standard way is the cheapest)'} · ${a.refines} refines · ${fmt(a.gold)} gold${state.m !== 'exact' ? ` · formula: ${(S.models.find(m => m.key === state.m) || {}).label}` : ''}`);
     const lbl = nd => `${isPerfectNode(nd, item.chain) ? 'P' : 'L'}${nd.L} (${nd.s.map((v, i) => `${v} ${item.stats[i].short}`).join(', ')})${nd.k === 1 ? ' [owned]' : ''}`;
     if (state.view === 'jit') {
       lines.push('\nJust-in-time order (one branch at a time):');
