@@ -1348,6 +1348,30 @@
   .rc-line small { grid-column: 3; text-align: right; color: var(--muted); }
   .rc-line.ok small { color: var(--good); } .rc-line.short small b { color: var(--warn); }
   .proj-ready { color: var(--good); } .proj-short { color: var(--warn); }
+  /* ---------- Settings as a game options menu ---------- */
+  #settingsSheet .sheet, #settingsSheet .sheet-head .icon-btn { border: 0 !important; box-shadow: none !important; }
+  #settingsSheet .sheet-head .icon-btn { background: none !important; position: absolute; right: 10px; color: var(--muted); }
+  #settingsSheet .sheet-head { justify-content: center; position: relative; padding-top: 18px; }
+  #settingsSheet .sheet-head h2 { flex: 0 1 auto; text-align: center; font-size: 24px; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); text-shadow: 2px 2px 0 rgba(0, 0, 0, .55); }
+  .gm-h { display: flex; align-items: center; gap: 10px; margin: 18px 4px 6px; font-size: 14px; color: var(--gold); text-transform: uppercase; letter-spacing: 2px; text-shadow: 1px 1px 0 rgba(0, 0, 0, .5); }
+  .gm-h::after { content: ""; flex: 1; height: 2px; background: linear-gradient(90deg, color-mix(in srgb, var(--gold) 45%, transparent), transparent); }
+  .gm-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 4px; }
+  .gm-row.gm-col { flex-direction: column; align-items: stretch; gap: 10px; }
+  .gm-l { font-size: 17px; text-shadow: 1px 1px 0 rgba(0, 0, 0, .5); }
+  .gm-l small { display: block; font-size: 12px; color: var(--soft); text-shadow: none; }
+  .gm-opts { display: flex; gap: 16px; }
+  .gm-opts button { position: relative; border: 0; background: none; padding: 4px 0; color: var(--soft); font: inherit; font-size: 17px; cursor: pointer; transition: color .15s; }
+  .gm-opts button.on { color: var(--gold); text-shadow: 1px 1px 0 rgba(0, 0, 0, .5); }
+  .gm-opts button.on::after { content: ""; position: absolute; left: 0; right: 0; bottom: -2px; height: 3px; background: var(--gold); box-shadow: 1px 1px 0 rgba(0, 0, 0, .45); }
+  .gm-opts button:active { transform: scale(.94); }
+  .gm-menu { display: grid; }
+  .gm-menu button { position: relative; text-align: left; border: 0; background: none; color: var(--text); font: inherit; font-size: 17px; padding: 10px 4px 10px 26px; cursor: pointer;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, .5); transition: color .15s; border-radius: 10px; }
+  .gm-menu button::before { content: ""; position: absolute; left: 8px; top: 50%; width: 8px; height: 12px; margin-top: -6px; background: var(--gold); clip-path: polygon(0 0, 100% 50%, 0 100%); opacity: 0; }
+  .gm-menu button:hover, .gm-menu button:focus-visible { color: var(--gold); background: linear-gradient(90deg, rgba(255, 255, 255, .06), transparent 80%); outline: none; }
+  .gm-menu button:hover::before, .gm-menu button:focus-visible::before, .gm-menu button:active::before { opacity: 1; animation: menu-cursor .9s steps(2) infinite; }
+  .gm-menu button:active { color: var(--gold); }
+  .gm .in-help .bg-thumb.icon { background: rgba(0, 0, 0, .3); color: var(--text); }
 </style>
 </head>
 <body>
@@ -1461,28 +1485,32 @@
       <h2 id="settingsTitle">Settings</h2>
       <button class="icon-btn" type="button" data-action="close-settings" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
-    <div class="sheet-body info-body settings-body">
-      <div class="app-actions">
-        <button class="btn small" type="button" data-action="reload"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg>Reload app</button>
-        <button class="btn small" type="button" data-action="check-update"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Check for update</button>
-      </div>
-      <div class="font-pick theme-pick"><span>Look</span><div class="seg" role="group" aria-label="Look">
+    <div class="sheet-body settings-body gm">
+      <h3 class="gm-h">Display</h3>
+      <div class="gm-row"><span class="gm-l">Look</span><div class="gm-opts" role="group" aria-label="Look">
         <button type="button" data-action="skin-pick" data-skin="modern">Modern</button><button type="button" data-action="skin-pick" data-skin="pixel">Pixel</button><button type="button" data-action="skin-pick" data-skin="game">Game</button>
       </div></div>
-      <div class="font-pick theme-pick bg-pick"><span>Background</span><div class="bg-strip in-help" data-none="1" role="group" aria-label="Background"></div></div>
-      <div class="font-pick theme-pick"><span>Motion <small>(saves battery when off)</small></span><div class="seg" role="group" aria-label="Background motion">
+      <div class="gm-row gm-col"><span class="gm-l">Background</span><div class="bg-strip in-help" data-none="1" role="group" aria-label="Background"></div></div>
+      <div class="gm-row"><span class="gm-l">Motion <small>saves battery when off</small></span><div class="gm-opts" role="group" aria-label="Background motion">
         <button type="button" data-action="bg-motion" data-motion="on">On</button><button type="button" data-action="bg-motion" data-motion="off">Off</button>
       </div></div>
-      <div class="font-pick"><span>Font</span><div class="seg" role="group" aria-label="Font">
-        <button type="button" data-action="font" data-font="jersey">Jersey 15</button><button type="button" data-action="font" data-font="vt323">VT323</button>
+      <div class="gm-row"><span class="gm-l">Font</span><div class="gm-opts" role="group" aria-label="Font">
+        <button type="button" data-action="font" data-font="jersey" style="font-family: 'Jersey 15', sans-serif">Jersey</button><button type="button" data-action="font" data-font="vt323" style="font-family: 'VT323', monospace">VT323</button>
       </div></div>
-      <div class="data-pick"><span>Your data</span><div class="data-btns">
-        <button class="btn small" type="button" data-action="backup-save">Save backup</button>
-        <button class="btn small" type="button" data-action="backup-load">Restore</button>
-        <button class="btn small ghost" type="button" data-action="backup-copy">Copy code</button>
-        <button class="btn small ghost" type="button" data-action="backup-paste">Paste code</button>
-        <button class="btn small ghost" type="button" data-action="intro-replay" style="grid-column: 1 / -1">Replay the intro</button>
-      </div><input type="file" id="backupFile" accept=".json,application/json" hidden></div>
+      <h3 class="gm-h">Your data</h3>
+      <div class="gm-menu">
+        <button type="button" data-action="backup-save">Save backup</button>
+        <button type="button" data-action="backup-load">Restore backup</button>
+        <button type="button" data-action="backup-copy">Copy backup code</button>
+        <button type="button" data-action="backup-paste">Paste backup code</button>
+      </div>
+      <input type="file" id="backupFile" accept=".json,application/json" hidden>
+      <h3 class="gm-h">System</h3>
+      <div class="gm-menu">
+        <button type="button" data-action="check-update">Check for update</button>
+        <button type="button" data-action="reload">Reload app</button>
+        <button type="button" data-action="intro-replay">Replay the intro</button>
+      </div>
     </div>
   </div>
 </div>
