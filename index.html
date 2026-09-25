@@ -1443,6 +1443,18 @@
   .inv-cat.on .cat-art { transform: scale(1.18); }
   .inv-cat.on::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: 2px; height: 3px; border-radius: 2px; background: var(--gold); }
   .inv-cat.on { background: none; }
+  /* inventory without item frames: icons float on the world with a soft glow of their colour; level and count stay */
+  .slot.slot { background: none !important; box-shadow: none !important; overflow: visible; }
+  .slot.slot::before { content: ""; position: absolute; inset: 10%; border-radius: 50%; z-index: -1; pointer-events: none;
+    background: radial-gradient(closest-side, color-mix(in srgb, var(--glow) 34%, transparent), transparent); }
+  .slot.slot { isolation: isolate; }
+  .slot.slot .pixel, .slot.slot > svg { width: 76%; transition: transform .15s; }
+  .slot.slot.sel { box-shadow: none !important; }
+  .slot.slot.sel::before { inset: 0; background: radial-gradient(closest-side, color-mix(in srgb, var(--gold) 55%, transparent), transparent); }
+  .slot.slot.sel .pixel, .slot.slot.sel > svg { transform: scale(1.1); }
+  .slot.slot.add::before { display: none; }
+  .slot.slot.add { color: var(--soft); }
+  .slot.slot.add svg { width: 30%; }
 </style>
 </head>
 <body>
