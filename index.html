@@ -1656,6 +1656,8 @@
   .info-body .why { padding: 12px 14px; border-radius: 12px; background: color-mix(in srgb, var(--gold) 10%, transparent); border-left: 3px solid var(--gold); }
   .info-body .why p { margin: 0 0 8px; } .info-body .why p:last-child { margin: 0; }
   .info-body .why-h { margin-top: 0; }
+  .proj-saved { margin: 14px 4px 0; text-align: center; color: var(--soft); font-size: 14px; }
+  .proj-saved b { color: var(--good, #37d39a); font-size: 18px; }
 </style>
 </head>
 <body>
@@ -4355,7 +4357,7 @@ function createSolver() {
       const tot = a.steps.length, dn = a.steps.filter(st => done.has(stepId(st))).length;
       const rc = readyCheck(item, a.steps, done);
       readyNow = rc;
-      if (currentProject() || dn > 0) upsertProject({ done: dn, total: tot, ready: rc.ready ? 1 : rc.short.length ? 0 : null, short: rc.short.slice(0, 3).join(' · ') });
+      if (currentProject() || dn > 0) upsertProject({ done: dn, total: tot, saved: Math.max(0, standard - cost), ready: rc.ready ? 1 : rc.short.length ? 0 : null, short: rc.short.slice(0, 3).join(' · ') });
     }
     stepIndex = new Map();
     for (const st of a.steps) { if (!groups.has(st.L)) groups.set(st.L, []); groups.get(st.L).push(st); }
@@ -5015,6 +5017,11 @@ function createSolver() {
     renderAll(); scheduleSolve(0);
     openGuide();   // a project goes straight to the guide at the next step (back returns to the plan)
   }
+  // what PORE has spared you across your projects: base items you never have to gather
+  function savedTotalHTML() {
+    const n = projects.reduce((t, pr) => t + (pr.saved || 0), 0);
+    return n > 0 ? `<p class="proj-saved"><b>${fmt(n)}</b> base items you won't have to gather across your projects. Less grind, more life.</p>` : '';
+  }
   function projectsHTML() {
     if (!projects.length) return '';
     const rows = projects.map((pr, i) => {
@@ -5028,7 +5035,7 @@ function createSolver() {
         `${i === 0 ? '<span class="proj-go">Continue ›</span>' : ''}</button>` +
         `<button class="proj-x" type="button" data-action="project-remove" data-id="${esc(pr.id)}" aria-label="Remove ${esc(pr.name)} from my projects" title="Remove from my projects"><svg viewBox="0 0 7 7" shape-rendering="crispEdges"><path fill="currentColor" d="M0 0h2v1h1v1h1V1h1V0h2v2H6v1H5v1h1v1h1v2H5V6H4V5H3v1H2v1H0V5h1V4h1V3H1V2H0z"/></svg></button></div>`;
     }).join('');
-    return `<div class="card projects"><div class="section-title"><h3>My projects</h3><span class="hint">${projects.length} item${projects.length === 1 ? '' : 's'}</span></div><div class="proj-list">${rows}</div>` +
+    return `<div class="card projects"><div class="section-title"><h3>My projects</h3><span class="hint">${projects.length} item${projects.length === 1 ? '' : 's'}</span></div><div class="proj-list">${rows}</div>` + savedTotalHTML() +
       `<button class="proj-new" type="button" data-action="tab" data-tab="items"><span>+</span> New project <small>pick an item to plan</small></button></div>`;
   }
 
