@@ -1259,6 +1259,35 @@
   .tab.update .tab-icon::after { content: ""; position: absolute; top: -2px; right: -4px; width: 9px; height: 9px; border-radius: 50%; background: var(--good, #5be07a);
     box-shadow: 0 0 0 2px var(--bg-2), 0 0 8px var(--good, #5be07a); animation: upd-pulse 1.6s ease-in-out infinite; }
   @keyframes upd-pulse { 50% { transform: scale(1.35); } }
+  /* ---------- Projects as a game menu: no frames, big icons, a menu cursor, segmented progress ---------- */
+  #projectsSheet .sheet { border: 0 !important; box-shadow: none !important; }
+  #projectsSheet .sheet-head { justify-content: center; position: relative; padding-top: 18px; }
+  #projectsSheet .sheet-head h2 { flex: 0 1 auto; text-align: center; font-size: 24px; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); text-shadow: 2px 2px 0 rgba(0, 0, 0, .55); }
+  #projectsSheet .sheet-head .icon-btn { position: absolute; right: 10px; border: 0 !important; background: none !important; box-shadow: none !important; color: var(--muted); }
+  #projectsBody .projects { background: none !important; border: 0 !important; box-shadow: none !important; padding: 4px 0 !important; animation: none; }
+  #projectsBody .proj-list { gap: 2px; }
+  #projectsBody .proj-row { align-items: center; }
+  #projectsBody .proj-open { position: relative; background: none !important; border: 0 !important; box-shadow: none !important; border-radius: 12px; padding: 12px 8px 12px 30px; gap: 14px;
+    transition: background .15s, transform .12s; }
+  #projectsBody .proj-open::before { content: ""; position: absolute; left: 9px; top: 50%; width: 9px; height: 14px; margin-top: -7px; background: var(--gold); clip-path: polygon(0 0, 100% 50%, 0 100%);
+    filter: drop-shadow(1px 1px 0 rgba(0, 0, 0, .5)); opacity: 0; }
+  #projectsBody .proj-row.first .proj-open::before, #projectsBody .proj-open:hover::before, #projectsBody .proj-open:focus-visible::before { opacity: 1; animation: menu-cursor .9s steps(2) infinite; }
+  #projectsBody .proj-list:hover .proj-row.first .proj-open:not(:hover)::before { opacity: 0; }   /* one cursor: it follows the pointer */
+  @keyframes menu-cursor { 50% { transform: translateX(3px); } }
+  #projectsBody .proj-row.first .proj-open { background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 22%, transparent), transparent 85%) !important; }
+  #projectsBody .proj-open:hover { background: linear-gradient(90deg, rgba(255, 255, 255, .08), transparent 85%) !important; }
+  #projectsBody .proj-open:active { transform: scale(.98); }
+  #projectsBody .proj-open .pixel { width: 48px; height: 48px; filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, .45)); }
+  #projectsBody .proj-main { gap: 6px; }
+  #projectsBody .proj-main b { font-size: 18px; text-shadow: 1px 1px 0 rgba(0, 0, 0, .5); }
+  #projectsBody .proj-main b small { color: var(--gold); font-size: 14px; }
+  #projectsBody .proj-main > small { font-size: 13px; }
+  #projectsBody .proj-bar { height: 8px; border-radius: 1px; background: repeating-linear-gradient(90deg, rgba(255, 255, 255, .14) 0 9px, transparent 9px 11px); }   /* an XP bar in blocks */
+  #projectsBody .proj-bar i { border-radius: 0; background: repeating-linear-gradient(90deg, var(--good) 0 9px, transparent 9px 11px); filter: drop-shadow(0 0 3px color-mix(in srgb, var(--good) 60%, transparent)); }
+  #projectsBody .proj-go { position: absolute; right: 8px; bottom: 12px; color: var(--gold); text-transform: uppercase; font-size: 12px; letter-spacing: 1px; text-shadow: 1px 1px 0 rgba(0, 0, 0, .5); }
+  #projectsBody .proj-x { width: 36px; height: 44px; border: 0 !important; background: none !important; box-shadow: none !important; color: var(--soft); font-size: 22px; opacity: .55; transition: opacity .15s, color .15s; }
+  #projectsBody .proj-x:hover, #projectsBody .proj-x:focus-visible { opacity: 1; color: var(--bad); }
+  @media (prefers-reduced-motion: reduce) { #projectsBody .proj-open::before { animation: none; } }
 </style>
 </head>
 <body>
