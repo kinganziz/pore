@@ -5062,6 +5062,19 @@ function createSolver() {
     ui.filters.scrollLeft = sx;   // stays where the player left it
     const nm = document.getElementById('pickCatName'); if (nm) nm.textContent = picker.type === 'ALL' ? '' : (all.find(a => a[0] === picker.type) || [0, ''])[1];
   }
+  // Best value: stats an item gains from P1 to its perfect max, per base item PORE's plan takes (the best use of
+  // your gathering time); gear you own comes first, so the top of the list is your next best move
+  const valueCache = new Map();
+  function valueOf(it) {
+    if (badges[it.key] == null || noShortcut(it)) return 0;
+    if (valueCache.has(it.key)) return valueCache.get(it.key);
+    let v = 0;
+    try {
+      const base = Object.values(it.stats), chain = S.perfectChain(base, itemRates(it), maxOf(it), S.makeCtx('exact', {}, base.length));
+      const top = chain[maxOf(it)] || base; v = (top.reduce((t, x) => t + x, 0) - base.reduce((t, x) => t + x, 0)) / Math.max(1, badges[it.key]);
+    } catch (e) { v = 0; }
+    valueCache.set(it.key, v); return v;
+  }
   function statsLine(it) { return Object.entries(it.stats).map(([n, v]) => `${v} ${metaFor(n).short}`).join(' · '); }
   function renderPickerList() {
     if (picker.type === 'CUSTOM') { renderCustomForm(); return; }
@@ -5071,7 +5084,9 @@ function createSolver() {
     if (sq) list = list.filter(it => Object.entries(it.stats).some(([n, v]) => sq.match(n) && sq.test(v)));
     else if (q) list = list.filter(it => it.name.toLowerCase().includes(q) || (it.boss || '').toLowerCase().includes(q) || Object.keys(it.stats).some(n => n.toLowerCase().includes(q) || metaFor(n).short.toLowerCase().includes(q)) || (it.affinity || '').toLowerCase().includes(q) || TYPE_SINGULAR[it.type].toLowerCase().includes(q) || (TYPE_WORDS[it.type] || []).some(w => w.startsWith(q) || q.startsWith(w)));
     const byCost = (x, y) => costShare(x) - costShare(y) || x.name.localeCompare(y.name);
+    const owned = it => (inv.items[it.key] || 0) > 0 ? 1 : 0;
     if (picker.sort === 'cost') list = list.slice().sort(byCost);
+    else if (picker.sort === 'value') list = list.slice().sort((x, y) => owned(y) - owned(x) || valueOf(y) - valueOf(x) || x.name.localeCompare(y.name));
     else list = list.slice().sort((x, y) => x.name.localeCompare(y.name));
     const on = it => state.item === it.key ? 'sel' : '';
     const cost = it => badges[it.key] != null ? (noShortcut(it) ? '—' : fmt(badges[it.key])) : '';
@@ -5088,7 +5103,7 @@ function createSolver() {
     const box = icons ? 'slots' : grid ? 'slots named' : 'inv-list';
     const pv = document.getElementById('pickViews');
     if (pv) pv.innerHTML = ['grid', 'list', 'icons'].map(v => `<button type="button" class="${(v === 'list' ? !grid && !icons : picker.view === v) ? 'on' : ''}" data-action="picker-view" data-view="${v}" aria-label="${v === 'grid' ? 'Tiles with names' : v === 'list' ? 'List' : 'Icons only'}" title="${v === 'grid' ? 'Tiles' : v === 'list' ? 'List' : 'Icons'}">${INV_VIEW_SVG[v]}</button>`).join('');
-    let html = `<div class="sort-row"><span>${list.length} item${list.length === 1 ? '' : 's'}</span><div class="sort-tools"><div class="seg"><button type="button" class="${picker.sort === 'name' ? 'on' : ''}" data-action="sort" data-sort="name">A–Z</button><button type="button" class="${picker.sort === 'cost' ? 'on' : ''}" data-action="sort" data-sort="cost" title="Fewest base items for a perfect ${picker.type === 'BOSS' ? 'P5' : picker.type === 'ALL' ? 'max' : 'P10'}">Least grind</button></div></div></div>`;
+    let html = `<div class="sort-row"><span>${list.length} item${list.length === 1 ? '' : 's'}</span><div class="sort-tools"><div class="seg"><button type="button" class="${picker.sort === 'name' ? 'on' : ''}" data-action="sort" data-sort="name">A–Z</button><button type="button" class="${picker.sort === 'cost' ? 'on' : ''}" data-action="sort" data-sort="cost" title="Fewest base items for a perfect ${picker.type === 'BOSS' ? 'P5' : picker.type === 'ALL' ? 'max' : 'P10'}">Least grind</button><button type="button" class="${picker.sort === 'value' ? 'on' : ''}" data-action="sort" data-sort="value" title="Most stats gained per base item (your gear first)">Best value</button></div></div></div>`;
     if (!q && picker.type === 'ALL') {   // a shelf above the full list: what you opened lately
       let rec = recent.map(k => ITEM_BY_KEY.get(k)).filter(Boolean);
       if (picker.sort === 'cost') rec = rec.slice().sort(byCost);
