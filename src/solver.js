@@ -412,8 +412,21 @@ function createSolver() {
         bl.gold += n * GOLD[nd.L];
       }
     });
-    steps.sort((a, b) => (a.L - b.L) || (sum(b.result.s) - sum(a.result.s)) || (b.count - a.count));
-    return { steps: steps, p1: p1, ownedUse: ownedUse, refines: refines, gold: gold, byLevel: byLevel, count: count };
+    // An owned P2 is still a P2: refines with the same stats merge into one step, whether their inputs are
+    // crafted or come from your inventory. The crafted node stays the representative (its id keeps old ticks).
+    const merged = new Map();
+    for (const st of steps) {
+      const key = st.L + '|' + st.result.s.join(',') + '|' + st.base.L + ':' + st.base.s.join(',') + '|' + st.mat.L + ':' + st.mat.s.join(',');
+      const own = (st.base.k === 1 ? st.count : 0) + (st.mat.k === 1 ? st.count : 0);
+      const m = merged.get(key);
+      if (!m) { st.ids = [st.id]; st.ownedIn = own; merged.set(key, st); continue; }
+      const stOwned = st.base.k === 1 || st.mat.k === 1, mOwned = m.base.k === 1 || m.mat.k === 1;
+      if (mOwned && !stOwned) { m.id = st.id; m.result = st.result; m.base = st.base; m.mat = st.mat; }
+      m.ids.push(st.id); m.count += st.count; m.ownedIn += own;
+    }
+    const list = Array.from(merged.values());
+    list.sort((a, b) => (a.L - b.L) || (sum(b.result.s) - sum(a.result.s)) || (b.count - a.count));
+    return { steps: list, p1: p1, ownedUse: ownedUse, refines: refines, gold: gold, byLevel: byLevel, count: count };
   }
 
   function standardGold(level) {
