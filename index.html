@@ -3284,6 +3284,36 @@ function createSolver() {
     }
   }
 
+  // Swipe sideways on an empty part of any screen to move between the tab pages (Home, Items, Plan, Guide, Help).
+  // Ignored where something scrolls sideways already, on inputs, at the screen edges (the phone's own back
+  // gesture) and for mostly vertical moves.
+  const TAB_ORDER = ['home', 'items', 'plan', 'guide', 'help'];
+  let swipe = null;
+  function swipeBlocked(el) {
+    for (let n = el; n && n !== document.body; n = n.parentElement) {
+      if (n.matches && n.matches('input, textarea, select, [contenteditable], .hb-track, .deal-row, .table-wrap, .pair-flow')) return true;
+      if (n.scrollWidth > n.clientWidth + 2) { const ox = getComputedStyle(n).overflowX; if (ox === 'auto' || ox === 'scroll') return true; }
+    }
+    return false;
+  }
+  document.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    swipe = e.touches.length === 1 && t.clientX > 18 && t.clientX < innerWidth - 18 && !swipeBlocked(e.target) ? { x: t.clientX, y: t.clientY, at: performance.now() } : null;
+  }, { passive: true });
+  document.addEventListener('touchend', e => {
+    if (!swipe) return;
+    const t = e.changedTouches[0], dx = t.clientX - swipe.x, dy = t.clientY - swipe.y, quick = performance.now() - swipe.at < 700;
+    swipe = null;
+    if (!quick || Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.8) return;
+    const now = !ui.guideSheet.hidden ? 'guide' : !ui.pickerSheet.hidden ? 'items' : !ui.infoSheet.hidden ? 'help' : state.item ? 'plan' : 'home';
+    const step = dx < 0 ? 1 : -1, open = planTarget();
+    for (let i = TAB_ORDER.indexOf(now) + step; i >= 0 && i < TAB_ORDER.length; i += step) {
+      const id = TAB_ORDER[i];
+      if ((id === 'plan' || id === 'guide') && !open) continue;   // locked until an item has been opened
+      tabGo(id); break;
+    }
+  }, { passive: true });
+
   /* ================= home screen ================= */
   // A hero with the best real saving and one big button, your projects, the best deals and the item groups.
   function homeDeals() {
