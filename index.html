@@ -1575,7 +1575,7 @@
   body.menu-open .pore-scrim { pointer-events: auto; }   /* a tap anywhere else closes the strip */
   @media (prefers-reduced-motion: reduce) { .pore-menu { transition: none; } }
   /* screensaver: the app fades away, the scene stays */
-  body.saver > :where(:not(#scene):not(script)) { opacity: 0 !important; pointer-events: none !important; transition: opacity .8s ease; }   /* fades out; comes back at once */
+  body.saver > :where(:not(#scene):not(#saverClock):not(script)) { opacity: 0 !important; pointer-events: none !important; transition: opacity .8s ease; }   /* fades out; comes back at once */
   body.saver { cursor: none; }
   .ip-place { display: block; padding: 0; border: 0; background: none; font: inherit; font-size: 15px; font-weight: 700; color: var(--text); text-align: left; cursor: pointer; text-decoration: underline dotted color-mix(in srgb, var(--gold) 60%, transparent); text-underline-offset: 3px; }
   .ip-place:active { color: var(--gold); }
@@ -1592,6 +1592,9 @@
   .inv-cat .cat-n { position: absolute; top: 1px; right: 3px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--gold); color: #2a1606;
     font-style: normal; font-size: 11px; line-height: 16px; text-align: center; box-shadow: 1px 1px 0 rgba(0, 0, 0, .45); pointer-events: none; }
   .inv-cat .cat-n[hidden] { display: none; }
+  #saverClock { position: fixed; z-index: 2; left: 0; right: 0; top: 16vh; text-align: center; font-family: var(--display); font-size: clamp(48px, 16vw, 96px); color: #fff;
+    text-shadow: 4px 4px 0 rgba(0, 0, 0, .45); letter-spacing: 2px; opacity: 0; pointer-events: none; transition: opacity .8s ease; }
+  body.saver #saverClock { opacity: .85; }
 </style>
 </head>
 <body>
@@ -1786,6 +1789,7 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <canvas id="scene" aria-hidden="true"></canvas>
+<div id="saverClock" aria-hidden="true"></div>
 <nav class="tabbar" id="tabbar" aria-label="Main"></nav>
 <canvas id="fx" class="fx" hidden></canvas>
 
@@ -3270,11 +3274,21 @@ function createSolver() {
   const saverOn = () => document.body.classList.contains('saver');
   function saverArm() {
     clearTimeout(saverT);
-    if (saverSecs > 0) saverT = setTimeout(() => { if (!document.hidden) { document.body.classList.add('saver'); sceneHide(); sceneShow(); } }, saverSecs * 1000);
+    if (saverSecs > 0) saverT = setTimeout(() => { if (!document.hidden) { document.body.classList.add('saver'); sceneHide(); sceneShow(); saverTick(); } }, saverSecs * 1000);
+  }
+  // while it runs: a big clock, and on Auto a new scene every 90 seconds
+  let saverClockT = 0, saverSceneAt = 0;
+  function saverTick() {
+    clearTimeout(saverClockT);
+    if (!saverOn()) return;
+    const el = document.getElementById('saverClock'), d = new Date();
+    if (el) el.textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (bgPref === 'auto') { if (!saverSceneAt) saverSceneAt = Date.now() + 90000; else if (Date.now() > saverSceneAt) { saverSceneAt = Date.now() + 90000; bgNext(); } }
+    saverClockT = setTimeout(saverTick, 5000);
   }
   function saverWake(e) {
     if (saverOn()) {
-      document.body.classList.remove('saver');
+      document.body.classList.remove('saver'); clearTimeout(saverClockT); saverSceneAt = 0;
       if (e && e.cancelable && (e.type === 'pointerdown' || e.type === 'click' || e.type === 'keydown')) { e.preventDefault(); e.stopPropagation(); }
       if (e && e.type === 'pointerdown') {   // swallow the click that follows the waking tap (only that one)
         const eat = ev => { ev.preventDefault(); ev.stopPropagation(); };
