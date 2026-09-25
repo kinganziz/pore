@@ -982,6 +982,66 @@
   .share-row .btn { width: 52px; padding: 0; display: grid; place-items: center; }
   .share-row svg { width: 20px; height: 20px; }
   .lvl-note { justify-content: center; text-align: center; }
+  /* ---------- home screen ---------- */
+  body:not(.has-item) .col-inputs { display: none; }
+  @media (min-width: 980px) { body:not(.has-item) .app { grid-template-columns: minmax(0, 1fr); max-width: 860px; } }
+  .home-hero { position: relative; overflow: hidden; padding: 26px 20px 22px; border: 0;
+    background: radial-gradient(120% 90% at 0% 0%, rgba(139, 124, 255, .55), transparent 60%),
+                radial-gradient(90% 80% at 100% 100%, rgba(55, 211, 154, .38), transparent 60%),
+                linear-gradient(150deg, #2a1f5c, #3b1f55 45%, #13324a); color: #fff; box-shadow: 0 18px 50px rgba(20, 10, 60, .45); }
+  .home-hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, .12) 45%, transparent 60%);
+    transform: translateX(-100%); animation: home-shine 5.5s ease-in-out 1.2s infinite; pointer-events: none; }
+  @keyframes home-shine { 0% { transform: translateX(-100%); } 35%, 100% { transform: translateX(100%); } }
+  .home-copy { position: relative; z-index: 1; display: grid; justify-items: start; gap: 10px; max-width: 520px; }
+  .home-kicker { font-size: 12px; letter-spacing: 1.4px; text-transform: uppercase; font-weight: 700; color: #c9bfff; }
+  .home-title { font-family: var(--display); font-size: clamp(30px, 8.6vw, 44px); line-height: 1.02; margin: 0; letter-spacing: -.5px; }
+  .home-title span { background: linear-gradient(90deg, #ffe08a, #ff9ad8 55%, #8ff0ff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .home-sub { margin: 0; color: rgba(255, 255, 255, .78); max-width: 34ch; }
+  .home-sub b { color: #fff; }
+  .home-best { display: flex; align-items: center; gap: 12px; padding: 10px 14px 10px 10px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, .22);
+    background: rgba(255, 255, 255, .1); color: #fff; text-align: left; cursor: pointer; backdrop-filter: blur(6px); }
+  .home-best .hb-icon { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 14px; background: rgba(0, 0, 0, .25); flex: 0 0 auto; }
+  .home-best .hb-icon .pixel { width: 44px; height: 44px; }
+  .home-best b { font-size: 17px; display: block; }
+  .home-best .hb-num { font-family: var(--display); font-size: 26px; color: #9dffc9; }
+  .home-best small { display: block; color: rgba(255, 255, 255, .7); font-size: 12px; margin-top: 2px; }
+  .home-cta { display: inline-flex; align-items: center; gap: 10px; font-size: 18px; padding: 14px 24px; border-radius: 999px; margin-top: 4px;
+    box-shadow: 0 10px 28px rgba(139, 124, 255, .55), 0 0 0 0 rgba(255, 255, 255, .5); animation: home-pulse 2.6s ease-out 1.5s infinite; }
+  .home-cta svg { width: 20px; height: 20px; }
+  @keyframes home-pulse { 0% { box-shadow: 0 10px 28px rgba(139, 124, 255, .55), 0 0 0 0 rgba(255, 255, 255, .45); } 70%, 100% { box-shadow: 0 10px 28px rgba(139, 124, 255, .55), 0 0 0 16px rgba(255, 255, 255, 0); } }
+  .home-hint { font-size: 12px; color: rgba(255, 255, 255, .6); }
+  .floaters { position: absolute; inset: 0; pointer-events: none; }
+  .floater { position: absolute; width: 46px; height: 46px; opacity: .9; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .35)); animation: home-bob 3.6s ease-in-out infinite; }
+  .floater .pixel { width: 100%; height: 100%; }
+  .floater.f0 { top: 14px; right: 16px; transform: rotate(-8deg); }
+  .floater.f1 { top: 74px; right: 64px; width: 38px; height: 38px; animation-delay: -1.2s; opacity: .75; }
+  .floater.f2 { top: 128px; right: 12px; width: 42px; height: 42px; animation-delay: -2.1s; }
+  .floater.f3 { bottom: 86px; right: 70px; width: 34px; height: 34px; animation-delay: -.6s; opacity: .7; }
+  .floater.f4 { bottom: 22px; right: 18px; width: 44px; height: 44px; animation-delay: -2.8s; }
+  .floater.f5 { top: 18px; right: 88px; width: 30px; height: 30px; animation-delay: -1.8s; opacity: .6; }
+  @keyframes home-bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -8px; } }
+  @media (max-width: 520px) { .floater.f1, .floater.f2, .floater.f3, .floater.f5 { display: none; } .floater.f4 { bottom: 64px; right: 16px; } }
+  .home-deals .deal-row { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 4px 2px 8px; margin: 0 -4px; scrollbar-width: none; }
+  .home-deals .deal-row::-webkit-scrollbar { display: none; }
+  .deal { flex: 0 0 118px; scroll-snap-align: start; display: grid; justify-items: center; gap: 4px; padding: 12px 8px 10px; border-radius: 16px;
+    border: 1px solid var(--line-2); background: linear-gradient(170deg, var(--surface-2), var(--surface)); color: var(--text); cursor: pointer; text-align: center; transition: transform .15s var(--ease); }
+  .deal:active { transform: scale(.96); }
+  .deal-icon .pixel { width: 48px; height: 48px; }
+  .deal-name { font-size: 13px; font-weight: 700; line-height: 1.15; min-height: 2.3em; display: flex; align-items: center; }
+  .deal-cost { font-size: 12px; color: var(--muted); }
+  .deal-save { font-size: 13px; font-weight: 800; color: #06231a; background: var(--good); border-radius: 999px; padding: 1px 9px; }
+  .type-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  @media (min-width: 560px) { .type-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+  .type-tile { display: grid; justify-items: center; gap: 4px; padding: 10px 4px 8px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface-2);
+    color: var(--text); font-size: 12px; font-weight: 700; cursor: pointer; min-width: 0; transition: transform .15s var(--ease), border-color .15s; }
+  .type-tile:active { transform: scale(.95); }
+  .type-tile .pixel, .type-tile .fglyph { width: 34px; height: 34px; }
+  .type-tile span { max-width: 100%; line-height: 1.1; font-size: 11.5px; overflow-wrap: normal; word-break: keep-all; }
+  :root[data-theme="light"] .home-hero { background: radial-gradient(120% 90% at 0% 0%, rgba(139, 124, 255, .7), transparent 60%),
+                radial-gradient(90% 80% at 100% 100%, rgba(55, 211, 154, .55), transparent 60%), linear-gradient(150deg, #3a2a86, #5a2a7a 45%, #1a4a6a); }
+  :root[data-skin="pixel"] .home-hero { border: 2px solid var(--line) !important; }
+  :root[data-skin="pixel"] .home-cta { border-radius: 12px; }
+  @media (prefers-reduced-motion: reduce) { .home-hero::after, .floater, .home-cta { animation: none; } }
 </style>
 </head>
 <body>
@@ -1185,7 +1245,6 @@ __SOLVER_JS__
   };
   const STAT_NAMES = Array.from(new Set(ITEM_DB.statNames.concat(Object.keys(STAT_META)))).sort();
   const AFF_LABEL = a => a ? a.split('_').map(w => w[0] + w.slice(1).toLowerCase()).join(' + ') : '';
-  const EXAMPLES = ['Wooden Sword', 'Soldier Sword', 'Platinum Dagger', 'Purpurite Sword'];
   const STORAGE = { state: 'pore.state.v3', badges: 'pore.badges.v4', recent: 'pore.recent.v1', theme: 'pore.theme', done: 'pore.done.', obs: 'pore.observations.v1', icons: 'pore.iconstyle.v2', skin: 'pore.skin', font: 'pore.font', projects: 'pore.projects.v1', cstock: 'pore.charmstock.v1', charmoff: 'pore.charmoff.v1', community: 'pore.community.v1', intro: 'pore.intro.v1' };
   const REPO_URL = 'https://github.com/kinganziz/pore';
   const MODEL_KEYS = new Set(S.models.map(m => m.key));
@@ -2017,18 +2076,68 @@ __SOLVER_JS__
     </div>`;
   }
 
+  /* ================= home screen ================= */
+  // A hero with the best real saving and one big button, your projects, the best deals and the item groups.
+  const HOME_FLOATERS = ['Gilded Dominion', 'Frostheart Claymore', 'Gold Chestplate', 'Fire Gold Ring', 'Wizard Hat', 'Sun Demon Amulet'];
+  function homeDeals() {
+    return ITEMS.filter(it => badges[it.key] != null && !noShortcut(it))
+      .sort((x, y) => costShare(x) - costShare(y) || x.name.localeCompare(y.name)).slice(0, 12);
+  }
+  function homeHTML() {
+    const deals = homeDeals(), best = deals[0];
+    const std = it => Math.pow(2, maxOf(it) - 1);
+    const pct = it => Math.round((1 - badges[it.key] / std(it)) * 100);
+    const floaters = HOME_FLOATERS.map(n => ITEMS.find(it => it.name === n)).filter(Boolean)
+      .map((it, i) => `<span class="floater f${i}">${iconSVG(it.key)}</span>`).join('');
+    const hero = `<section class="card home-hero">
+        <div class="floaters" aria-hidden="true">${floaters}</div>
+        <div class="home-copy">
+          <span class="home-kicker">Pixel Odyssey refining</span>
+          <h1 class="home-title">Max your gear<br><span>for a fraction.</span></h1>
+          <p class="home-sub">A perfect P10 normally eats <b>512</b> base items. PORE finds the cheapest path, step by step.</p>
+          ${best ? `<button class="home-best" type="button" data-action="pick" data-key="${best.key}">
+            <span class="hb-icon">${iconSVG(best.key)}</span>
+            <span class="hb-text"><b><span class="hb-num" data-count="${badges[best.key]}">${fmt(badges[best.key])}</span> items</b> for a perfect P${maxOf(best)}<small>${esc(best.name)} · ${pct(best)}% less</small></span>
+          </button>` : ''}
+          <button class="btn primary home-cta" type="button" data-action="open-picker">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></svg>
+            Choose an item
+          </button>
+          <span class="home-hint">${ITEMS.length} items from the wiki, or your own stats</span>
+        </div>
+      </section>`;
+    const dealRow = deals.length ? `<section class="card home-deals">
+        <div class="section-title"><h3>Best deals</h3><span class="hint">cheapest to max</span></div>
+        <div class="deal-row">${deals.map(it => `<button class="deal" type="button" data-action="pick" data-key="${it.key}">
+          <span class="deal-icon">${iconSVG(it.key)}</span>
+          <span class="deal-name">${esc(it.name)}</span>
+          <span class="deal-cost">P${maxOf(it)} · ${fmt(badges[it.key])}</span>
+          <span class="deal-save">−${pct(it)}%</span>
+        </button>`).join('')}</div>
+      </section>` : '';
+    const types = TYPES.map(([k, label]) => `<button class="type-tile" type="button" data-action="browse" data-type="${k}">${filterIcon(k)}<span>${esc(label)}</span></button>`).join('');
+    const browse = `<section class="card home-types">
+        <div class="section-title"><h3>Browse</h3><span class="hint">by type</span></div>
+        <div class="type-grid">${types}<button class="type-tile" type="button" data-action="browse" data-type="CUSTOM">${filterIcon('CUSTOM')}<span>Custom</span></button></div>
+      </section>`;
+    return hero + projectsHTML() + dealRow + browse + tipHTML();
+  }
+  function countUpHome() {
+    const el = document.querySelector('.hb-num');
+    if (!el || reduced) return;
+    const to = Number(el.dataset.count), t0 = performance.now();
+    (function step(t) {
+      const k = Math.min(1, (t - t0) / 900);
+      el.textContent = fmt(Math.round(512 - (512 - to) * (1 - Math.pow(1 - k, 3))));
+      if (k < 1) requestAnimationFrame(step);
+    })(t0);
+  }
+
   function renderResults() {
     const item = last ? last.item : resolveItem();
     if (!item) {
-      const ex = EXAMPLES.map(n => ITEMS.find(it => it.name === n)).filter(Boolean).map(it => `<button class="example" type="button" data-action="pick" data-key="${it.key}">${iconSVG(it.key)}${esc(it.name)}</button>`).join('');
-      ui.resultsBody.innerHTML = `${projectsHTML()}
-        <div class="card empty">
-          <div class="glyph"><span class="hd-only">💎</span><svg class="px-only px-gem" viewBox="0 0 15 12" shape-rendering="crispEdges"><path fill="#0b0b1e" d="M0 4h1v1h-1zM1 3h1v1h-1zM1 5h1v1h-1zM10 0h1v1h-1zM10 8h1v1h-1zM11 1h1v1h-1zM11 7h1v1h-1zM12 2h1v1h-1zM12 6h1v1h-1zM13 3h1v1h-1zM13 5h1v1h-1zM14 4h1v1h-1zM2 2h1v1h-1zM2 6h1v1h-1zM3 1h1v1h-1zM3 7h1v1h-1zM4 0h1v1h-1zM4 8h1v1h-1zM5 0h1v1h-1zM5 9h1v1h-1zM6 0h1v1h-1zM6 10h1v1h-1zM7 0h1v1h-1zM7 11h1v1h-1zM8 0h1v1h-1zM8 10h1v1h-1zM9 0h1v1h-1zM9 9h1v1h-1z"/><path fill="#9fe3ff" d="M2 3h1v1h-1zM2 5h1v1h-1zM3 2h1v1h-1zM3 3h1v1h-1zM3 5h1v1h-1zM3 6h1v1h-1zM4 1h1v1h-1zM4 2h1v1h-1zM4 3h1v1h-1zM4 5h1v1h-1zM4 6h1v1h-1zM4 7h1v1h-1zM5 1h1v1h-1zM5 3h1v1h-1zM5 5h1v1h-1zM5 6h1v1h-1zM5 7h1v1h-1zM5 8h1v1h-1zM6 5h1v1h-1zM6 6h1v1h-1zM6 7h1v1h-1zM6 8h1v1h-1zM6 9h1v1h-1z"/><path fill="#e6fbff" d="M6 1h1v1h-1zM6 3h1v1h-1zM7 10h1v1h-1zM7 1h1v1h-1zM7 2h1v1h-1zM7 3h1v1h-1zM7 5h1v1h-1zM7 6h1v1h-1zM7 7h1v1h-1zM7 8h1v1h-1zM7 9h1v1h-1zM8 1h1v1h-1zM8 2h1v1h-1zM8 3h1v1h-1z"/><path fill="#5cc3ff" d="M10 1h1v1h-1zM10 2h1v1h-1zM10 3h1v1h-1zM11 2h1v1h-1zM11 3h1v1h-1zM12 3h1v1h-1zM9 1h1v1h-1zM9 2h1v1h-1zM9 3h1v1h-1z"/><path fill="#ffffff" d="M5 2h1v1h-1zM6 2h1v1h-1z"/><path fill="#3aa0f0" d="M1 4h1v1h-1zM10 4h1v1h-1zM11 4h1v1h-1zM12 4h1v1h-1zM13 4h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM5 4h1v1h-1zM6 4h1v1h-1zM7 4h1v1h-1zM8 4h1v1h-1zM9 4h1v1h-1z"/><path fill="#2a74cc" d="M10 5h1v1h-1zM10 6h1v1h-1zM10 7h1v1h-1zM11 5h1v1h-1zM11 6h1v1h-1zM12 5h1v1h-1zM8 5h1v1h-1zM8 6h1v1h-1zM8 7h1v1h-1zM8 8h1v1h-1zM8 9h1v1h-1zM9 5h1v1h-1zM9 6h1v1h-1zM9 7h1v1h-1zM9 8h1v1h-1z"/></svg></div>
-          <h3>Refine smarter, not harder</h3>
-          <p>A perfect P10 normally costs 512 base items. PORE finds refinement paths that reach the same stats for a fraction of that. Pick an item to start.</p>
-          <div class="examples">${ex}</div>
-          ${tipHTML()}
-        </div>`;
+      ui.resultsBody.innerHTML = homeHTML();
+      countUpHome();
       maybeIntro();
       return;
     }
@@ -2907,7 +3016,7 @@ __SOLVER_JS__
     // people who already use PORE skip it (the help page can replay it)
     if (!introSeen('pick') && (recent.length || projects.length) && !introSeen('replay')) { markIntro('pick'); markIntro('guide'); return; }
     if (!state.item && !introSeen('pick')) {
-      setTimeout(() => coach(document.querySelector('.pick-trigger'), "Hi, I'm anz! Pick the item you want to refine here, and I'll find the cheapest way to max it.", 'pick'), 900);
+      setTimeout(() => coach(document.querySelector('.home-cta') || document.querySelector('.pick-trigger'), "Hi, I'm anz! Pick the item you want to refine here, and I'll find the cheapest way to max it.", 'pick'), 900);
     } else if (state.item && introSeen('pick') && !introSeen('guide') && last && last.res) {
       setTimeout(() => { const b = document.querySelector('.guide-cta'); if (b) coach(b, "Here's your plan! Every step is listed below: scroll down and follow it at your own pace. Or tap here and I'll hand you one refine at a time. Either way, your progress is saved.", 'guide'); }, 1800);
     }
@@ -3045,6 +3154,7 @@ __SOLVER_JS__
         break;
       }
       case 'open-picker': openPicker(); break;
+      case 'browse': picker.type = el.dataset.type; picker.q = ''; openPicker(); break;
       case 'close-picker': closePicker(); break;
       case 'close-info': closeInfo(); break;
       case 'clear-search': picker.q = ''; ui.searchInput.value = ''; el.hidden = true; renderPickerList(); ui.searchInput.focus(); break;
