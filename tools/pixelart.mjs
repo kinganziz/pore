@@ -377,7 +377,7 @@ function fromTxt(t) {
 }
 // Colour intensity: every icon is drawn more vivid than its grid (saturation up, a touch more contrast).
 // Near-greys (steel, silver, white, outlines) keep their colour so metals are not tinted.
-const VIVID = 1.3, CONTRAST = 1.08;
+const VIVID = 1.8, CONTRAST = 1.16;
 function vivid(h) {
   let [r, g, b] = hex(h).map(v => v / 255);
   const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
