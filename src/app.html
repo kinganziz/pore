@@ -1715,6 +1715,10 @@
   .place-tile .map-pic { width: 92px; height: 66px; }
   .place-grid.bare .map-pic { width: 64px; height: 46px; }
   .place-tile .pt-name { font-size: 12px; line-height: 1.2; text-align: center; color: var(--gold); }
+  /* the plan page gets the same even tint over the scene as the sheets (Items, Inventory…), not just behind its cards */
+  body.has-item:not(.locked):not(.saver)::after { content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background: color-mix(in srgb, var(--bg-2) var(--sheet-a, 50%), transparent); }
+  :root[data-nobg] body.has-item::after { display: none; }
 </style>
 </head>
 <body>
