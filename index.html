@@ -1093,6 +1093,20 @@
   :root[data-flavor="game"] .chip-btn .lvr { font-family: "Press Start 2P", monospace; font-size: 10px; }
   .theme-pick button { font-family: inherit !important; }
   :root[data-skin="pixel"] .home-title { font-size: clamp(20px, 6vw, 30px); line-height: 1.25; letter-spacing: 0; }
+  /* ---------- pixel frames: stepped pixel corners on every frame (pixel and game looks) ---------- */
+  :root[data-skin="pixel"] :is(.card, .hero, .toast, .tile-item, .icon-only, .charm-chip, .btn, .icon-btn, .chip-btn, .example, .mini, .filter, .row,
+      .seg, .pill, .chip, .tip, .talk, .g-recipe, .g-how, .same-formula, .proj-open, .proj-x, .coach-bubble, .home-hero, .home-best, .deal, .type-tile,
+      .search input, .cat-select select, .stepper, input[type="number"], .lvl-head .facts span, .sheet, .obs-form, .note, .verdict, .shop-row, .deal-save) {
+    border-image: var(--pf-line) 1 stretch !important; border-radius: 0 !important; background-clip: padding-box;
+  }
+  :root[data-skin="pixel"] :is(.stat-row, .ladder-row, .charm-total, .step, .icon-frame, .safety, .formula, .table-wrap, .fit-row, .tile, .hb-icon, .logo,
+      .step-num, .pick-trigger, .plain-badge, .pf, .pair-flow, .lvl-note, .share-row .btn, .guide-cta, .home-cta, .cstock-grid input, .tag, .deal-save,
+      .proj-bar, .proj-bar i, .progress .track, .progress .fill, .x-btn, .obs-btn, .check) { border-radius: 0 !important; }
+  :root[data-skin="pixel"] :is(.hero, .tile-item.on, .icon-only.on, .charm-chip.on, .row.on, .chip-btn.on.gold, .chip.perfect, .hero.plain) { border-image-source: var(--pf-gold) !important; }
+  :root[data-skin="pixel"] :is(.btn.primary, .chip-btn.on, .filter.on, .toast.tappable, .home-cta, .guide-cta) { border-image-source: var(--pf-accent) !important; }
+  :root[data-skin="pixel"] :is(.seg, .step, .lvl-head, .pick-trigger) { border-image: none !important; }
+  :root[data-skin="pixel"] .deal-save { border-image: none !important; }
+  :root[data-flavor="game"][data-skin="pixel"] :is(.btn.btn.primary, .btn.btn.home-cta, .btn.btn.guide-cta) { border-image-source: var(--pf-good) !important; }
 </style>
 </head>
 <body>
@@ -2145,6 +2159,19 @@ function createSolver() {
     try { localStorage.setItem(STORAGE.font, readFont); } catch (e) { /* ignore */ }
     syncTopbar();
   }
+  // Pixel frames: every border is drawn from a 3x3 pixel image (edges filled, corners empty) in the look's own
+  // colours, so frames get stepped pixel corners instead of smooth rounded ones. One image per frame colour.
+  function frameURL(color) {
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='3' height='3' shape-rendering='crispEdges'><path fill='${color}' d='M1 0h1v1H1zM0 1h1v1H0zM2 1h1v1H2zM1 2h1v1H1z'/></svg>`;
+    return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+  }
+  function syncPixelFrames() {
+    const root = document.documentElement, cs = getComputedStyle(root);
+    for (const [name, v] of [['line', '--line'], ['line2', '--line-2'], ['accent', '--accent'], ['gold', '--gold'], ['good', '--good']]) {
+      const c = cs.getPropertyValue(v).trim();
+      if (c) root.style.setProperty(`--pf-${name}`, frameURL(c));
+    }
+  }
   // Three looks: modern (default), pixel, and game (the pixel look in Pixel Odyssey's own colours and level badges)
   const SKINS = { modern: 'Modern theme', pixel: 'Pixel theme', game: 'Game theme' };
   let skin = 'modern';
@@ -2153,6 +2180,7 @@ function createSolver() {
     const d = document.documentElement;
     d.setAttribute('data-skin', skin === 'modern' ? 'modern' : 'pixel');
     if (skin === 'game') d.setAttribute('data-flavor', 'game'); else d.removeAttribute('data-flavor');
+    syncPixelFrames();
     syncTopbar();
     const b = document.querySelector('[data-action="skin"]');
     if (b) b.setAttribute('aria-pressed', String(skin !== 'modern'));
@@ -3615,6 +3643,7 @@ function createSolver() {
   function haptic(ms) { try { if (userTouched && navigator.vibrate) navigator.vibrate(ms || 8); } catch (e) { /* ignore */ } }
   function setTheme(t) {
     document.documentElement.setAttribute('data-theme', t);
+    syncPixelFrames();
     document.querySelector('meta[name="theme-color"]').setAttribute('content', t === 'light' ? '#dcdfeb' : '#0a0c12');
     try { localStorage.setItem(STORAGE.theme, t); } catch (e) { /* ignore */ }
   }
