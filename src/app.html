@@ -1589,6 +1589,9 @@
   /* tab bar: no border line; a raised 3D edge instead (light top rim, dark ledge under it, a hard shadow above) */
   .tabbar.tabbar { border: 0; background-image: linear-gradient(rgba(255, 255, 255, .07), transparent 55%);
     box-shadow: inset 0 2px 0 rgba(255, 255, 255, .18), inset 0 4px 0 rgba(0, 0, 0, .22), 0 -3px 0 rgba(0, 0, 0, .35), 0 -12px 28px rgba(0, 0, 0, .3); }
+  .inv-cat .cat-n { position: absolute; top: 1px; right: 3px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--gold); color: #2a1606;
+    font-style: normal; font-size: 11px; line-height: 16px; text-align: center; box-shadow: 1px 1px 0 rgba(0, 0, 0, .45); pointer-events: none; }
+  .inv-cat .cat-n[hidden] { display: none; }
 </style>
 </head>
 <body>
@@ -4593,12 +4596,22 @@ __SOLVER_JS__
     const allArt = () => `<span class="cat-quad">${['Iron Sword', 'Potion of Luck', 'Gold ore', 'Apple'].map(n => { const x = ITEMS.find(i => i.name === n) || GOODS.find(i => i.name === n); return x ? iconSVG(x.key) : ''; }).join('')}</span>`;
     const catArt = k => ({ all: allArt(), charms: clover ? iconSVG(clover.key) : '', coins: iconSVG('u-gold') })[k] || (k.startsWith('g:') ? goodArt(k.slice(2)) : filterIcon(k.slice(2)));   // item types use the item list's type icons
     const strip = document.getElementById('invCats'), sx = strip.scrollLeft;
-    strip.innerHTML = cats.map(([k, l]) => `<button type="button" role="tab" class="inv-cat ${invTab === k ? 'on' : ''}" data-action="inv-tab" data-tab="${k}" aria-selected="${invTab === k}" aria-label="${l}" title="${l}">${catArt(k)}</button>`).join('');
+    strip.innerHTML = cats.map(([k, l]) => `<button type="button" role="tab" class="inv-cat ${invTab === k ? 'on' : ''}" data-action="inv-tab" data-tab="${k}" aria-selected="${invTab === k}" aria-label="${l}" title="${l}">${catArt(k)}<i class="cat-n" data-cat="${k}" hidden></i></button>`).join('');
     strip.scrollLeft = sx;   // stays where the player left it
     invRenderGrid();
   }
+  // how many different things you own in each category: a small badge on its icon
+  function invBadges() {
+    const has = key => (inv.items[key] || 0) > 0;
+    const count = k => k === 'charms' ? CHARMS.filter(c => charmStock[c.key] > 0).length
+      : k.startsWith('t:') ? ITEMS.filter(it => it.type === k.slice(2) && has(it.key)).length
+      : k.startsWith('g:') ? GOODS.filter(g => g.type === k.slice(2) && has(g.key)).length
+      : k === 'all' ? ITEMS.filter(it => has(it.key)).length + GOODS.filter(g => has(g.key)).length + CHARMS.filter(c => charmStock[c.key] > 0).length : 0;
+    document.querySelectorAll('#invCats .cat-n').forEach(b => { const n = count(b.dataset.cat); b.hidden = !n; b.textContent = n > 99 ? '99+' : n; });
+  }
   function invRenderGrid() {
     const box = document.getElementById('invGrid'); if (!box) return;
+    invBadges();
     const q = invQ.trim().toLowerCase(), hit = (name, key) => !q || name.toLowerCase().includes(q) || (q.length > 2 && !!PLACES[key] && PLACES[key].includes(q));
     const show = k => invTab === 'all' || invTab === k || (k === 'items' && invTab.startsWith('t:')) || (k === 'goods' && invTab.startsWith('g:'));
     const typeOk = it => invTab.length < 3 || invTab[1] !== ':' || it.type === invTab.slice(2);
