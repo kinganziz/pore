@@ -901,13 +901,21 @@ def boot(ic, pal, trim=None, pattern=None, kind="boot", gem_=None):
         s += tube(ic, "M17.6 30 L32 12.8 L46.4 30", pal, 4.8)
         s += tube(ic, "M19.2 46 C25 50.5 39 50.5 44.8 46", pal, 4.8)
         s.append(circle(ic, 32, 12.8, 3.2, pal, sw=1.4))
-    elif kind == "clog":   # a Dutch clog from the side: toe curving up to a point, flat sole, tall rounded heel
-        body = ("M58 20 C62 30 62 46 57 55 L22 55 C12 55 6 47 4.2 38 C3.5 33 4 28 6 23.5 C12 27.5 20 29.6 28 28.8 "
-                "C32 28.3 34.5 26.6 37 24.6 L51 18.6 C54.5 17.8 57 18 58 20 Z")
-        s.append(shape(ic, body, pal, ic.lg(pal, 0, 0, 0, 1)))
-        s.append(f'<path d="M38 24.5 C43 17.5 53 15.4 57.4 19.2 C56 25.4 47 28.8 40.2 27.8 C38.5 27.3 37.6 26 38 24.5 Z" fill="{pal[3]}" stroke="{pal[3]}" stroke-width="1.2"/>')
-        s.append(line("M9 45 C18 48.5 34 49.5 58 47", pal[2], 1.8, 0.6))
-        s.append(line("M8.4 29 C14 32 22 33 31 31", HL, 2.4, 0.65))
+    elif kind == "clog":   # a Dutch clog seen from above at three quarters: rounded toe down-left, open heel up-right
+        body = ("M5.4 50.2 C6.4 46.4 8.6 44.6 10.1 43.3 C13 38 16 34.5 18.1 32.1 C22 27 26 23.5 29.9 20.5 C34 17 39 13.5 43.5 11.3 "
+                "C50 8 58 7.5 60.5 11.5 C62.5 15 60.5 24 56.9 28.7 C53 33.5 49 36.5 44.5 39.5 C40 42.5 35 45.5 30.3 47.9 "
+                "C25 50.5 21 52 17.5 52.7 C12.8 54.5 8.8 55.9 6.8 54.6 C5.4 53.6 5 51.9 5.4 50.2 Z")
+        s.append(shape(ic, body, pal, ic.lg(pal, 0, 0, 1, 1)))
+        # a thick side wall along the bottom-right edge: the clog's wooden body
+        s.append(f'<path d="M6.8 54.6 C8.8 55.9 12.8 54.5 17.5 52.7 C21 52 25 50.5 30.3 47.9 C35 45.5 40 42.5 44.5 39.5 C49 36.5 53 33.5 56.9 28.7 '
+                 f'C60.1 24.5 61.9 19.5 61.2 15.2 C59.8 20 56.8 23 53.2 24.9 C49.4 29.2 45 32.6 40.4 35.6 C35.5 38.9 30.3 41.6 25.6 43.6 '
+                 f'C21.3 45.5 17 47 13.4 47.8 C10.4 48.5 7.6 49.9 5.6 52.4 C5.8 53.4 6.2 54.2 6.8 54.6 Z" fill="{pal[2]}"/>')
+        # the foot opening
+        s.append(f'<ellipse cx="45.5" cy="22.5" rx="11.5" ry="7.2" transform="rotate(-37.6 45.5 22.5)" fill="{pal[3]}" stroke="{pal[3]}" stroke-width="1.4"/>')
+        # a painted blossom on the toe
+        s.append(circle(ic, 22, 38.5, 4.2, PAL["red"], sw=1.2))
+        s.append(dot(22, 38.5, 1.8, "#fff2a6"))
+        s.append(line("M10.5 44 C15 37 21 30 28 24", HL, 2.4, 0.7))
     elif kind == "shackle":
         s.append(f'<ellipse cx="32" cy="30" rx="24" ry="18" fill="none" stroke="#141216" stroke-width="12"/>')
         s.append(f'<ellipse cx="32" cy="30" rx="24" ry="18" fill="none" stroke="{ic.lgu(PAL["slate"])}" stroke-width="8"/>')
