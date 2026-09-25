@@ -1052,21 +1052,6 @@
   :root[data-flavor="game"] .chip.lv9 { --lvc: #9a4ad8; } :root[data-flavor="game"] .chip.lv10 { --lvc: #e03a4a; }
   :root[data-flavor="game"] .chip-btn .lvr { font-size: 15px; }
   .theme-pick button { font-family: inherit !important; }
-  /* ---------- pixel frames: stepped pixel corners on every frame (pixel and game looks) ---------- */
-  :root[data-skin="pixel"] :is(.card, .hero, .toast, .tile-item, .icon-only, .charm-chip, .btn, .icon-btn, .chip-btn, .example, .mini, .filter, .row,
-      .seg, .pill, .chip, .tip, .talk, .g-recipe, .g-how, .same-formula, .proj-open, .proj-x, .coach-bubble, .home-hero, .home-best, .deal, .type-tile,
-      .search input, .cat-select select, .stepper, input[type="number"], .lvl-head .facts span, .sheet, .obs-form, .note, .verdict, .shop-row, .deal-save) {
-    border-image: var(--pf-line) 4 / calc(var(--pfu) * 4) stretch !important; border-radius: calc(var(--pfu) * 5) !important; background-clip: border-box !important;
-  }
-  :root[data-skin="pixel"] { --pfu: 2px; }
-  :root[data-skin="pixel"] :is(.stat-row, .ladder-row, .charm-total, .step, .icon-frame, .safety, .formula, .table-wrap, .fit-row, .tile, .hb-icon, .logo,
-      .step-num, .pick-trigger, .plain-badge, .pf, .pair-flow, .lvl-note, .share-row .btn, .guide-cta, .home-cta, .cstock-grid input, .tag, .deal-save,
-      .proj-bar, .proj-bar i, .progress .track, .progress .fill, .x-btn, .obs-btn, .check) { border-radius: calc(var(--pfu) * 3) !important; }
-  :root[data-skin="pixel"] :is(.hero, .tile-item.on, .icon-only.on, .charm-chip.on, .row.on, .chip-btn.on.gold, .chip.perfect, .hero.plain) { border-image-source: var(--pf-gold) !important; }
-  :root[data-skin="pixel"] :is(.btn.primary, .chip-btn.on, .filter.on, .toast.tappable, .home-cta, .guide-cta) { border-image-source: var(--pf-accent) !important; }
-  :root[data-skin="pixel"] :is(.seg, .step, .lvl-head, .pick-trigger) { border-image: none !important; }
-  :root[data-skin="pixel"] .deal-save { border-image: none !important; }
-  :root[data-flavor="game"][data-skin="pixel"] :is(.btn.btn.primary, .btn.btn.home-cta, .btn.btn.guide-cta) { border-image-source: var(--pf-good) !important; }
   /* ---------- home as a game title screen over an animated landscape ---------- */
   #scene { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; display: none; image-rendering: pixelated; pointer-events: none; }
   body:not(.has-item) #scene { display: block; }
@@ -1113,8 +1098,8 @@
   @media (max-width: 719px) { .sheet { height: 100%; padding-top: 0; } }
   @media (min-width: 720px) { .sheet { height: min(100%, 900px); } }
   :root[data-skin="pixel"] .tabbar { background: var(--bg-2); border-top: var(--px-w) solid var(--line); box-shadow: none; }
-  @media (min-width: 720px) { :root[data-skin="pixel"] .tabbar { border-image: var(--pf-line) 4 / calc(var(--pfu) * 4) stretch; border-radius: calc(var(--pfu) * 5); box-shadow: var(--px-raised); } }
-  :root[data-skin="pixel"] .tab { border-radius: calc(var(--pfu) * 3); font-family: var(--font); }
+  @media (min-width: 720px) { :root[data-skin="pixel"] .tabbar { border: var(--px-w) solid var(--line); border-radius: 22px; box-shadow: var(--px-raised); } }
+  :root[data-skin="pixel"] .tab { border-radius: 16px; font-family: var(--font); }
   :root[data-skin="pixel"] .tab.on { background: var(--accent); box-shadow: var(--px-btn); }
   :root[data-flavor="game"][data-skin="pixel"] .tab.on { background: #1f5a3c; color: #e0ffe8; border-radius: 14px; box-shadow: none; }
   :root[data-flavor="game"][data-skin="pixel"] .tab.on .tab-glyph { color: #e0ffe8; }
@@ -1129,9 +1114,8 @@
   /* steps: quest cards in a pixel frame, with a square pixel checkbox */
   :root[data-flavor="game"][data-skin="pixel"] .steps { gap: 12px; }
   :root[data-flavor="game"][data-skin="pixel"] .step.step { position: relative; background: color-mix(in srgb, var(--surface) 92%, transparent) !important;
-    --pfu: 3px; border-style: solid !important; border-width: 3px !important; border-image: var(--pf-line2) 4 / calc(var(--pfu) * 4) stretch !important;
-    border-radius: calc(var(--pfu) * 5) !important; background-clip: border-box !important; box-shadow: 3px 3px 0 var(--px-shadow); }
-  :root[data-flavor="game"][data-skin="pixel"] .step .check { width: 28px; height: 28px; border-radius: calc(var(--pfu) * 2); background: var(--bg); border: 3px solid var(--line-2); box-shadow: inset 2px 2px 0 rgba(0, 0, 0, .35); }
+    border: 2px solid var(--line-2) !important; border-radius: 14px !important; box-shadow: 3px 3px 0 var(--px-shadow); }
+  :root[data-flavor="game"][data-skin="pixel"] .step .check { width: 28px; height: 28px; border-radius: 8px; background: var(--bg); border: 3px solid var(--line-2); box-shadow: inset 2px 2px 0 rgba(0, 0, 0, .35); }
   :root[data-flavor="game"][data-skin="pixel"] .step.done .check { background: #1f5a3c; border-color: #5fd873; box-shadow: none; }
   :root[data-flavor="game"][data-skin="pixel"] .step.done { opacity: .72; }
   :root[data-flavor="game"][data-skin="pixel"] .step.done .recipe { text-decoration: none; filter: saturate(.5); }
@@ -1143,14 +1127,14 @@
   :root[data-flavor="game"][data-skin="pixel"] .item-head .icon-frame { background: radial-gradient(circle at 50% 40%, #2f6a52 0, var(--tile) 70%) !important; box-shadow: 3px 3px 0 var(--px-shadow); }
   :root[data-flavor="game"][data-skin="pixel"][data-theme="light"] .item-head .icon-frame { background: radial-gradient(circle at 50% 40%, #fff6dc 0, var(--tile) 70%) !important; }
   /* anz: an RPG dialogue box with a name plate and a blinking "more" arrow */
-  :root[data-flavor="game"][data-skin="pixel"] .talk { position: relative; border-radius: calc(var(--pfu) * 5) !important; padding-bottom: 18px; background: var(--surface) !important; }
+  :root[data-flavor="game"][data-skin="pixel"] .talk { position: relative; border-radius: 14px !important; padding-bottom: 18px; background: var(--surface) !important; }
   :root[data-flavor="game"][data-skin="pixel"] .talk .tip-name { justify-self: start; padding: 4px 8px 3px; background: var(--gold); color: #1a1206; font: 14px/1 var(--font); text-transform: uppercase; box-shadow: 2px 2px 0 var(--px-shadow); }
   :root[data-flavor="game"][data-skin="pixel"] .talk::after { content: ""; position: absolute; right: 12px; bottom: 7px; width: 10px; height: 6px; background: var(--gold);
     clip-path: polygon(0 0, 100% 0, 50% 100%); animation: talk-more 1s steps(2) infinite; }
   @keyframes talk-more { 50% { transform: translateY(3px); } }
   /* toasts: a dialogue box at the bottom, above the tab bar */
   :root[data-flavor="game"][data-skin="pixel"] .toast { top: auto; bottom: calc(var(--tabbar-h) + 14px); transform: translate(-50%, 12px); 
-    background: var(--surface) !important; color: var(--text) !important; --pfu: 3px; border-style: solid !important; border-width: 3px !important; border-image: var(--pf-gold) 4 / calc(var(--pfu) * 4) stretch !important; border-radius: calc(var(--pfu) * 5) !important;
+    background: var(--surface) !important; color: var(--text) !important; border: 3px solid var(--gold) !important; border-radius: 14px !important;
     box-shadow: 4px 4px 0 var(--px-shadow); padding: 12px 30px 12px 16px; text-align: left; font-family: var(--font); font-size: 15px; }
   :root[data-flavor="game"][data-skin="pixel"] .toast.show { transform: translate(-50%, 0); }
   :root[data-flavor="game"][data-skin="pixel"] .toast::after { content: ""; position: absolute; right: 10px; bottom: 9px; width: 8px; height: 5px; background: var(--gold);
@@ -2234,23 +2218,6 @@ function createSolver() {
     try { localStorage.setItem(STORAGE.font, readFont); } catch (e) { /* ignore */ }
     syncTopbar();
   }
-  // Pixel frames: every border is drawn from a 3x3 pixel image (edges filled, corners empty) in the look's own
-  // colours, so frames get stepped pixel corners instead of smooth rounded ones. One image per frame colour.
-  // corner:  . . # #      sliced 4 / 4 / 4 / 4, drawn one pixel = --pfu; the element's border-radius (5 pixels) keeps
-  //          . # . .      its background inside the stepped curve, so nothing shows outside the frame
-  //          # . . .
-  //          # . . .
-  function frameURL(color) {
-    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='9' height='9' shape-rendering='crispEdges'><path fill='${color}' d='M2 0h5v1H2zM2 8h5v1H2zM0 2h1v5H0zM8 2h1v5H8zM1 1h1v1H1zM7 1h1v1H7zM1 7h1v1H1zM7 7h1v1H7z'/></svg>`;
-    return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
-  }
-  function syncPixelFrames() {
-    const root = document.documentElement, cs = getComputedStyle(root);
-    for (const [name, v] of [['line', '--line'], ['line2', '--line-2'], ['accent', '--accent'], ['gold', '--gold'], ['good', '--good']]) {
-      const c = cs.getPropertyValue(v).trim();
-      if (c) root.style.setProperty(`--pf-${name}`, frameURL(c));
-    }
-  }
   // Three looks: modern (default), pixel, and game (the pixel look in Pixel Odyssey's own colours and level badges)
   const SKINS = { modern: 'Modern theme', pixel: 'Pixel theme', game: 'Game theme' };
   let skin = 'modern';
@@ -2259,7 +2226,6 @@ function createSolver() {
     const d = document.documentElement;
     d.setAttribute('data-skin', skin === 'modern' ? 'modern' : 'pixel');
     if (skin === 'game') d.setAttribute('data-flavor', 'game'); else d.removeAttribute('data-flavor');
-    syncPixelFrames();
     syncTopbar();
     const b = document.querySelector('[data-action="skin"]');
     if (b) b.setAttribute('aria-pressed', String(skin !== 'modern'));
@@ -3944,7 +3910,6 @@ function createSolver() {
   function haptic(ms) { try { if (userTouched && navigator.vibrate) navigator.vibrate(ms || 8); } catch (e) { /* ignore */ } }
   function setTheme(t) {
     document.documentElement.setAttribute('data-theme', t);
-    syncPixelFrames();
     document.querySelector('meta[name="theme-color"]').setAttribute('content', t === 'light' ? '#dcdfeb' : '#0a0c12');
     try { localStorage.setItem(STORAGE.theme, t); } catch (e) { /* ignore */ }
   }
