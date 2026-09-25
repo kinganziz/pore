@@ -39,10 +39,10 @@ EQUIP_TYPES = [
     "SHIELD", "RING", "AMULET", "NECKLACE", "TOOL",
 ]
 
-# Everything else a player can own (food, potions, ores, drops...). Skins are cosmetic and left out.
+# Everything else a player can own (food, potions, ores, drops, skins...).
 GOODS_TYPES = [
     "POTION", "FOOD", "FRUIT", "MUSHROOM", "PLANT", "ORE", "INGOT", "MATERIAL", "MONSTER_DROP",
-    "KEY", "VALUABLE", "RELIC", "RESOURCE", "EVENT", "BASIC",
+    "KEY", "VALUABLE", "RELIC", "RESOURCE", "EVENT", "BASIC", "SKIN",
 ]
 
 # World boss weapons can only be refined up to this level.
@@ -145,6 +145,7 @@ def sources(index: dict, items: list, charms: list, goods: list, frontmatter_of)
                          ["enc", encounter, %, amount, [locations]]   ["mine", node, mining power, [locations]]
                          ["chest", chest, "common"|"rare"|"epic", key item]   ["shop", npc, gold, [locations]]
                          ["craft", [[item, amount], ...], needs unlock]   ["boss", world boss]   ["event"]   ["coliseum"]
+                         ["diamonds"]   ["login"]   ["free"]  (skins)
     uses[key] entries:   ["craft", product, amount]   ["key", chest]
     """
     key_of = {}
@@ -231,6 +232,14 @@ def sources(index: dict, items: list, charms: list, goods: list, frontmatter_of)
                 uses.setdefault(ik, []).append(["craft", k, r.get("amount") or 1])
         if parts:
             add(k, ["craft", parts, 1 if fm.get("recipe_requires_unlock") else 0])
+    # skins name their own source: bought with diamonds, a login reward or free
+    for path, meta in index.items():
+        if not (path.startswith("Items/") and path.endswith(".md") and meta):
+            continue
+        fm = frontmatter_of(path, meta)
+        src = str(fm.get("source") or "").lower()
+        if fm.get("type") == "SKIN" and src in ("diamonds", "login", "free"):
+            add(key_of.get(norm(fm.get("name"))), [src])
     # the event and coliseum pages are plain lists of links
     for page, tag in (("Events.md", "event"), ("Coliseum.md", "coliseum")):
         for l in (index.get(page) or {}).get("links") or []:
@@ -339,13 +348,16 @@ def main() -> None:
         sub = fm.get("slot")
         if sub and sub != fm["type"]:
             g["sub"] = sub
+        if fm.get("rarity"):
+            g["rarity"] = str(fm["rarity"]).lower()
         if isinstance(fm.get("stats"), dict):   # relics: percent bonuses on top of everything else
             pct = {k.replace(" PercentOnTop", ""): v for k, v in fm["stats"].items() if isinstance(v, (int, float)) and v}
             if pct:
                 g["pct"] = pct
         goods.append(g)
     goods_order = {t: i for i, t in enumerate(GOODS_TYPES)}
-    goods.sort(key=lambda g: (goods_order[g["type"]], g["name"].lower()))
+    num = lambda name: int(re.sub(r"\D", "", name) or 0)   # Skin #2 before Skin #10
+    goods.sort(key=lambda g: (goods_order[g["type"]], num(g["name"]) if g["type"] == "SKIN" else 0, g["name"].lower()))
 
     where, uses = sources(index, items, charms, goods, frontmatter_of)
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw PORE's own icons for the non-equipment items (potions, food, ores, drops, keys...) -> icons/modern/i<id>.svg
+"""Draw PORE's own icons for the non-equipment items (potions, food, ores, drops, keys, skins...) -> icons/modern/i<id>.svg
 
 Same drawing kit and style as tools/modern_icons.py (64-unit grid, soft top-left light, dark outline,
 gradient fills, white highlight); tools/pixelart.mjs then turns every drawing into the pixel icon.
@@ -16,6 +16,7 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from modern_icons import HL, Icon, C, P, circle, dot, f, facet_gem, line, shape, sparkle, tube  # noqa: E402
+from skin_icons import skin_spec  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 OUT = ROOT / "icons" / "modern"
@@ -959,7 +960,7 @@ def main() -> None:
         name = g["name"]
         if only and name not in only:
             continue
-        spec = SPECS.get(name) or (potion_spec(name) if g["type"] == "POTION" else None)
+        spec = SPECS.get(name) or (potion_spec(name) if g["type"] == "POTION" else skin_spec(name) if g["type"] == "SKIN" else None)
         if not spec:
             missing.append(name)
             continue

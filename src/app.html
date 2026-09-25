@@ -1512,6 +1512,18 @@
   .ip-lab { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
   .ip-lab small { text-transform: none; letter-spacing: 0; color: var(--soft); margin-left: 6px; }
   @media (prefers-reduced-motion: reduce) { .ip-card { animation: none; } }
+  .ip-card.still { animation: none; }
+  .inv-cat-name { display: block; font-size: 15px; letter-spacing: 1px; color: var(--muted); font-family: inherit; font-weight: 400; text-transform: none; min-height: 0; }
+  .inv-cat-name:empty { display: none; }
+  .inv-search .inv-gear { width: 34px; height: 30px; border: 0; border-radius: 8px; background: none; cursor: pointer; display: grid; place-items: center; flex: 0 0 auto; padding: 0; }
+  .inv-gear .cat-art { width: 20px; height: 20px; opacity: .45; filter: saturate(.3); transition: opacity .15s, filter .15s; }
+  .inv-gear.on .cat-art { opacity: 1; filter: none; }
+  .inv-gear.on { background: color-mix(in srgb, var(--gold) 18%, transparent); }
+  .cat-quad { display: grid; grid-template-columns: 1fr 1fr; width: 26px; height: 26px; }
+  .cat-quad .pixel, .cat-quad > svg, .cat-quad img { width: 13px !important; height: 13px !important; }
+  /* a charm's multiplier is a small tag, not a count */
+  .slot .lv.mult { top: 3px; left: 3px; right: auto; padding: 0 4px; border-radius: 6px; font-size: 12px; line-height: 15px; color: #2a1606; text-shadow: none; background: linear-gradient(#ffe07a, #f0a020); box-shadow: 0 1px 0 rgba(0, 0, 0, .5); }
+  .rar.common { color: #c8d0dc; } .rar.rare { color: #6ab8ff; } .rar.epic { color: #c88aff; }
   .ip-row b.pos { color: #7ee07a; } .ip-row b.neg { color: #ff8a8a; }
   .ip-sec { display: grid; gap: 6px; }
   .ip-src { display: grid; grid-template-columns: 16px 1fr; gap: 8px; align-items: start; }
@@ -1629,7 +1641,7 @@
 <div class="sheet-backdrop" id="charmsSheet" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="charmsTitle">
     <div class="sheet-head">
-      <h2 id="charmsTitle">Inventory</h2>
+      <h2 id="charmsTitle">Inventory<small class="inv-cat-name" id="invCatName"></small></h2>
       <button class="icon-btn" type="button" data-action="close-charms" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     <div class="sheet-body" id="charmsBody"></div>
@@ -1756,7 +1768,7 @@ __SOLVER_JS__
     ['MUSHROOM', 'Mushrooms', 'Mushroom', 'Glittercap'], ['PLANT', 'Plants', 'Plant', 'Sunflower'], ['ORE', 'Ores', 'Ore', 'Gold ore'], ['INGOT', 'Ingots', 'Ingot', 'Gold ingot'],
     ['MATERIAL', 'Materials', 'Material', 'Emerald'], ['MONSTER_DROP', 'Monster drops', 'Monster drop', 'Bone'], ['KEY', 'Keys', 'Key', 'Gold Key'],
     ['VALUABLE', 'Valuables', 'Valuable', 'Pouch'], ['RELIC', 'Relics', 'Relic', 'Chalice of Abundance'], ['RESOURCE', 'Resources', 'Resource', 'Coliseum Ticket'],
-    ['EVENT', 'Event items', 'Event item', 'Easter Egg'], ['BASIC', 'Fossils', 'Fossil', 'Fossil']];
+    ['EVENT', 'Event items', 'Event item', 'Easter Egg'], ['BASIC', 'Fossils', 'Fossil', 'Fossil'], ['SKIN', 'Skins', 'Skin', 'Skin #1']];
   const GOOD_SINGULAR = Object.fromEntries(GOOD_TYPES.map(t => [t[0], t[2]]));
   const anyItem = k => ITEM_BY_KEY.get(k) || GOOD_BY_KEY.get(k) || CHARMS.find(c => c.key === k);
   // the places each item comes from, for searching the bag by place ("whisper cave", "undead")
@@ -2229,6 +2241,7 @@ __SOLVER_JS__
     try { localStorage.setItem(STORAGE.icons, iconStyle); } catch (e) { /* ignore */ }
     renderItem(); renderResults();
     if (!ui.pickerSheet.hidden) { renderFilters(); if (picker.type !== 'CUSTOM') renderPickerList(); }
+    renderCharms(); renderProjects();
   }
   function iconHTML(item, cls) {
     if (item.key && item.key !== 'custom') return `<div class="icon-frame ${cls || ''}">${iconSVG(item.key)}</div>`;
@@ -3234,7 +3247,7 @@ __SOLVER_JS__
   const ART_HOME = '<svg class="tab-art" viewBox="0 0 16 15" shape-rendering="crispEdges"><path fill="#2a1608" d="M7 0h2v1h-2zM6 1h1v1h-1zM9 1h1v1h-1zM5 2h1v1h-1zM10 2h1v1h-1zM4 3h1v1h-1zM11 3h1v1h-1zM3 4h1v1h-1zM12 4h1v1h-1zM2 5h1v1h-1zM13 5h1v1h-1zM1 6h14v1h-14zM2 7h1v1h-1zM13 7h1v1h-1zM2 8h1v1h-1zM13 8h1v1h-1zM2 9h1v1h-1zM13 9h1v1h-1zM2 10h1v1h-1zM13 10h1v1h-1zM2 11h1v1h-1zM13 11h1v1h-1zM2 12h1v1h-1zM13 12h1v1h-1zM2 13h1v1h-1zM13 13h1v1h-1zM2 14h12v1h-12z"/><path fill="#a8322a" d="M7 1h2v1h-2zM6 2h1v1h-1zM9 2h1v1h-1zM5 3h1v1h-1zM10 3h1v1h-1zM4 4h1v1h-1zM11 4h1v1h-1zM3 5h1v1h-1zM12 5h1v1h-1z"/><path fill="#d9483b" d="M7 2h2v1h-2zM6 3h4v1h-4zM5 4h6v1h-6zM4 5h8v1h-8z"/><path fill="#c9ae80" d="M3 7h10v1h-10zM3 8h1v1h-1zM12 8h1v1h-1zM3 9h1v1h-1zM12 9h1v1h-1zM3 10h1v1h-1zM12 10h1v1h-1zM3 11h1v1h-1zM12 11h1v1h-1zM3 12h1v1h-1zM12 12h1v1h-1zM3 13h1v1h-1zM12 13h1v1h-1z"/><path fill="#e8d3a8" d="M4 8h8v1h-8zM6 9h4v1h-4zM6 10h4v1h-4zM6 11h6v1h-6zM6 12h6v1h-6zM6 13h6v1h-6z"/><path fill="#7a4a22" d="M4 9h2v1h-2zM4 10h2v1h-2zM4 11h2v1h-2zM4 12h1v1h-1zM4 13h2v1h-2z"/><path fill="#8fd0ff" d="M10 9h2v1h-2zM10 10h2v1h-2z"/><path fill="#f6c453" d="M5 12h1v1h-1z"/></svg>';
   const ART_PROJECTS = '<svg class="tab-art" viewBox="0 0 16 15" shape-rendering="crispEdges"><path fill="#3a2410" d="M2 0h12v1h-12zM1 1h1v1h-1zM14 1h1v1h-1zM1 2h1v1h-1zM14 2h1v1h-1zM2 3h1v1h-1zM13 3h1v1h-1zM2 4h1v1h-1zM13 4h1v1h-1zM2 5h1v1h-1zM13 5h1v1h-1zM2 6h1v1h-1zM13 6h1v1h-1zM2 7h1v1h-1zM13 7h1v1h-1zM2 8h1v1h-1zM13 8h1v1h-1zM2 9h1v1h-1zM13 9h1v1h-1zM2 10h1v1h-1zM13 10h1v1h-1zM2 11h1v1h-1zM13 11h1v1h-1zM1 12h1v1h-1zM14 12h1v1h-1zM1 13h1v1h-1zM14 13h1v1h-1zM2 14h12v1h-12z"/><path fill="#c9a36a" d="M2 1h12v1h-12zM2 2h1v1h-1zM13 2h1v1h-1zM2 12h1v1h-1zM13 12h1v1h-1zM2 13h12v1h-12z"/><path fill="#f2dfb0" d="M3 2h10v1h-10zM3 3h10v1h-10zM3 4h2v1h-2zM10 4h3v1h-3zM3 5h10v1h-10zM3 6h2v1h-2zM11 6h2v1h-2zM3 7h10v1h-10zM3 8h2v1h-2zM8 8h5v1h-5zM3 9h7v1h-7zM12 9h1v1h-1zM3 10h2v1h-2zM7 10h2v1h-2zM3 11h6v1h-6zM12 11h1v1h-1zM3 12h10v1h-10z"/><path fill="#8a6a44" d="M5 4h5v1h-5zM5 6h6v1h-6zM5 8h3v1h-3zM5 10h2v1h-2z"/><path fill="#a8322a" d="M10 9h2v1h-2zM9 10h1v1h-1zM12 10h1v1h-1zM9 11h3v1h-3z"/><path fill="#e0474f" d="M10 10h2v1h-2z"/></svg>';
   const ART_BAG = '<svg class="tab-art" viewBox="0 0 16 14" shape-rendering="crispEdges"><path fill="#2a1608" d="M6 0h4v1h-4zM5 1h1v1h-1zM10 1h1v1h-1zM5 2h1v1h-1zM10 2h1v1h-1zM3 3h10v1h-10zM2 4h1v1h-1zM13 4h1v1h-1zM1 5h1v1h-1zM14 5h1v1h-1zM1 6h1v1h-1zM14 6h1v1h-1zM1 7h1v1h-1zM14 7h1v1h-1zM1 8h1v1h-1zM14 8h1v1h-1zM1 9h1v1h-1zM14 9h1v1h-1zM1 10h1v1h-1zM14 10h1v1h-1zM1 11h1v1h-1zM14 11h1v1h-1zM2 12h1v1h-1zM13 12h1v1h-1zM3 13h10v1h-10z"/><path fill="#7a4a22" d="M3 4h10v1h-10zM2 5h2v1h-2zM12 5h2v1h-2zM2 6h1v1h-1zM13 6h1v1h-1zM2 7h1v1h-1zM13 7h1v1h-1zM2 8h1v1h-1zM13 8h1v1h-1zM2 9h1v1h-1zM13 9h1v1h-1zM2 10h1v1h-1zM13 10h1v1h-1zM2 11h2v1h-2zM12 11h2v1h-2zM3 12h10v1h-10z"/><path fill="#a8683a" d="M4 5h8v1h-8zM3 6h10v1h-10zM3 7h4v1h-4zM9 7h4v1h-4zM3 8h4v1h-4zM9 8h4v1h-4zM3 9h10v1h-10zM3 10h2v1h-2zM6 10h7v1h-7zM4 11h8v1h-8z"/><path fill="#f6c453" d="M7 7h2v1h-2zM7 8h1v1h-1z"/><path fill="#b8862a" d="M8 8h1v1h-1z"/><path fill="#c98a55" d="M5 10h1v1h-1z"/></svg>';
-  const ART_SETTINGS = '<svg class="tab-art" viewBox="0 0 16 14" shape-rendering="crispEdges"><path fill="#2a3140" d="M6 0h4v1h-4zM6 1h1v1h-1zM9 1h1v1h-1zM2 2h2v1h-2zM6 2h1v1h-1zM9 2h1v1h-1zM12 2h2v1h-2zM2 3h1v1h-1zM4 3h2v1h-2zM10 3h2v1h-2zM13 3h1v1h-1zM3 4h1v1h-1zM12 4h1v1h-1zM1 5h3v1h-3zM12 5h3v1h-3zM1 6h1v1h-1zM14 6h1v1h-1zM1 7h1v1h-1zM14 7h1v1h-1zM1 8h3v1h-3zM12 8h3v1h-3zM3 9h1v1h-1zM12 9h1v1h-1zM2 10h1v1h-1zM4 10h2v1h-2zM10 10h2v1h-2zM13 10h1v1h-1zM2 11h2v1h-2zM6 11h1v1h-1zM9 11h1v1h-1zM12 11h2v1h-2zM6 12h1v1h-1zM9 12h1v1h-1zM6 13h4v1h-4z"/><path fill="#c4ccd8" d="M7 1h2v1h-2zM7 2h2v1h-2zM3 3h1v1h-1zM7 3h2v1h-2zM12 3h1v1h-1zM5 4h6v1h-6zM5 5h2v1h-2zM9 5h2v1h-2zM2 6h4v1h-4zM10 6h4v1h-4zM2 7h4v1h-4zM10 7h4v1h-4zM5 8h2v1h-2zM9 8h2v1h-2zM5 9h6v1h-6zM3 10h1v1h-1zM7 10h2v1h-2zM12 10h1v1h-1zM7 11h2v1h-2zM7 12h2v1h-2z"/><path fill="#7c8aa0" d="M6 3h1v1h-1zM9 3h1v1h-1zM4 4h1v1h-1zM11 4h1v1h-1zM4 5h1v1h-1zM11 5h1v1h-1zM4 8h1v1h-1zM11 8h1v1h-1zM4 9h1v1h-1zM11 9h1v1h-1zM6 10h1v1h-1zM9 10h1v1h-1z"/><path fill="#3a4454" d="M7 5h2v1h-2zM6 6h1v1h-1zM9 6h1v1h-1zM6 7h1v1h-1zM9 7h1v1h-1zM7 8h2v1h-2z"/></svg>';
+  const ART_SETTINGS = '<svg class="tab-art" viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="#1e2430" d="M7 0h2v1h-2zM6 1h1v1h-1zM9 1h1v1h-1zM3 2h2v1h-2zM6 2h1v1h-1zM9 2h1v1h-1zM11 2h2v1h-2zM2 3h1v1h-1zM5 3h1v1h-1zM10 3h1v1h-1zM13 3h1v1h-1zM2 4h1v1h-1zM13 4h1v1h-1zM3 5h1v1h-1zM12 5h1v1h-1zM1 6h2v1h-2zM13 6h2v1h-2zM0 7h1v1h-1zM15 7h1v1h-1zM0 8h1v1h-1zM15 8h1v1h-1zM1 9h2v1h-2zM13 9h2v1h-2zM3 10h1v1h-1zM12 10h1v1h-1zM2 11h1v1h-1zM13 11h1v1h-1zM2 12h1v1h-1zM5 12h1v1h-1zM10 12h1v1h-1zM13 12h1v1h-1zM3 13h2v1h-2zM6 13h1v1h-1zM9 13h1v1h-1zM11 13h2v1h-2zM6 14h1v1h-1zM9 14h1v1h-1zM7 15h2v1h-2z"/><path fill="#f4f7fb" d="M7 1h2v1h-2zM7 2h2v1h-2zM3 3h2v1h-2zM6 3h3v1h-3zM3 4h5v1h-5zM4 5h2v1h-2zM3 6h2v1h-2zM1 7h4v1h-4zM1 8h3v1h-3z"/><path fill="#c4ccd8" d="M9 3h1v1h-1zM11 3h2v1h-2zM8 4h5v1h-5zM10 5h2v1h-2zM11 6h1v1h-1zM4 8h1v1h-1zM3 9h2v1h-2zM4 10h2v1h-2zM3 11h4v1h-4zM3 12h2v1h-2z"/><path fill="#4a5566" d="M6 5h4v1h-4zM5 6h1v1h-1zM10 6h1v1h-1zM5 7h1v1h-1zM10 7h1v1h-1zM5 8h1v1h-1zM10 8h1v1h-1zM5 9h1v1h-1zM10 9h1v1h-1zM6 10h4v1h-4z"/><path fill="#ffe07a" d="M6 6h3v1h-3zM6 7h1v1h-1zM6 8h1v1h-1z"/><path fill="#e0a020" d="M9 6h1v1h-1zM9 7h1v1h-1zM9 8h1v1h-1zM6 9h4v1h-4z"/><path fill="#7c8aa0" d="M12 6h1v1h-1zM11 7h4v1h-4zM11 8h4v1h-4zM11 9h2v1h-2zM10 10h2v1h-2zM7 11h6v1h-6zM6 12h4v1h-4zM11 12h2v1h-2zM7 13h2v1h-2zM7 14h2v1h-2z"/><path fill="#5a3a08" d="M7 7h2v1h-2zM7 8h2v1h-2z"/></svg>';
   const CAT_ALL = '<svg class="cat-art" viewBox="0 0 12 12" shape-rendering="crispEdges"><path fill="#9a2a3a" d="M1 0h4v1h-4zM0 1h1v1h-1zM4 1h1v1h-1zM0 2h1v1h-1zM4 2h1v1h-1zM0 3h1v1h-1zM4 3h1v1h-1zM1 4h4v1h-4z"/><path fill="#1f7a3a" d="M7 0h4v1h-4zM6 1h1v1h-1zM10 1h1v1h-1zM6 2h1v1h-1zM10 2h1v1h-1zM6 3h1v1h-1zM10 3h1v1h-1zM7 4h4v1h-4z"/><path fill="#ff5a6e" d="M1 1h2v1h-2zM1 2h3v1h-3zM1 3h3v1h-3z"/><path fill="#ffffff" d="M3 1h1v1h-1zM9 1h1v1h-1zM3 7h1v1h-1zM9 7h1v1h-1z"/><path fill="#5fd873" d="M7 1h2v1h-2zM7 2h3v1h-3zM7 3h3v1h-3z"/><path fill="#2a4aa8" d="M1 6h4v1h-4zM0 7h1v1h-1zM4 7h1v1h-1zM0 8h1v1h-1zM4 8h1v1h-1zM0 9h1v1h-1zM4 9h1v1h-1zM1 10h4v1h-4z"/><path fill="#a8781a" d="M7 6h4v1h-4zM6 7h1v1h-1zM10 7h1v1h-1zM6 8h1v1h-1zM10 8h1v1h-1zM6 9h1v1h-1zM10 9h1v1h-1zM7 10h4v1h-4z"/><path fill="#6aa8ff" d="M1 7h2v1h-2zM1 8h3v1h-3zM1 9h3v1h-3z"/><path fill="#ffd84a" d="M7 7h2v1h-2zM7 8h3v1h-3zM7 9h3v1h-3z"/></svg>';
   const CAT_SWORD = '<svg class="cat-art" viewBox="0 0 12 12" shape-rendering="crispEdges"><path fill="#2a3140" d="M9 0h2v1h-2zM8 1h1v1h-1zM11 1h1v1h-1zM7 2h1v1h-1zM11 2h1v1h-1zM6 3h1v1h-1zM10 3h1v1h-1zM5 4h1v1h-1zM9 4h1v1h-1zM1 5h1v1h-1zM4 5h1v1h-1zM8 5h1v1h-1zM1 6h2v1h-2zM7 6h1v1h-1zM2 7h2v1h-2zM6 7h1v1h-1zM2 8h1v1h-1zM4 8h2v1h-2zM1 9h1v1h-1zM3 9h2v1h-2zM0 10h1v1h-1zM2 10h1v1h-1zM0 11h2v1h-2z"/><path fill="#ffffff" d="M9 1h2v1h-2zM8 2h1v1h-1zM7 3h1v1h-1zM6 4h1v1h-1zM5 5h1v1h-1zM4 6h1v1h-1z"/><path fill="#b8c4d4" d="M9 2h2v1h-2zM8 3h2v1h-2zM7 4h2v1h-2zM6 5h2v1h-2zM5 6h2v1h-2zM4 7h2v1h-2z"/><path fill="#e0a82a" d="M3 8h1v1h-1zM2 9h1v1h-1zM1 10h1v1h-1z"/></svg>';
   const CAT_CLOVER = '<svg class="cat-art" viewBox="0 0 12 12" shape-rendering="crispEdges"><path fill="#1f7a3a" d="M3 0h2v1h-2zM6 0h2v1h-2zM2 1h1v1h-1zM5 1h1v1h-1zM8 1h1v1h-1zM2 2h1v1h-1zM5 2h1v1h-1zM8 2h1v1h-1zM1 3h2v1h-2zM8 3h2v1h-2zM0 4h1v1h-1zM3 4h1v1h-1zM7 4h1v1h-1zM10 4h1v1h-1zM0 5h1v1h-1zM10 5h1v1h-1zM0 6h1v1h-1zM3 6h1v1h-1zM7 6h1v1h-1zM10 6h1v1h-1zM1 7h2v1h-2zM8 7h2v1h-2zM2 8h1v1h-1zM5 8h1v1h-1zM8 8h1v1h-1zM2 9h1v1h-1zM4 9h1v1h-1zM6 9h1v1h-1zM8 9h1v1h-1zM3 10h1v1h-1zM7 10h1v1h-1z"/><path fill="#5fd873" d="M3 1h2v1h-2zM6 1h2v1h-2zM3 2h1v1h-1zM7 2h1v1h-1zM3 3h5v1h-5zM1 4h2v1h-2zM4 4h3v1h-3zM8 4h2v1h-2zM1 5h1v1h-1zM3 5h5v1h-5zM9 5h1v1h-1zM1 6h2v1h-2zM4 6h3v1h-3zM8 6h2v1h-2zM3 7h5v1h-5zM3 8h2v1h-2zM6 8h2v1h-2zM3 9h1v1h-1zM7 9h1v1h-1z"/><path fill="#b8ffbe" d="M4 2h1v1h-1zM6 2h1v1h-1zM2 5h1v1h-1zM8 5h1v1h-1z"/><path fill="#3d8a3d" d="M5 10h1v1h-1zM5 11h2v1h-2z"/></svg>';
@@ -4483,7 +4496,7 @@ __SOLVER_JS__
   function invSlot(key, icon, n, opts) {
     const o = opts || {};
     return `<button type="button" class="slot ${o.cls || ''} ${invSel === key ? 'sel' : ''}" style="--glow:${o.glow || 'var(--gold)'}" data-action="inv-sel" data-key="${key}" aria-label="${esc(o.label)}${n ? ', ' + n : ''}" title="${esc(o.label)}">` +
-      `${icon}${o.lv ? `<b class="lv">${o.lv}</b>` : ''}${n != null && n !== '' ? `<i class="qty">${n}</i>` : ''}</button>`;
+      `${icon}${o.lv ? `<b class="lv ${o.lvCls || ''}">${o.lv}</b>` : ''}${n != null && n !== '' ? `<i class="qty">${n}</i>` : ''}</button>`;
   }
   function invStepper(field, key, val, label) {
     return `<div class="inv-stepper"><button type="button" data-action="inv-step" data-field="${field}" data-key="${key}" data-d="-10" aria-label="10 fewer">−10</button><button type="button" data-action="inv-step" data-field="${field}" data-key="${key}" data-d="-1" aria-label="One fewer">−</button>` +
@@ -4491,6 +4504,8 @@ __SOLVER_JS__
       `<button type="button" data-action="inv-step" data-field="${field}" data-key="${key}" data-d="1" aria-label="One more">+</button><button type="button" data-action="inv-step" data-field="${field}" data-key="${key}" data-d="10" aria-label="10 more">+10</button></div>`;
   }
   let invQ = '';
+  let invGear = false;   // hide everything that cannot be equipped
+  try { invGear = localStorage.getItem('pore.invgear.v1') === '1'; } catch (e) { /* ignore */ }
   let invView = 'grid';   // like the item list: 'grid' (tiles with names), 'list' (rows) or 'icons'
   try { invView = localStorage.getItem('pore.invview.v1') || 'grid'; } catch (e) { /* ignore */ }
   const INV_VIEW_SVG = {
@@ -4502,15 +4517,22 @@ __SOLVER_JS__
   function renderCharms(force) {
     if (!ui.charmsBody || (!force && ui.charmsSheet.hidden)) return;
     // every category the bag can hold: all, charms, each item type (like the game's filter row), coins
-    const cats = [['all', 'All'], ['charms', 'Charms'], ...TYPES.map(t => ['t:' + t[0], t[1]]), ...GOOD_TYPES.map(t => ['g:' + t[0], t[1]]), ['coins', 'Coins']];
+    if (invGear && invTab.startsWith('g:')) invTab = 'all';
+    const cats = [['all', 'All'], ['charms', 'Charms'], ...TYPES.map(t => ['t:' + t[0], t[1]]), ...(invGear ? [] : GOOD_TYPES.map(t => ['g:' + t[0], t[1]])), ['coins', 'Coins']];
+    const catName = (cats.find(c => c[0] === invTab) || cats[0])[1];
+    const nameEl = document.getElementById('invCatName'); if (nameEl) nameEl.textContent = invTab === 'all' ? (invGear ? 'Gear only' : '') : catName;
     ui.charmsBody.innerHTML = `<label class="inv-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></svg><input type="search" placeholder="Search by name" value="${esc(invQ)}" data-field="inv-q" aria-label="Search the inventory">` +
+      `<button type="button" class="inv-gear ${invGear ? 'on' : ''}" data-action="inv-gear" aria-pressed="${invGear}" aria-label="Gear only: hide what you cannot equip" title="Gear only">${CAT_SWORD}</button>` +
       `<span class="inv-views" role="group" aria-label="View">${['grid', 'list', 'icons'].map(v => `<button type="button" class="${invView === v ? 'on' : ''}" data-action="inv-view" data-view="${v}" aria-label="${v === 'grid' ? 'Tiles with names' : v === 'list' ? 'List' : 'Icons only'}" title="${v === 'grid' ? 'Tiles' : v === 'list' ? 'List' : 'Icons'}">${INV_VIEW_SVG[v]}</button>`).join('')}</span></label>` +
       `<div id="invGrid"></div>`;
     // the category icons: a fixed strip at the foot of the sheet, right above the tab bar (like the game)
     const goodArt = t => { const g = GOODS.find(x => x.name === (GOOD_TYPES.find(y => y[0] === t) || [])[3]) || GOODS.find(x => x.type === t); return g ? iconSVG(g.key) : ''; };
-    const catArt = k => ({ all: CAT_ALL, items: CAT_SWORD, charms: CAT_CLOVER, coins: CAT_COINS })[k] || (k.startsWith('g:') ? goodArt(k.slice(2)) : filterIcon(k.slice(2)));   // item types use the item list's type icons
-    document.getElementById('invCats').innerHTML = cats.map(([k, l]) => `<button type="button" role="tab" class="inv-cat ${invTab === k ? 'on' : ''}" data-action="inv-tab" data-tab="${k}" aria-selected="${invTab === k}" aria-label="${l}" title="${l}">${catArt(k)}</button>`).join('');
-    const on = document.querySelector('#invCats .inv-cat.on'); if (on) on.scrollIntoView({ block: 'nearest', inline: 'center' });
+    const clover = CHARMS.find(c => c.name === 'Clover') || CHARMS[0];
+    const allArt = () => `<span class="cat-quad">${['Iron Sword', 'Potion of Luck', 'Gold ore', 'Apple'].map(n => { const x = ITEMS.find(i => i.name === n) || GOODS.find(i => i.name === n); return x ? iconSVG(x.key) : ''; }).join('')}</span>`;
+    const catArt = k => ({ all: allArt(), charms: clover ? iconSVG(clover.key) : CAT_CLOVER, coins: CAT_COINS })[k] || (k.startsWith('g:') ? goodArt(k.slice(2)) : filterIcon(k.slice(2)));   // item types use the item list's type icons
+    const strip = document.getElementById('invCats'), sx = strip.scrollLeft;
+    strip.innerHTML = cats.map(([k, l]) => `<button type="button" role="tab" class="inv-cat ${invTab === k ? 'on' : ''}" data-action="inv-tab" data-tab="${k}" aria-selected="${invTab === k}" aria-label="${l}" title="${l}">${catArt(k)}</button>`).join('');
+    strip.scrollLeft = sx;   // stays where the player left it
     invRenderGrid();
   }
   function invRenderGrid() {
@@ -4520,17 +4542,17 @@ __SOLVER_JS__
     const typeOk = it => invTab.length < 3 || invTab[1] !== ':' || it.type === invTab.slice(2);
     const rows = [];   // { key, icon, n, cls, glow, label, lv, sub }
     if (show('coins')) for (const k of ['gold', 'wb']) { const nm = k === 'gold' ? 'Gold' : 'WB tokens'; if (hit(nm)) rows.push({ key: k, icon: INV_COIN_SVG[k], n: inv[k] != null ? (inv[k] >= 1000 ? invQty(inv[k]) : inv[k] + '') : '', cls: inv[k] == null ? 'blank' : '', glow: k === 'gold' ? '#f6c453' : '#cf8f4f', label: nm, sub: inv[k] == null ? 'not tracked' : k === 'gold' ? 'refining fees' : 'boss weapon fees' }); }
-    if (show('charms')) for (const c of CHARMS) if (hit(c.name, c.key)) rows.push({ key: c.key, icon: iconSVG(c.key), n: charmStock[c.key] ? invQty(charmStock[c.key]) : '', cls: charmOff.has(c.key) ? 'off' : '', glow: '#ff9d3c', label: c.name, lv: '×' + c.factor, sub: `charm ×${c.factor}${charmOff.has(c.key) ? ' · kept out of plans' : ''}` });
+    if (show('charms')) for (const c of CHARMS) if (hit(c.name, c.key)) rows.push({ key: c.key, icon: iconSVG(c.key), n: charmStock[c.key] ? invQty(charmStock[c.key]) : '', cls: charmOff.has(c.key) ? 'off' : '', glow: '#ff9d3c', label: c.name, lv: '×' + c.factor, lvCls: 'mult', sub: `charm ×${c.factor}${charmOff.has(c.key) ? ' · kept out of plans' : ''}` });
     if (show('items') || show('goods')) {
       const has = it => (inv.items[it.key] || 0) > 0;
-      const pool = [...(show('items') ? ITEMS.filter(it => it.key !== 'custom').sort((a, b) => a.name.localeCompare(b.name)) : []), ...(show('goods') ? GOODS : [])]
+      const pool = [...(show('items') ? ITEMS.filter(it => it.key !== 'custom').sort((a, b) => a.name.localeCompare(b.name)) : []), ...(show('goods') && !invGear ? GOODS : [])]
         .filter(it => hit(it.name, it.key) && typeOk(it));
       const at = new Map(pool.map((it, i) => [it.key, i]));
       pool.sort((a, b) => (has(b) - has(a)) || (has(a) ? (inv.added[b.key] || 0) - (inv.added[a.key] || 0) : 0) || at.get(a.key) - at.get(b.key))
         .forEach(it => {
           const gear = ITEM_BY_KEY.has(it.key);
           rows.push({ key: it.key, icon: iconSVG(it.key), n: has(it) ? invQty(inv.items[it.key]) : '', cls: has(it) ? '' : 'off', glow: gear ? '#3aa84a' : '#4aa8ff', label: it.name, lv: gear && has(it) ? 'I' : '',
-            sub: gear ? `${TYPE_SINGULAR[it.type] || ''} · ${statsLine(it)}` : `${GOOD_SINGULAR[it.type] || ''}${it.desc ? ' · ' + it.desc : ''}` });
+            sub: gear ? `${TYPE_SINGULAR[it.type] || ''} · ${statsLine(it)}` : `${GOOD_SINGULAR[it.type] || ''}${it.rarity ? ' · ' + it.rarity : ''}${it.desc ? ' · ' + it.desc : ''}` });
         });
     }
     const sel = r => invSel === r.key ? 'sel' : '';
@@ -4545,7 +4567,7 @@ __SOLVER_JS__
   }
   // a tappable item inside a card (ingredients, keys, products): opens that item's card
   const itemLink = (k, pre, post) => anyItem(k) ? `<button type="button" class="ip-link" data-action="inv-go" data-key="${k}">${iconSVG(k)}<span>${pre ? `<i>${pre}</i> ` : ''}${esc(anyItem(k).name)}${post ? ` <i>${post}</i>` : ''}</span></button>` : '';
-  const SRC_ORDER = { shop: 0, craft: 1, boss: 2, mob: 3, enc: 4, find: 5, mine: 6, chest: 7, event: 8, coliseum: 9 };   // chests need a key, so they come after drops
+  const SRC_ORDER = { shop: 0, craft: 1, boss: 2, mob: 3, enc: 4, find: 5, mine: 6, chest: 7, event: 8, coliseum: 9, diamonds: 10, login: 11, free: 12 };   // chests need a key, so they come after drops
   const SRC_GLYPH = {   // small pixel signs for each kind of source
     mob: ['#ff6a6a', 'M2 1h4v1h1v3H6v1H2V5H1V2h1zM2 3v1h1V3zM5 3v1h1V3zM3 6h1v1H3zM5 6h1v1H5z'],
     find: ['#8fd0ff', 'M1 1h2v1h2V1h2v6H5V6H3v1H1zM2 3v2h1V3zM5 3v2h1V3z'],
@@ -4557,6 +4579,9 @@ __SOLVER_JS__
     boss: ['#ff9d3c', 'M0 2h1v1h1V2h1v1h1V1h1v2h1V2h1v1h1V2h1v5H0z'],
     event: ['#ff9ad0', 'M3 0h2v2h2v2H5v1h1v2H5V6H3v1H2V5h1V4H1V2h2z'],
     coliseum: ['#e2343e', 'M1 1h6v3H6v1H5v1H3V5H2V4H1z'],
+    diamonds: ['#6ae0ff', 'M2 1h4v1h1v1h1v1H7v1H6v1H5v1H3V6H2V5H1V4H0V3h1V2h1z'],
+    login: ['#7ee07a', 'M1 1h6v6H1zM2 3v3h4V3z'],
+    free: ['#ffd23a', 'M3 0h2v3h3v2H5v3H3V5H0V3h3z'],
   };
   const srcRow = (kind, title, sub, links) => `<div class="ip-src"><svg class="ip-glyph" viewBox="0 0 8 8" shape-rendering="crispEdges"><path fill="${SRC_GLYPH[kind][0]}" d="${SRC_GLYPH[kind][1]}"/></svg><div><b>${esc(title)}</b><small>${sub}</small>${links ? `<span class="ip-links">${links}</span>` : ''}</div></div>`;
   function whereHTML(key) {
@@ -4575,6 +4600,9 @@ __SOLVER_JS__
         case 'boss': return srcRow('boss', e[1], 'world boss weapon');
         case 'event': return srcRow('event', 'Events', 'seasonal event item');
         case 'coliseum': return srcRow('coliseum', 'Coliseum', 'coliseum reward');
+        case 'diamonds': return srcRow('diamonds', 'Diamond shop', 'bought with diamonds');
+        case 'login': return srcRow('login', 'Login reward', 'for logging in');
+        case 'free': return srcRow('free', 'Free', 'every player has it');
       }
       return '';
     });
@@ -4595,7 +4623,7 @@ __SOLVER_JS__
     if (!it && !c && !coin && !g) { pop.hidden = true; pop.innerHTML = ''; return; }
     let head = '', details = '', controls = '';
     if (g) {
-      head = `${iconSVG(g.key)}<div><b>${esc(g.name)}</b><small>${esc(GOOD_SINGULAR[g.type] || '')}</small></div>`;
+      head = `${iconSVG(g.key)}<div><b>${esc(g.name)}</b><small>${esc(GOOD_SINGULAR[g.type] || '')}${g.rarity ? ` · <span class="rar ${g.rarity}">${esc(g.rarity[0].toUpperCase() + g.rarity.slice(1))}</span>` : ''}</small></div>`;
       details = (g.desc ? `<p class="ip-desc">${esc(g.desc)}</p>` : '') +
         (g.pct ? Object.entries(g.pct).map(([n, v]) => `<div class="ip-row"><span>${esc(n)}</span><b class="${v < 0 ? 'neg' : 'pos'}">${v > 0 ? '+' : ''}${v}%</b></div>`).join('') : '');
       const extra = whereHTML(g.key) + usesHTML(g.key);
@@ -4621,8 +4649,12 @@ __SOLVER_JS__
       head = `${INV_COIN_SVG[invSel]}<div><b>${nm}</b><small>${invSel === 'gold' ? 'pays refining fees' : 'world boss tokens: pay boss weapon fees'}</small></div>`;
       controls = `<div class="ip-lab">You have <small>empty = not tracked</small></div><label class="ie-coin"><input class="num" type="number" inputmode="numeric" min="0" step="1" value="${inv[invSel] != null ? inv[invSel] : ''}" placeholder="not tracked" data-field="inv-${invSel}" aria-label="${nm} you have"></label>`;
     }
-    pop.innerHTML = `<div class="ip-card" role="dialog" aria-label="Details"><button type="button" class="ip-x" data-action="inv-pop-close" aria-label="Close"><svg viewBox="0 0 7 7" shape-rendering="crispEdges"><path fill="currentColor" d="M0 0h2v1h1v1h1V1h1V0h2v2H6v1H5v1h1v1h1v2H5V6H4V5H3v1H2v1H0V5h1V4h1V3H1V2H0z"/></svg></button>` +
+    const old = pop.querySelector('.ip-card'), same = !pop.hidden && old && pop.dataset.key === invSel;
+    const keep = same ? { top: old.scrollTop, open: [...old.querySelectorAll('details')].map(d => d.open) } : null;
+    pop.dataset.key = invSel;
+    pop.innerHTML = `<div class="ip-card ${same ? 'still' : ''}" role="dialog" aria-label="Details"><button type="button" class="ip-x" data-action="inv-pop-close" aria-label="Close"><svg viewBox="0 0 7 7" shape-rendering="crispEdges"><path fill="currentColor" d="M0 0h2v1h1v1h1V1h1V0h2v2H6v1H5v1h1v1h1v2H5V6H4V5H3v1H2v1H0V5h1V4h1V3H1V2H0z"/></svg></button>` +
       `<div class="ip-head">${head}</div>${details ? `<div class="ip-details">${details}</div>` : ''}${controls}</div>`;
+    if (keep) { const card = pop.querySelector('.ip-card'); card.querySelectorAll('details').forEach((d, i) => { d.open = !!keep.open[i]; }); card.scrollTop = keep.top; }
     pop.hidden = false;
   }
 
@@ -4696,6 +4728,7 @@ __SOLVER_JS__
       case 'inv-sel': invSel = invSel === el.dataset.key ? null : el.dataset.key; haptic(6); invRenderGrid(); break;
       case 'inv-go': invSel = el.dataset.key; haptic(6); invRenderGrid(); { const cd = document.querySelector('#invPop .ip-card'); if (cd) cd.scrollTop = 0; } break;   // an item named inside a card
       case 'inv-pop-close': if (el.id === 'invPop' && e.target !== el) break; invSel = null; invRenderGrid(); break;   // the × or a tap beside the card (not inside it)
+      case 'inv-gear': invGear = !invGear; try { localStorage.setItem('pore.invgear.v1', invGear ? '1' : '0'); } catch (err) { /* ignore */ } haptic(6); renderCharms(); toast(invGear ? 'Gear only' : 'Everything'); break;
       case 'inv-view': invView = el.dataset.view; try { localStorage.setItem('pore.invview.v1', invView); } catch (err) { /* ignore */ } renderCharms(); break;
       case 'inv-step': {
         const k = el.dataset.key, d = Number(el.dataset.d);
