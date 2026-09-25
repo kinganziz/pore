@@ -1769,6 +1769,13 @@
   .lib-row summary b { font-size: 15px; } .lib-row summary small { color: var(--soft); font-size: 12px; }
   .lib-row[open] summary b { color: var(--gold); }
   .lib-body { padding: 0 12px 10px; font-size: 13px; color: var(--soft); line-height: 1.4; } .lib-body ol { margin: 0 0 6px; padding-left: 20px; } .lib-body p { margin: 0 0 4px; }
+  .npc-spells { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: -4px 2px 12px; } .npc-spells > small { color: var(--soft); font-size: 12px; margin-right: 2px; }
+  .obol-t { width: 100%; border-collapse: separate; border-spacing: 2px; table-layout: fixed; margin-bottom: 4px; }
+  .obol-t th { font-size: 11px; font-weight: normal; color: var(--soft); text-transform: capitalize; }
+  .obol-t thead th { padding-bottom: 2px; } .obol-t tbody th { text-align: left; font-size: 13px; color: var(--text); width: 64px; line-height: 1.1; }
+  .obol-t tbody th small { display: block; color: var(--gold); font-size: 12px; }
+  .obol-t td { text-align: center; padding: 1px 0; } .obol-t td .pixel { width: 34px; height: 34px; display: inline-block; vertical-align: middle; }
+  .obol-note { font-size: 12px; color: var(--soft); margin: 2px 2px 8px; }
 </style>
 </head>
 <body>
@@ -5715,6 +5722,13 @@ function createSolver() {
     icons: '<svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M1 1h4v4H1zM6 1h4v4H6zM11 1h4v4h-4zM1 6h4v4H1zM6 6h4v4H6zM11 6h4v4h-4zM1 11h4v4H1zM6 11h4v4H6zM11 11h4v4h-4z"/></svg>',
   };
   // the whole bag: search on top, the slots and a slot editor, and the category icons right above the tab bar (like the game)
+  // The Library (spells, talents, obols, books) by name. Icons are l-<name>: tools/library_icons.py names them the same way.
+  const libKey = n => 'l-' + n.toLowerCase().replace(/'/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  let LIB_NAMES = null;
+  const libNames = () => LIB_NAMES || (LIB_NAMES = new Map([['spells', 'Spell'], ['talents', 'Talent'], ['obols', 'Obol'], ['books', 'Book']]
+    .flatMap(([k, kind]) => ((ITEM_DB.library || {})[k] || []).map(x => [x.name, { kind, x }]))));
+  const libSub = ({ kind, x }) => kind === 'Spell' ? `Spell${x.element ? ' · ' + ELEMENT(x.element) : ''} · ${x.mana} mana` : kind === 'Talent' ? `Talent · ${x.level ? 'level ' + x.level : 'from the start'}`
+    : kind === 'Obol' ? `Obol · +${x.value} ${x.stat}` : `Book${x.pages ? ' · ' + x.pages + ' pages' : ''}`;
   function renderCharms(force) {
     if (!ui.charmsBody || (!force && ui.charmsSheet.hidden)) return;
     // every category the bag can hold: all, charms, each item type (like the game's filter row), coins
@@ -5785,15 +5799,19 @@ function createSolver() {
     if (invTab === 'library') {   // spells, talents, obols and books: reference lists, each entry opens in place
       const L = ITEM_DB.library || {}, has = t => !q || t.toLowerCase().includes(q);
       const sec = (title, list) => list.length ? `<h3 class="lib-h">${title} <small>${list.length}</small></h3>${list.join('')}` : '';
-      const libKey = n => 'l-' + n.toLowerCase().replace(/'/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');   // tools/library_icons.py names them the same way
-      const entry = (name, sub, body) => `<details class="lib-row"><summary>${iconSVG(libKey(name), 'lib-ic')}<b>${esc(name)}</b><small>${sub}</small></summary><div class="lib-body">${body}</div></details>`;
+      const entry = (name, sub, body) => `<details class="lib-row"${name.toLowerCase() === q ? ' open' : ''}><summary>${iconSVG(libKey(name), 'lib-ic')}<b>${esc(name)}</b><small>${sub}</small></summary><div class="lib-body">${body}</div></details>`;
       const spells = (L.spells || []).filter(x => has(`${x.name} ${x.element}`)).map(x => entry(x.name, `${x.element ? esc(ELEMENT(x.element)) + ' · ' : ''}${x.mana} mana · ${x.cooldown}s cooldown`,
         `<ol>${x.levels.map(l => `<li>${esc(l)}</li>`).join('')}</ol>` + (x.sold.length ? `<p>Sold by ${x.sold.map(([n, pr]) => `${NPCS.has(n) ? `<button type="button" class="ip-map" data-action="inv-place" data-q="${esc(n)}">${esc(n)}</button>` : esc(n)} for ${fmtGold(pr)} gold`).join(', ')}</p>` : '')));
       const talents = (L.talents || []).filter(x => has(x.name)).map(x => entry(x.name, x.level ? `unlocks at level ${x.level}` : 'from the start', `<p>${esc(x.desc)}</p>`));
-      const obols = (L.obols || []).filter(x => has(`${x.name} ${x.stat}`)).map(x => entry(x.name, `+${x.value} ${esc(x.stat)} · ${esc(x.tier)}`, `<p>An obol adds +${x.value} ${esc(x.stat)}.</p>`));
+      const obolList = (L.obols || []).filter(x => has(`${x.name} ${x.stat} ${x.tier}`));
+      const oStats = [...new Set((L.obols || []).map(x => x.stat))], oTiers = [...new Set(obolList.map(x => x.tier))].sort((a, b) => obolList.find(x => x.tier === a).value - obolList.find(x => x.tier === b).value);
+      const oCell = (t, st) => { const o = obolList.find(x => x.tier === t && x.stat === st); return o ? `<td title="${esc(o.name)}: +${o.value} ${esc(st)}">${iconSVG(libKey(o.name))}</td>` : '<td></td>'; };
+      const obols = obolList.length ? [`<table class="obol-t"><thead><tr><th></th>${oStats.map(st => `<th>${esc(st === 'hp' ? 'HP' : st)}</th>`).join('')}</tr></thead><tbody>` +
+        oTiers.map(t => `<tr><th>${esc(t)}<small>+${obolList.find(x => x.tier === t).value}</small></th>${oStats.map(st => oCell(t, st)).join('')}</tr>`).join('') +
+        '</tbody></table><p class="obol-note">An obol adds its number to one stat: the material sets how much, the symbol which stat.</p>'] : [];
       const books = (L.books || []).filter(x => has(x.name)).map(x => entry(x.name, `${x.pages ? x.pages + ' pages' : 'book'}${x.where.length ? ' · ' + x.where.length + ' maps' : ''}`,
         x.where.length ? `<p>Pages drop in ${x.where.map(l => MAP_KEYS.has(l) ? `<button type="button" class="ip-map" data-action="inv-place" data-q="${esc(l)}">${esc(l)}</button>` : esc(l)).join(', ')}.</p>` : '<p>The wiki does not say where its pages drop.</p>'));
-      const html = sec('Spells', spells) + sec('Talents', talents) + sec('Obols', obols) + sec('Books', books);
+      const html = sec('Spells', spells) + sec('Talents', talents) + (obols.length ? `<h3 class="lib-h">Obols <small>${obolList.length}</small></h3>${obols[0]}` : '') + sec('Books', books);
       box.innerHTML = (html || '<p class="inv-hint">Nothing matches.</p>') + '<p class="inv-hint">From the wiki. Tap an entry to open it.</p>';
       invRenderPop();
       return;
@@ -5870,6 +5888,7 @@ function createSolver() {
       for (const n of NPC_LIST) add(n.name, npcIcon(n.name).replace('npc-face', ''), `NPC · sells ${n.items.size} item${n.items.size === 1 ? '' : 's'}`);
       for (const b of BOSSES) add(b.name, bossIcon(b.name, ''), `World boss · ${ELEMENT(b.element)}`);
       for (const m of MAPS) add(m.name, iconSVG('u-map'), `Map · ${MAP_KEYS.get(m.name).size} items`);
+      for (const [name, e] of libNames()) add(name, iconSVG(libKey(name)), libSub(e));
     }
     if (q && !onSet) {   // a search: names that match best first, then things found only through where they come from
       const words = n => n.toLowerCase().split(/[^a-z0-9']+/);
@@ -5890,6 +5909,7 @@ function createSolver() {
     const hint = invTab.startsWith('g:') ? 'Tap an item to see where to get it and set how many you own.' : { all: 'Tap anything to see where to get it and set how many you own. Search finds places too.', charms: 'Tap a charm to set your stock or keep it out of plans.', coins: 'Gold pays fees, world boss (WB) tokens pay boss weapons.' }[invTab] || 'Tap an item to see it and set how many base (P1) copies you own.';
     const mp = onMap && MAPS.find(m => m.name === invMap);
     const np = onNpc && NPCS.get(invNpc), mb = onMob && MOBS.get(invMob);
+    const npcSpells = onNpc ? ((ITEM_DB.library || {}).spells || []).flatMap(sp => sp.sold.filter(([n]) => n === invNpc).map(([, pr]) => [sp, pr])).sort((a, b) => a[1] - b[1]) : [];
     const mobStats = m => [['Power', m.power], ['HP', m.hp], ['Attack', m.atk], ['Defense', m.def], ['Speed', m.spd], ['Luck', m.luck]].filter(x => x[1]);
     const ch = onChest && CHESTS.get(invChest), en = onEnc && ENCS.get(invEnc);
     box.innerHTML = (onChest ? `<button type="button" class="inv-back" data-action="inv-chest-back">‹ All chests</button>` +
@@ -5901,7 +5921,8 @@ function createSolver() {
       `<div class="boss-head">${mobIcon(invMob, 'boss-pic')}<div><small>${esc(ELEMENT(mb.element))} monster${mb.locs.size ? ' · ' + [...mb.locs].map(l => MAP_KEYS.has(l) ? `<button type="button" class="ip-map" data-action="inv-place" data-q="${esc(l)}">${esc(l)}</button>` : esc(l)).join(', ') : ''}</small>${mb.desc ? `<p>${esc(mb.desc)}</p>` : ''}</div></div>` +
       `<div class="boss-stats">${mobStats(mb).map(([n, v]) => `<div><small>${n}</small><b>${fmt(v)}</b></div>`).join('')}</div>` : '') +
       (onNpc ? `<button type="button" class="inv-back" data-action="inv-npc-back">‹ All NPCs</button>` +
-      `<div class="npc-head">${npcIcon(invNpc)}<small>${[...np.locs].map(l => MAP_KEYS.has(l) ? `<button type="button" class="ip-map" data-action="inv-place" data-q="${esc(l)}">${esc(l)}</button>` : esc(l)).join(', ')} · sells ${np.items.size} item${np.items.size === 1 ? '' : 's'} for gold</small></div>` : '') +
+      `<div class="npc-head">${npcIcon(invNpc)}<small>${[...np.locs].map(l => MAP_KEYS.has(l) ? `<button type="button" class="ip-map" data-action="inv-place" data-q="${esc(l)}">${esc(l)}</button>` : esc(l)).join(', ')} · sells ${np.items.size} item${np.items.size === 1 ? '' : 's'} for gold</small></div>` +
+      (npcSpells.length ? `<div class="npc-spells"><small>Spells</small>${npcSpells.map(([sp, pr]) => `<button type="button" class="ip-link" data-action="inv-place" data-q="${esc(sp.name)}">${iconSVG(libKey(sp.name))}<span>${esc(sp.name)} <i>${fmtGold(pr)} gold</i></span></button>`).join('')}</div>` : '') : '') +
       (onMap ? `<button type="button" class="inv-back" data-action="inv-map-back">‹ All maps</button>` +
       (mp ? `<div class="map-head"><img class="map-pic" src="${bgThumb(MAP_BG[mp.kind] || 'hills', MAP_NIGHT.has(mp.kind) ? 'night' : 'day')}" alt="" draggable="false">` +   // the landscape alone: its items are listed below
         `<div><small>${mp.steps ? fmt(mp.steps) + ' steps to unlock' : 'where it starts'} · ${onMap.size} items</small>${mp.desc ? `<p>${esc(mp.desc)}</p>` : ''}` +
@@ -6134,7 +6155,12 @@ function createSolver() {
       case 'inv-mob-back': invMob = null; invSel = null; haptic(6); renderCharms(); break;
       case 'inv-boss': invBoss = el.dataset.boss; invQ = ''; invSel = null; haptic(6); renderCharms(); { const b = document.getElementById('charmsBody'); if (b) b.scrollTop = 0; } break;
       case 'inv-boss-back': invBoss = null; invSel = null; haptic(6); renderCharms(); break;
-      case 'inv-place': if (CHESTS.has(el.dataset.q) || ENCS.has(el.dataset.q)) {   // a chest or an encounter: its page
+      case 'inv-place': if (libNames().has(el.dataset.q) && !MOBS.has(el.dataset.q) && !NPCS.has(el.dataset.q)) {   // a spell, talent, obol or book: open it in the Library
+          invTab = 'library'; invQ = el.dataset.q; invMap = null; invNpc = null; invBoss = null; invMob = null; invChest = null; invEnc = null; invSel = null; haptic(6);
+          if (ui.charmsSheet.hidden) tabGo('inventory'); else renderCharms();
+          break;
+        }
+        if (CHESTS.has(el.dataset.q) || ENCS.has(el.dataset.q)) {   // a chest or an encounter: its page
           const isChest = CHESTS.has(el.dataset.q);
           invTab = isChest ? 'chests' : 'encounters'; invChest = isChest ? el.dataset.q : null; invEnc = isChest ? null : el.dataset.q;
           invMap = null; invNpc = null; invBoss = null; invMob = null; invQ = ''; invSel = null; haptic(6);
