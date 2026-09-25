@@ -2875,7 +2875,7 @@ function createSolver() {
   let iconStyle = DEFAULT_ICONS;
   // HD images load eagerly and decode synchronously: a re-rendered list (e.g. a new group filter) then paints its
   // already-cached icons in the same frame instead of flashing empty tiles.
-  const ICONS_V = 'cffaae7754';
+  const ICONS_V = '48ebe12401';
   // Re-rendering a list would create fresh <img> elements that flash empty while they load, even from cache.
   // Loaded HD images are kept in a pool and moved into the new markup instead, so they paint at once.
   const imgPool = new Map();   // src -> [loaded <img>]

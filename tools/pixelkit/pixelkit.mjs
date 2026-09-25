@@ -402,16 +402,65 @@ export function pixelKit(options = {}) {
     const [r1, g1, b1] = hue < 1 ? [c, xx, 0] : hue < 2 ? [xx, c, 0] : hue < 3 ? [0, c, xx] : hue < 4 ? [0, xx, c] : hue < 5 ? [xx, 0, c] : [c, 0, xx];
     return toHex([(r1 + m) * 255, (g1 + m) * 255, (b1 + m) * 255]);
   }
-  function toSvg(grid) {
+  // Flame animation (palette cycling, the classic pixel-art fire): the warm bright pixels of the flame step
+  // through a fire ramp in a wave that climbs the flame, FRAMES frames a loop; the rest of the icon holds still.
+  // Each frame is a group whose visibility a SMIL <animate> switches, so it plays wherever the icon is shown.
+  const FIRE = ['#8a1e0e', '#d2401a', '#ff7a1e', '#ffb02e', '#ffe27a', '#fff6c8'];
+  const FRAMES = 4, FRAME_S = 0.14;
+  const hueOf = h => { const [r, g, b] = hex(h).map(v => v / 255), mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+    if (!d) return { h: 0, s: 0, l: (mx + mn) / 2 };
+    let hh = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; if (hh < 0) hh += 6;
+    return { h: hh * 60, s: d / (1 - Math.abs(mx + mn - 1)), l: (mx + mn) / 2 }; };
+  const isFlame = h => { const c = hueOf(h); return c.h <= 58 && c.s > 0.45 && c.l > 0.42; };
+  function runsOf(cells) {   // cells: Map of 'x,y' -> colour; one path per colour, horizontal runs
+    const byC = new Map();
+    for (let y = 0; y < N; y++) { let x = 0; while (x < N) { const c = cells.get(x + ',' + y); if (!c) { x++; continue; } let x1 = x + 1; while (x1 < N && cells.get(x1 + ',' + y) === c) x1++; if (!byC.has(c)) byC.set(c, []); byC.get(c).push(`M${x} ${y}h${x1 - x}v1h-${x1 - x}z`); x = x1; } }
+    return [...byC].map(([c, d]) => `<path fill="${c}" d="${d.join('')}"/>`).join('');
+  }
+  function toSvg(grid, anim) {
     const runs = new Map();
     grid = grid.map(r => r.map(c => (c ? vivid(c) : c)));
+    let frames = '';
+    if (anim === 'flame' || anim === 'glow') {   // lift the flame pixels out of the still picture into their own frames
+      // 'flame': the warm patch at the top of the icon (a torch's fire, a lamp's flame, not its gold body);
+      // 'glow': only the yellow light (a pumpkin's carved face, not its orange skin)
+      const pick = anim === 'glow' ? (c => { const q = hueOf(c); return q.h >= 44 && q.h <= 64 && q.s > 0.4 && q.l > 0.5; }) : isFlame;
+      const on = new Set(); grid.forEach((r, y) => r.forEach((c, x) => { if (c && pick(c)) on.add(x + ',' + y); }));
+      let keep = on;
+      if (anim === 'flame') {   // 4-connected patches; keep the topmost one(s)
+        const seen = new Set(), comps = [];
+        for (const id of on) { if (seen.has(id)) continue; const comp = [], st = [id]; seen.add(id);
+          while (st.length) { const cur = st.pop(); comp.push(cur); const [cx, cy] = cur.split(',').map(Number);
+            for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const n = (cx + dx) + ',' + (cy + dy); if (on.has(n) && !seen.has(n)) { seen.add(n); st.push(n); } } }
+          comps.push(comp); }
+        const minY = comp => Math.min(...comp.map(id => +id.split(',')[1])), top = Math.min(...comps.map(minY));
+        keep = new Set(comps.filter(c => c.length >= 3 && minY(c) <= top + 2).flat());
+      }
+      const flame = [...keep].map(id => { const [x, y] = id.split(',').map(Number); return [x, y, grid[y][x]]; });
+      if (flame.length >= 3) {
+        const step = c => { const l = hueOf(c).l; return Math.max(1, Math.min(FIRE.length - 2, Math.round(l * (FIRE.length - 1)))); };
+        const top = Math.min(...flame.map(p => p[1]));
+        for (const [x, y] of flame) grid[y][x] = null;
+        const groups = [];
+        for (let f = 0; f < FRAMES; f++) {
+          const cells = new Map();
+          for (const [x, y, c] of flame) {
+            const wave = [0, 1, 0, -1][((y - top) + f * 3 + (x % 2)) % 4];   // brighter and dimmer bands rising through the flame
+            cells.set(x + ',' + y, FIRE[Math.max(0, Math.min(FIRE.length - 1, step(c) + wave))]);
+          }
+          const vals = Array.from({ length: FRAMES }, (_, i) => (i === f ? 'visible' : 'hidden')).join(';');
+          groups.push(`<g visibility="${f ? 'hidden' : 'visible'}"><animate attributeName="visibility" values="${vals}" dur="${(FRAMES * FRAME_S).toFixed(2)}s" calcMode="discrete" repeatCount="indefinite"/>${runsOf(cells)}</g>`);
+        }
+        frames = groups.join('');
+      }
+    }
     grid.forEach((r, y) => { let x = 0; while (x < r.length) { const c = r[x]; if (!c) { x++; continue; } let x1 = x + 1; while (x1 < r.length && r[x1] === c) x1++; if (!runs.has(c)) runs.set(c, []); runs.get(c).push(`M${x} ${y}h${x1 - x}v1h-${x1 - x}z`); x = x1; } });
     // cast shadow: every empty pixel just down-right of the drawing, soft and dark, drawn first (underneath)
     const sh = [];
     if (SHADOW) for (let y = 1; y < N; y++) { let x = 1; while (x < N) { const on = xx => xx < N && !grid[y][xx] && grid[y - 1][xx - 1]; if (!on(x)) { x++; continue; } let x1 = x + 1; while (on(x1)) x1++; sh.push(`M${x} ${y}h${x1 - x}v1h-${x1 - x}z`); x = x1; } }
     const op = String(SHADOW).replace(/^0\./, '.');
     const shadow = sh.length ? `<path fill="#0b0816" style="fill-opacity:var(--pk-shadow,${op})" d="${sh.join('')}"/>` : '';
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${N} ${N}" shape-rendering="crispEdges">${shadow}${[...runs].map(([c, d]) => `<path fill="${c}" d="${d.join('')}"/>`).join('')}</svg>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${N} ${N}" shape-rendering="crispEdges">${shadow}${[...runs].map(([c, d]) => `<path fill="${c}" d="${d.join('')}"/>`).join('')}${frames}</svg>`;
   }
 
   return { compile, toTxt, fromTxt, toSvg, options: o };
