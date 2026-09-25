@@ -1185,8 +1185,9 @@
   :root[data-finish="retro"] .brand h1 { text-shadow: 2px 2px 0 rgba(0, 0, 0, .45); }
   /* backgrounds: None hides the scene; the picker wraps on phones */
   :root[data-nobg] #scene { display: none !important; }
-  .bg-pick { align-items: flex-start; }
-  .bg-pick .seg { flex-wrap: wrap; justify-content: flex-end; border-radius: 16px; }
+  .bg-pick { flex-direction: column; align-items: stretch; gap: 8px; }   /* label on its own line, choices centred below in even rows */
+  .bg-pick .seg { display: flex; flex-wrap: wrap; justify-content: center; width: 100%; border-radius: 16px; }
+  .bg-pick .seg button { flex: 0 0 25%; text-align: center; }
   .font-pick small { font-size: 11px; color: var(--soft); }
   /* ---------- title screen: no frames (games put little in boxes here): the item cards and the call to action sit on the world ---------- */
   :root .home-hero .home-best.home-best { background: none !important; border: 0 !important; box-shadow: none !important; backdrop-filter: none !important;
