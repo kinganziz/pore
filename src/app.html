@@ -635,7 +635,7 @@
   /* messages sit in the middle of the screen, where they never cover the bottom buttons */
   .toast.show { opacity: 1; transform: translate(-50%, -50%); }
   .toast.tappable { pointer-events: auto; cursor: pointer; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; }
-  .fx { position: fixed; inset: 0; z-index: 40; pointer-events: none; }
+  .fx { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 95; pointer-events: none; }
 
   /* ---------- very small phones (<= 350px) ---------- */
   @media (max-width: 350px) {
@@ -978,6 +978,10 @@
   /* the target is below the item's max: say so where the plan is shown */
   .lvl-note { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin-top: 10px; padding: 8px 8px 8px 12px; border-radius: 12px; border: 1px solid rgba(246, 196, 83, .45); background: rgba(246, 196, 83, .1); }
   .lvl-note b { color: var(--gold); }
+  .share-row { justify-content: center; gap: 10px; margin-top: 10px; }
+  .share-row .btn { width: 52px; padding: 0; display: grid; place-items: center; }
+  .share-row svg { width: 20px; height: 20px; }
+  .lvl-note { justify-content: center; text-align: center; }
 </style>
 </head>
 <body>
@@ -2195,10 +2199,12 @@ __SOLVER_JS__
           const label = dn && dn < tot ? `Ask anz: continue where you left off (${dn}/${tot})` : dn >= tot && tot ? 'Ask anz: all steps done, review' : 'Ask anz: guide me step by step';
           return `<button class="btn primary block guide-cta" type="button" data-action="guide-open"><img src="icons/app/anz.png?v=3" alt="" width="124" height="128">${label}</button>`;
         })()}
-        <div class="btn-row" style="margin-top:10px">
-          <button class="btn small" type="button" data-action="share">${navigator.share ? 'Share plan' : 'Copy link'}</button>
-          <button class="btn small ghost" type="button" data-action="copy-plan">Copy as text</button>
-          <button class="btn small ghost" type="button" data-action="share-image">Share image</button>
+        <div class="btn-row share-row">
+          <button class="btn small" type="button" data-action="share" aria-label="${navigator.share ? 'Share plan' : 'Copy link'}" title="${navigator.share ? 'Share plan' : 'Copy link'}">${navigator.share
+            ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.3 10.8l7.4-4.3M8.3 13.2l7.4 4.3"/></svg>'
+            : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>'}</button>
+          <button class="btn small ghost" type="button" data-action="copy-plan" aria-label="Copy as text" title="Copy as text"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h2"/><path d="M11 12.5h6M11 16h4"/></svg></button>
+          <button class="btn small ghost" type="button" data-action="share-image" aria-label="Share image" title="Share image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="M21 16l-5-5-9 9"/></svg></button>
         </div>
       </div>
 
@@ -2251,7 +2257,7 @@ __SOLVER_JS__
       if (arc && newPlan && !reduced) { arc.style.transition = 'none'; arc.style.strokeDashoffset = '264'; arc.getBoundingClientRect(); arc.style.transition = ''; arc.style.strokeDashoffset = ringOffset.toFixed(1); }
       if (newPlan) {
         countUp(document.getElementById('heroNum'), prevHero || standard, cost);
-        if (pct >= 20 && hadPlan) burst();
+        if (pct >= 20 && hadPlan) burst('confetti');
       }
       if (revealResults) {
         revealResults = false;
@@ -2323,25 +2329,131 @@ __SOLVER_JS__
     requestAnimationFrame(tick);
   }
 
-  function burst() {
+  /* ================= celebrations ================= */
+  // One particle loop for every effect: confetti for a good plan, a sparkle for a ticked step, coins for a finished
+  // level, a green sparkle for a matched result, fireworks and confetti rain when the whole item is done.
+  // Pixel theme: square pixels, no rotation. Reduced motion: nothing.
+  const FX = { parts: [], timers: [], running: false };
+  const FX_COLORS = ['#f6c453', '#8b7cff', '#37d39a', '#d16dff', '#5cc3ff', '#ffffff'];
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const pick = arr => arr[Math.random() * arr.length | 0];
+  function fxAt(el) {
+    const r = el && el.getBoundingClientRect ? el.getBoundingClientRect() : null;
+    return r && r.width ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : { x: innerWidth / 2, y: innerHeight * .4 };
+  }
+  function fxAdd(list) {
     if (reduced) return;
-    const c = ui.fx, ctx = c.getContext('2d');
-    c.hidden = false; c.width = innerWidth; c.height = innerHeight;
-    const hero = document.querySelector('.hero');
-    const r = hero ? hero.getBoundingClientRect() : { left: innerWidth / 2, top: 120, width: 0, height: 0 };
-    const cx = r.left + Math.min(r.width * .35, 200), cy = r.top + r.height * .45;
-    const colors = ['#f6c453', '#8b7cff', '#37d39a', '#d16dff', '#ffffff'];
-    const parts = Array.from({ length: 70 }, () => ({ x: cx, y: cy, vx: (Math.random() - .5) * 14, vy: -Math.random() * 12 - 2, s: 4 + Math.random() * 5, c: colors[Math.random() * colors.length | 0], a: 1, r: Math.random() * Math.PI }));
-    const t0 = performance.now();
+    FX.parts.push(...list);
+    if (FX.running) return;
+    const c = ui.fx, dpr = Math.min(2, devicePixelRatio || 1);
+    c.hidden = false; c.width = innerWidth * dpr; c.height = innerHeight * dpr;
+    const ctx = c.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    FX.running = true;
+    let prev = performance.now();
     (function frame(t) {
-      const k = (t - t0) / 1000;
-      ctx.clearRect(0, 0, c.width, c.height);
-      for (const p of parts) {
-        p.x += p.vx; p.y += p.vy; p.vy += .45; p.vx *= .98; p.r += .1; p.a = Math.max(0, 1 - k / 1.3);
-        ctx.save(); ctx.globalAlpha = p.a; ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.c; ctx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s); ctx.restore();
+      const dt = Math.min(2, (t - prev) / 16.7); prev = t;
+      const px = document.documentElement.dataset.skin === 'pixel';
+      ctx.clearRect(0, 0, innerWidth, innerHeight);
+      const born = [];
+      FX.parts = FX.parts.filter(p => {
+        p.age += dt * 16.7;
+        if (p.age < 0) return true;                       // not launched yet
+        if (p.age > p.life) { if (p.onEnd) born.push(...p.onEnd(p)); return false; }
+        p.vy += p.g * dt; p.vx *= Math.pow(p.drag, dt); p.vy *= Math.pow(p.drag, dt);
+        if (p.sway) p.vx += Math.sin((p.age / 300) + p.phase) * p.sway * dt;
+        p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.vr * dt;
+        const k = p.age / p.life, a = p.fade === false ? 1 : k < .7 ? 1 : 1 - (k - .7) / .3;
+        ctx.save(); ctx.globalAlpha = Math.max(0, a * (p.twinkle ? .55 + .45 * Math.sin(p.age / 40 + p.phase) : 1));
+        const x = px ? Math.round(p.x / 3) * 3 : p.x, y = px ? Math.round(p.y / 3) * 3 : p.y;
+        ctx.translate(x, y); ctx.fillStyle = p.color; ctx.strokeStyle = p.color;
+        drawPart(ctx, p, px, k);
+        ctx.restore();
+        return true;
+      });
+      FX.parts.push(...born);
+      if (FX.parts.length) requestAnimationFrame(frame);
+      else { ctx.clearRect(0, 0, innerWidth, innerHeight); c.hidden = true; FX.running = false; }
+    })(prev);
+  }
+  function drawPart(ctx, p, px, k) {
+    const z = p.size;
+    if (px) {   // pixel theme: everything is squares
+      const q = Math.max(3, Math.round(z / 3) * 3);
+      if (p.shape === 'star' || p.shape === 'spark') { ctx.fillRect(-q / 2, -q * 1.5, q, q * 3); ctx.fillRect(-q * 1.5, -q / 2, q * 3, q); }
+      else if (p.shape === 'coin') { ctx.fillRect(-q, -q, q * 2, q * 2); ctx.fillStyle = '#fff3c4'; ctx.fillRect(-q, -q, q, q); }
+      else if (p.shape === 'ring') { const R = Math.round(p.r0 + (p.r1 - p.r0) * k); ctx.fillRect(-R, -R, R * 2, 3); ctx.fillRect(-R, R - 3, R * 2, 3); ctx.fillRect(-R, -R, 3, R * 2); ctx.fillRect(R - 3, -R, 3, R * 2); }
+      else ctx.fillRect(-q / 2, -q / 2, q, q);
+      return;
+    }
+    ctx.rotate(p.rot);
+    switch (p.shape) {
+      case 'ribbon': { const w = z * Math.abs(Math.cos(p.rot * 2.3 + p.phase)) + 1; ctx.fillRect(-w / 2, -z * .9, w, z * 1.8); break; }
+      case 'coin': {
+        const w = z * Math.abs(Math.cos(p.rot * 1.7 + p.phase)) + 1.5;
+        ctx.beginPath(); ctx.ellipse(0, 0, w, z, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.ellipse(-w * .3, -z * .3, w * .3, z * .3, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = 'rgba(120,70,0,.6)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.ellipse(0, 0, w, z, 0, 0, Math.PI * 2); ctx.stroke();
+        break;
       }
-      if (k < 1.3) requestAnimationFrame(frame); else { ctx.clearRect(0, 0, c.width, c.height); c.hidden = true; }
-    })(t0);
+      case 'star': {
+        ctx.beginPath();
+        for (let i = 0; i < 10; i++) { const r = i % 2 ? z * .42 : z, an = i * Math.PI / 5 - Math.PI / 2; ctx.lineTo(Math.cos(an) * r, Math.sin(an) * r); }
+        ctx.closePath(); ctx.fill(); break;
+      }
+      case 'spark': { ctx.rotate(-p.rot + Math.atan2(p.vy, p.vx)); ctx.fillRect(-z * 2, -z / 4, z * 2.6, z / 2); break; }
+      case 'ring': { const R = p.r0 + (p.r1 - p.r0) * k; ctx.lineWidth = 2.5 * (1 - k) + .5; ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.stroke(); break; }
+      default: ctx.fillRect(-z / 2, -z / 2, z, z);
+    }
+  }
+  function part(o) { return Object.assign({ x: 0, y: 0, vx: 0, vy: 0, g: .4, drag: .985, age: 0, life: 1500, size: 6, color: pick(FX_COLORS), rot: rnd(0, 6.3), vr: rnd(-.2, .2), phase: rnd(0, 6.3), shape: 'rect' }, o); }
+  const FXK = {
+    // a good plan: ribbons thrown up from the result card
+    confetti(at) {
+      return Array.from({ length: 90 }, () => part({ x: at.x, y: at.y, vx: rnd(-7, 7), vy: rnd(-13, -3), g: .36, life: rnd(1400, 2200), size: rnd(5, 9), shape: pick(['ribbon', 'ribbon', 'rect']) }));
+    },
+    // a ticked step: a ring and a handful of stars from the checkbox
+    pop(at, color) {
+      const cols = color ? [color, '#ffffff'] : ['#f6c453', '#ffffff', '#37d39a'];
+      return [part({ x: at.x, y: at.y, g: 0, shape: 'ring', r0: 6, r1: 34, life: 420, color: cols[0], rot: 0, vr: 0 })]
+        .concat(Array.from({ length: 12 }, (_, i) => { const an = i / 12 * Math.PI * 2 + rnd(-.2, .2), sp = rnd(2.5, 5); return part({ x: at.x, y: at.y, vx: Math.cos(an) * sp, vy: Math.sin(an) * sp, g: .06, drag: .92, life: rnd(450, 700), size: rnd(3.5, 6), shape: 'star', color: pick(cols) }); }));
+    },
+    // a finished level: gold coins out of the header
+    coins(at) {
+      return Array.from({ length: 22 }, (_, i) => part({ x: at.x + rnd(-30, 30), y: at.y, vx: rnd(-4.5, 4.5), vy: rnd(-12, -6), g: .5, life: rnd(1300, 1800), size: rnd(6, 9), shape: 'coin', color: pick(['#f6c453', '#ffd76a', '#e8a93a']), vr: rnd(.08, .2), age: -i * 18 }));
+    },
+    // the whole item done: confetti rain from the top
+    rain() {
+      return Array.from({ length: 150 }, () => part({ x: rnd(0, innerWidth), y: rnd(-120, -10), vx: rnd(-1, 1), vy: rnd(2, 5), g: .05, drag: .995, sway: .05, life: rnd(2800, 4200), size: rnd(5, 9), shape: pick(['ribbon', 'ribbon', 'rect']), age: -rnd(0, 900) }));
+    },
+    // ...and fireworks: rockets that burst into twinkling sparks
+    firework(x, peak, delay, color) {
+      const col = color || pick(FX_COLORS.slice(0, 5));
+      const h = innerHeight + 10, v = -Math.sqrt(2 * .22 * (h - peak));
+      return [part({ x, y: h, vx: rnd(-.6, .6), vy: v, g: .22, drag: 1, life: Math.abs(v / .22) * 16.7, size: 3, shape: 'spark', color: '#fff3c4', fade: false, age: -delay,
+        onEnd: r => [part({ x: r.x, y: r.y, g: 0, shape: 'ring', r0: 4, r1: 70, life: 500, color: col, rot: 0, vr: 0 })].concat(Array.from({ length: 46 }, (_, i) => {
+          const an = i / 46 * Math.PI * 2, sp = rnd(3, 6.5);
+          return part({ x: r.x, y: r.y, vx: Math.cos(an) * sp, vy: Math.sin(an) * sp, g: .07, drag: .955, life: rnd(900, 1400), size: rnd(2.5, 4), shape: i % 3 ? 'spark' : 'star', color: i % 4 ? col : '#ffffff', twinkle: true });
+        })) })];
+    },
+  };
+  // kind: 'confetti' (a good plan), 'pop' (a step), 'match' (a result that matched), 'coins' (a level), 'finale' (everything)
+  function burst(kind, el) {
+    if (reduced) return;
+    const at = fxAt(el || document.querySelector('.hero'));
+    switch (kind) {
+      case 'pop': fxAdd(FXK.pop(at)); break;
+      case 'match': fxAdd(FXK.pop(at, '#37d39a')); break;
+      case 'star': fxAdd(FXK.pop(at, '#f6c453')); break;
+      case 'coins': fxAdd(FXK.pop(at, '#f6c453').concat(FXK.coins(at))); break;
+      case 'finale': {
+        const w = innerWidth;
+        fxAdd(FXK.rain().concat(FXK.confetti(at),
+          FXK.firework(w * .25, innerHeight * .28, 150), FXK.firework(w * .72, innerHeight * .2, 650), FXK.firework(w * .5, innerHeight * .34, 1150),
+          FXK.firework(w * .35, innerHeight * .18, 1700), FXK.firework(w * .65, innerHeight * .3, 2100)));
+        break;
+      }
+      default: fxAdd(FXK.confetti(at));
+    }
   }
 
   function goHome() {
@@ -2962,8 +3074,13 @@ __SOLVER_JS__
         const snap = undoPoint(), set = loadDone(), all = ids.every(x => set.has(x));
         ids.forEach(x => (all ? set.delete(x) : set.add(x)));
         saveJSON(doneKey(), Array.from(set)); haptic(12);
+        const head = el.closest('.lvl-head'), at = head ? fxAt(head) : null;
         renderResults();
         toastUndo(all ? `Level ${L} unticked` : `Level ${L} done`, snap);
+        if (!all && at) {
+          const d = loadDone(), everything = last.analysis.steps.every(st => d.has(stepId(st)));
+          if (everything) burst('finale'); else fxAdd(FXK.pop(at, '#f6c453').concat(FXK.coins(at)));
+        }
         break;
       }
       case 'use-custom': {
@@ -3034,7 +3151,7 @@ __SOLVER_JS__
       case 'project-remove': removeProject(el.dataset.id); renderResults(); toast('Removed from my projects'); break;
       case 'project-toggle': {
         if (currentProject()) { removeProject(projectId()); toast('Removed from my projects'); }
-        else { upsertProject({ star: true }); toast('Added to my projects'); }
+        else { upsertProject({ star: true }); toast('Added to my projects'); burst('star', el); }
         renderItem(); break;
       }
       case 'close-guide': closeGuide(); break;
@@ -3049,7 +3166,9 @@ __SOLVER_JS__
         if (act === 'guide-match') addObservation(last.item, st, st.result.s.slice());
         setDone(stepId(st), true); haptic(14);
         guide.i++; guide.other = false;
-        if (guide.i >= guideSteps().length) burst();
+        const btnAt = fxAt(el);
+        if (guide.i >= guideSteps().length) burst('finale');
+        else fxAdd(act === 'guide-match' ? FXK.pop(btnAt, '#37d39a') : FXK.pop(btnAt));
         renderGuide();
         const back = guide.i - 1;
         toast('Nice! Next step · tap to undo', () => { ui.toast.onclick = null; ui.toast.classList.remove('show'); if (snap.key) saveJSON(snap.key, snap.done); observations = JSON.parse(snap.obs); saveJSON(STORAGE.obs, observations); guide.i = back; renderResults(); renderGuide(); setTimeout(() => toast('Undone'), 50); }, 4500);
@@ -3075,6 +3194,7 @@ __SOLVER_JS__
         if (!step || !last) return;
         const snap = undoPoint();
         addObservation(last.item, step, step.result.s.slice());
+        burst('match', el);
         openObsForm = null; haptic(14);
         renderResults(); persist();
         toastUndo('Recorded: matched ✓', snap);
@@ -3152,8 +3272,13 @@ __SOLVER_JS__
       const pt = document.getElementById('progressText'), pf = document.getElementById('progressFill');
       if (pt) pt.textContent = `${done}/${total} done`;
       if (pf) pf.style.width = `${total ? (done / total) * 100 : 0}%`;
-      if (done === total && total) { toast('All steps done — enjoy your refined item!'); burst(); }
-      else toastUndo(el.checked ? 'Step done' : 'Step unticked', snap);
+      if (done === total && total) { toast('All steps done — enjoy your refined item!'); burst('finale', card); }
+      else {
+        toastUndo(el.checked ? 'Step done' : 'Step unticked', snap);
+        const grp = card && card.closest('.lvl-group');
+        if (el.checked && grp && grp.querySelectorAll('.step').length === grp.querySelectorAll('.step.done').length) burst('coins', grp.querySelector('.lvl-head'));
+        else if (el.checked) burst('pop', el.closest('.step-main') && el.closest('.step-main').querySelector('.check'));
+      }
       return;
     }
   });
