@@ -5044,7 +5044,7 @@ __SOLVER_JS__
   };
   function invSlot(key, icon, n, opts) {
     const o = opts || {};
-    return `<button type="button" class="slot ${o.cls || ''} ${invSel === key ? 'sel' : ''}" style="--glow:${o.glow || 'var(--gold)'}" data-action="inv-sel" data-key="${key}" aria-label="${esc(o.label)}${n ? ', ' + n : ''}" title="${esc(o.label)}">` +
+    return `<button type="button" class="slot ${o.cls || ''} ${invSel === key ? 'sel' : ''}" style="--glow:${o.glow || 'var(--gold)'}" ${o.place ? `data-action="inv-place" data-q="${esc(o.place)}"` : `data-action="inv-sel" data-key="${key}"`} aria-label="${esc(o.label)}${n ? ', ' + n : ''}" title="${esc(o.label)}">` +
       `${icon}${o.lv ? `<b class="lv ${o.lvCls || ''}">${o.lv}</b>` : ''}${n != null && n !== '' ? `<i class="qty">${n}</i>` : ''}</button>`;
   }
   function invStepper(field, key, val, label) {
@@ -5177,13 +5177,26 @@ __SOLVER_JS__
             sub: (mc && mc.get(it.key)[0] ? chanceTxt(mc.get(it.key)) + ' · ' : '') + (gear ? `${TYPE_SINGULAR[it.type] || ''} · ${statsLine(it)}` : `${GOOD_SINGULAR[it.type] || ''}${it.rarity ? ' · ' + it.rarity : ''}${it.desc ? ' · ' + it.desc : ''}`) });
         });
     }
+    if (q && invTab === 'all' && !onSet) {   // searching everything: monsters, NPCs, world bosses and maps by name too
+      const add = (name, icon, sub) => { if (name.toLowerCase().includes(q)) rows.push({ key: 'p:' + name, place: name, icon, n: '', cls: '', glow: '#b88aff', label: name, sub }); };
+      for (const m of MOBS.values()) add(m.name, mobIcon(m.name, ''), `Monster · ${ELEMENT(m.element)} · power ${fmt(m.power)}`);
+      for (const n of NPC_LIST) add(n.name, npcIcon(n.name).replace('npc-face', ''), `NPC · sells ${n.items.size} item${n.items.size === 1 ? '' : 's'}`);
+      for (const b of BOSSES) add(b.name, bossIcon(b.name, ''), `World boss · ${ELEMENT(b.element)}`);
+      for (const m of MAPS) add(m.name, iconSVG('u-map'), `Map · ${MAP_KEYS.get(m.name).size} items`);
+    }
+    if (q && !onSet) {   // a search: names that match best first, then things found only through where they come from
+      const words = n => n.toLowerCase().split(/[^a-z0-9']+/);
+      const rank = r => { const n = r.label.toLowerCase(); return n === q ? 0 : n.startsWith(q) ? 1 : words(n).some(w => w.startsWith(q)) ? 2 : n.includes(q) ? 3 : 4; };
+      rows.forEach((r, i) => { r.rk = rank(r); r.ri = i; });
+      rows.sort((a, b) => a.rk - b.rk || a.ri - b.ri);
+    }
     if (onSet) {   // charms join the items: everything on a map in order of its chance there (at an NPC: by price)
       for (const r of rows) if (r.cv == null) { const c = placeOf(r.key); r.cv = c[0]; if (c[0]) { r.ch = chanceShort(c); r.sub = chanceTxt(c) + ' · ' + r.sub; } }
       rows.sort((a, b) => b.cv - a.cv);
     }
     const sel = r => invSel === r.key ? 'sel' : '';
     let html;
-    if (invView === 'list') html = `<div class="inv-list">${rows.map(r => `<button type="button" class="inv-row ${r.cls} ${sel(r)}" data-action="inv-sel" data-key="${r.key}" title="${esc(r.label)}">` +
+    if (invView === 'list') html = `<div class="inv-list">${rows.map(r => `<button type="button" class="inv-row ${r.cls} ${sel(r)}" ${r.place ? `data-action="inv-place" data-q="${esc(r.place)}"` : `data-action="inv-sel" data-key="${r.key}"`} title="${esc(r.label)}">` +
         `<span class="ir-ic">${r.icon}</span><span class="ir-main"><b>${esc(r.label)}</b><small>${esc(r.sub || '')}</small></span><span class="ir-n">${r.n || ''}</span></button>`).join('')}</div>`;
     else if (invView === 'grid') html = `<div class="slots named">${rows.map(r => `<div class="named-slot">${invSlot(r.key, r.icon, r.n, r)}<span class="ns-name">${esc(r.label)}</span>${r.ch ? `<small class="ns-ch">${r.ch}</small>` : ''}</div>`).join('')}</div>`;
     else html = `<div class="slots">${rows.map(r => invSlot(r.key, r.icon, r.n, r)).join('')}</div>`;
