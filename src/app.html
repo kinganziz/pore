@@ -2402,6 +2402,10 @@ __SOLVER_JS__
     confetti(at) {
       return Array.from({ length: 110 }, () => part({ x: at.x, y: at.y, vx: rnd(-7, 7), vy: rnd(-13, -3), g: .36, life: rnd(1400, 2200), size: rnd(2.6, 4.6), shape: pick(['ribbon', 'ribbon', 'rect']) }));
     },
+    // a done step: a small handful of confetti (the big burst stays for plans and the finish)
+    mini(at) {
+      return Array.from({ length: 34 }, () => part({ x: at.x, y: at.y, vx: rnd(-4.5, 4.5), vy: rnd(-8.5, -2.5), g: .34, life: rnd(900, 1400), size: rnd(2.4, 4), shape: pick(['ribbon', 'ribbon', 'rect']) }));
+    },
     // a ticked step: a ring and a handful of stars from the checkbox
     pop(at, color) {
       const cols = color ? [color, '#ffffff'] : ['#f6c453', '#ffffff', '#37d39a'];
@@ -2432,8 +2436,8 @@ __SOLVER_JS__
     if (reduced) return;
     const at = fxAt(el || document.querySelector('.hero'));
     switch (kind) {
-      case 'pop': fxAdd(FXK.pop(at)); break;
-      case 'match': fxAdd(FXK.pop(at, '#37d39a')); break;
+      case 'pop': fxAdd(FXK.pop(at).concat(FXK.mini(at))); break;
+      case 'match': fxAdd(FXK.pop(at, '#37d39a').concat(FXK.mini(at))); break;
       case 'star': fxAdd(FXK.pop(at, '#f6c453')); break;
       case 'coins': fxAdd(FXK.pop(at, '#f6c453').concat(FXK.coins(at))); break;
       case 'finale': {
@@ -3159,7 +3163,7 @@ __SOLVER_JS__
         guide.i++; guide.other = false;
         const btnAt = fxAt(el);
         if (guide.i >= guideSteps().length) burst('finale');
-        else fxAdd(act === 'guide-match' ? FXK.pop(btnAt, '#37d39a') : FXK.pop(btnAt));
+        else fxAdd((act === 'guide-match' ? FXK.pop(btnAt, '#37d39a') : FXK.pop(btnAt)).concat(FXK.mini(btnAt)));
         renderGuide();
         const back = guide.i - 1;
         toast('Nice! Next step · tap to undo', () => { ui.toast.onclick = null; ui.toast.classList.remove('show'); if (snap.key) saveJSON(snap.key, snap.done); observations = JSON.parse(snap.obs); saveJSON(STORAGE.obs, observations); guide.i = back; renderResults(); renderGuide(); setTimeout(() => toast('Undone'), 50); }, 4500);
