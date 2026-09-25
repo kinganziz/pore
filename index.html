@@ -4301,7 +4301,7 @@ function createSolver() {
       return;
     }
     if (solving && !(last && last.res)) {
-      ui.resultsBody.innerHTML = `<div class="card"><div class="solving"><span class="dot"></span>Planning the cheapest path…</div><div class="skeleton" style="margin-top:14px"><div class="sk" style="width:55%;height:44px"></div><div class="sk" style="width:80%"></div><div class="sk" style="width:65%"></div><div class="sk" style="width:90%"></div></div></div>`;
+      ui.resultsBody.innerHTML = `<div class="card"><div class="solving"><span class="dot"></span>Finding the path with the least grind…</div><div class="skeleton" style="margin-top:14px"><div class="sk" style="width:55%;height:44px"></div><div class="sk" style="width:80%"></div><div class="sk" style="width:65%"></div><div class="sk" style="width:90%"></div></div></div>`;
       return;
     }
     if (!last || !last.res) {
@@ -4815,7 +4815,7 @@ function createSolver() {
     const box = icons ? 'slots' : grid ? 'slots named' : 'inv-list';
     const pv = document.getElementById('pickViews');
     if (pv) pv.innerHTML = ['grid', 'list', 'icons'].map(v => `<button type="button" class="${(v === 'list' ? !grid && !icons : picker.view === v) ? 'on' : ''}" data-action="picker-view" data-view="${v}" aria-label="${v === 'grid' ? 'Tiles with names' : v === 'list' ? 'List' : 'Icons only'}" title="${v === 'grid' ? 'Tiles' : v === 'list' ? 'List' : 'Icons'}">${INV_VIEW_SVG[v]}</button>`).join('');
-    let html = `<div class="sort-row"><span>${list.length} item${list.length === 1 ? '' : 's'}</span><div class="sort-tools"><div class="seg"><button type="button" class="${picker.sort === 'name' ? 'on' : ''}" data-action="sort" data-sort="name">A–Z</button><button type="button" class="${picker.sort === 'cost' ? 'on' : ''}" data-action="sort" data-sort="cost">Cheapest<span class="p10"> ${picker.type === 'BOSS' ? 'P5' : picker.type === 'ALL' ? 'max' : 'P10'}</span></button></div></div></div>`;
+    let html = `<div class="sort-row"><span>${list.length} item${list.length === 1 ? '' : 's'}</span><div class="sort-tools"><div class="seg"><button type="button" class="${picker.sort === 'name' ? 'on' : ''}" data-action="sort" data-sort="name">A–Z</button><button type="button" class="${picker.sort === 'cost' ? 'on' : ''}" data-action="sort" data-sort="cost" title="Fewest base items for a perfect ${picker.type === 'BOSS' ? 'P5' : picker.type === 'ALL' ? 'max' : 'P10'}">Least grind</button></div></div></div>`;
     if (!q && picker.type === 'ALL') {   // a shelf above the full list: what you opened lately
       let rec = recent.map(k => ITEM_BY_KEY.get(k)).filter(Boolean);
       if (picker.sort === 'cost') rec = rec.slice().sort(byCost);
