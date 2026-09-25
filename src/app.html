@@ -19,9 +19,9 @@
     var d = document.documentElement, g = function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } };
     var t = g('pore.theme') || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
     d.setAttribute('data-theme', t);
-    var sk = g('pore.skin');
-    d.setAttribute('data-skin', sk === 'pixel' || sk === 'game' ? 'pixel' : 'modern');
-    if (sk === 'game' || sk === 'test') d.setAttribute('data-flavor', sk);
+    var sk = g('pore.skin'); if (sk === 'test') sk = 'retro';
+    d.setAttribute('data-skin', 'modern');
+    if (sk === 'retro' || sk === 'pixel' || sk === 'game') { d.setAttribute('data-flavor', sk); d.setAttribute('data-finish', 'retro'); }
     d.setAttribute('data-font', g('pore.font') === 'jersey' ? 'jersey' : 'vt323');   // VT323 is the default reading font
   })();
 </script>
@@ -647,7 +647,7 @@
     .topbar .logo svg { width: 19px; height: 19px; }
     .topbar .brand { gap: 6px; }
     .topbar .brand h1 { font-size: 18px; }
-    :root[data-skin="pixel"] .topbar .brand p { letter-spacing: 0; font-size: 9px; }
+    
     .topbar .brand p { font-size: 10px; }
     .topbar .topbar-actions { gap: 4px; }
     .topbar .icon-btn { width: 32px; height: 32px; }
@@ -674,110 +674,113 @@
      rounded corners like the modern theme, hard 3-4px drop shadows, buttons that press onto their
      shadow, a 2x2 dither. Frames only on real containers; rows, headers, tabs and segments stay flat.
      ===================================================================================== */
-  :root[data-skin="pixel"] {
-    --bg: #0b0b1e; --bg-2: #101028;
-    --surface: rgba(22, 22, 56, .8); --surface-2: #212152; --surface-3: #2c2c66;
-    --tile: #161638; --tile-2: #212152; --tile-on: #2a2150;
-    --text: #f0f0f8; --muted: #9c9cc4; --soft: #7474a0;
-    --accent: #ff6b6b; --accent-2: #ff6b6b; --on-accent: #0b0b1e;
-    --gold: #ffd042; --gold-ink: #0b0b1e;
-    --good: #5be07a; --warn: #ffd042; --bad: #ff5c5c; --info: #7ab8ff;
-    --line: #3a3a86;          /* indigo outlines that belong to the palette (grey looked off) */
+  :root[data-flavor="pixel"] {
+    --bg: #0b0b1e;
+    --bg-2: #101028;
+    --surface: rgba(22, 22, 56, .8);
+    --surface-2: #212152;
+    --surface-3: #2c2c66;
+    --tile: #161638;
+    --tile-2: #212152;
+    --tile-on: #2a2150;
+    --text: #f0f0f8;
+    --muted: #9c9cc4;
+    --soft: #7474a0;
+    --accent: #ff6b6b;
+    --accent-2: #ff6b6b;
+    --on-accent: #0b0b1e;
+    --gold: #ffd042;
+    --gold-ink: #0b0b1e;
+    --good: #5be07a;
+    --warn: #ffd042;
+    --bad: #ff5c5c;
+    --info: #7ab8ff;
+    --line: #3a3a86;
     --line-2: #5a5ab4;
     --px-shadow: color-mix(in srgb, var(--bg) 55%, black);
-    --px-raised: 4px 4px 0 0 var(--px-shadow);
-    --px-w: 3px;
-    --px-btn: 3px 3px 0 0 var(--px-shadow);
-    --shadow: none;
-    --font: "Jersey 15", "Segoe UI", system-ui, sans-serif;   /* clearest pixel digits (8, 5, 3) of the fonts tried */
-    --display: var(--font);
-    --ease: steps(3, end);
   }
-  :root[data-skin="pixel"][data-theme="light"] {
-    --bg: #e3d9bd; --bg-2: #dad0b2;
-    --surface: rgba(239, 231, 209, .82); --surface-2: #e6dcc2; --surface-3: #d9ceb0;
-    --tile: #efe7d1; --tile-2: #e6dcc2; --tile-on: #f3d6cc;
-    --text: #1b1b33; --muted: #5c5c80; --soft: #8a8aa8;
-    --accent: #e0474f; --accent-2: #e0474f; --on-accent: #fff;
-    --gold: #f0b400; --gold-ink: #1b1b33;
-    --good: #1f9a45; --warn: #b87800; --bad: #d23434; --info: #2f6fd0;
-    --line: #b9a980; --line-2: #9a8a62;
+  :root[data-flavor="pixel"][data-theme="light"] {
+    --bg: #e3d9bd;
+    --bg-2: #dad0b2;
+    --surface: rgba(239, 231, 209, .82);
+    --surface-2: #e6dcc2;
+    --surface-3: #d9ceb0;
+    --tile: #efe7d1;
+    --tile-2: #e6dcc2;
+    --tile-on: #f3d6cc;
+    --text: #1b1b33;
+    --muted: #5c5c80;
+    --soft: #8a8aa8;
+    --accent: #e0474f;
+    --accent-2: #e0474f;
+    --on-accent: #fff;
+    --gold: #f0b400;
+    --gold-ink: #1b1b33;
+    --good: #1f9a45;
+    --warn: #b87800;
+    --bad: #d23434;
+    --info: #2f6fd0;
+    --line: #b9a980;
+    --line-2: #9a8a62;
     --px-shadow: color-mix(in srgb, var(--text) 22%, var(--bg));
   }
   @media (max-width: 719px) {   /* phones: thinner outlines and shadows */
-    :root[data-skin="pixel"] { --px-w: 2px; --px-raised: 3px 3px 0 0 var(--px-shadow); --px-btn: 2px 2px 0 0 var(--px-shadow); }
+    
   }
-  :root[data-skin="pixel"] body {
-    font-family: var(--font);
-    font-synthesis: none;   /* single-weight pixel fonts: no smeared fake bold */
-    background: repeating-conic-gradient(color-mix(in srgb, var(--text) 4%, transparent) 0 25%, transparent 0 50%) 0 0 / 6px 6px, var(--bg);
-  }
-  :root[data-skin="pixel"] img, :root[data-skin="pixel"] canvas { image-rendering: pixelated; }
-  :root[data-skin="pixel"] .glow, :root[data-skin="pixel"] .hero::before { display: none; }
-  :root[data-skin="pixel"] *::-webkit-scrollbar-thumb { background: var(--line); }
-  :root[data-skin="pixel"] :is(.card, .topbar, .sheet-backdrop) { backdrop-filter: none; -webkit-backdrop-filter: none; }
-  :root[data-skin="pixel"] .topbar { background: var(--bg-2); border-bottom: var(--px-w) solid var(--line); }
-  :root[data-skin="pixel"] *:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  
+  
+  
+  
+  
+  
+  
 
   /* ---- frames with hard pixel drop shadows on real containers only (rounded, like the modern theme) ---- */
-  :root[data-skin="pixel"] :is(.card, .hero, .toast, .tile-item, .icon-only, .charm-chip) {
-    border: var(--px-w) solid var(--line) !important; animation: none;
-    box-shadow: var(--px-raised) !important;
-  }
-  :root[data-skin="pixel"] :is(.tile-item, .icon-only, .charm-chip) { --px-w: 2px; --px-raised: var(--px-btn); }
-  :root[data-skin="pixel"] .hero { border-color: var(--gold) !important; }
-  :root[data-skin="pixel"] :is(.tile-item, .icon-only, .charm-chip, .row).on { border-color: var(--gold) !important; background: var(--tile-on); }
-  :root[data-skin="pixel"] .sheet { border: 0; border-top: var(--px-w) solid var(--line); box-shadow: none; }
-  @media (min-width: 720px) { :root[data-skin="pixel"] .sheet { border: var(--px-w) solid var(--line); box-shadow: 6px 6px 0 0 var(--px-shadow); } }
+  
+  
+  
+  
+  
+  
 
   /* ---- flat inside: no frames within frames ---- */
-  :root[data-skin="pixel"] :is(.stat-row, .ladder-row, .charm-total, .step, .icon-frame, .safety, .formula, .table-wrap, .fit-row, .tile) {
-    border-color: transparent !important; box-shadow: none !important; background: var(--surface-2);
-  }
-  :root[data-skin="pixel"] .step { background: transparent; border-bottom: 2px solid var(--line) !important; }
-  :root[data-skin="pixel"] .pick-trigger { border: 2px dashed var(--line) !important; background: transparent; box-shadow: none; }
-  :root[data-skin="pixel"] .lvl-head { border-bottom: var(--px-w) solid var(--line); box-shadow: none; }
-  :root[data-skin="pixel"] .seg, :root[data-skin="pixel"] .seg button { box-shadow: none !important; }
-  :root[data-skin="pixel"] .seg { border: 2px solid var(--line); background: transparent; }
+  
+  
+  
+  
+  
+  
 
   /* ---- buttons: 3px border, hard shadow, press onto the shadow ---- */
-  :root[data-skin="pixel"] :is(.btn, .icon-btn, .chip-btn, .example, .mini, .filter, .row) {
-    border: var(--px-w) solid var(--line) !important; box-shadow: var(--px-btn) !important; transition: none;
-  }
-  :root[data-skin="pixel"] :is(.filter, .mini, .chip-btn, .example) { border-width: 2px !important; }
-  :root[data-skin="pixel"] :is(.btn, .icon-btn, .chip-btn, .example, .mini, .filter, .row, .tile-item, .icon-only, .charm-chip):active:not(:disabled) {
-    transform: translate(2px, 2px) !important; box-shadow: none !important;
-  }
-  :root[data-skin="pixel"] :is(.search input, .cat-select select, .stepper, input[type="number"]) {
-    border: var(--px-w) solid var(--line) !important; box-shadow: inset 2px 2px 0 0 var(--px-shadow) !important;
-  }
-  :root[data-skin="pixel"] :is(.btn.primary, .chip-btn.on, .seg.accent button.on, .step-num, .logo, .hd-btn[aria-pressed="true"], .skin-btn[aria-pressed="true"], .toast.tappable, .filter.on) {
-    background: var(--accent) !important; color: var(--on-accent) !important; border-color: var(--accent) !important;
-  }
-  :root[data-skin="pixel"] .seg button.on { background: var(--text); color: var(--bg); }
-  :root[data-skin="pixel"] .seg.safe button.on { background: var(--good) !important; color: var(--bg); }
-  :root[data-skin="pixel"] :is(.chip-btn.on.gold, .chip.perfect b) { background: var(--gold) !important; color: var(--gold-ink) !important; border-color: var(--gold) !important; }
-  :root[data-skin="pixel"] .step-num, :root[data-skin="pixel"] .logo { box-shadow: var(--px-btn) !important; }
-  :root[data-skin="pixel"] :is(.pill, .chip, .lvl-head .facts span) { border: 2px solid var(--line); }
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
 
   /* ---- type: the same fonts and sizes as the modern look, with hard pixel drop shadows on the big titles ---- */
-  :root[data-skin="pixel"] .brand h1 { text-shadow: 2px 2px 0 var(--px-shadow); }
-  :root[data-skin="pixel"] .hero-num { text-shadow: 3px 3px 0 var(--px-shadow); }
+  
+  
 
   /* ---- bars, meters and motion ---- */
-  :root[data-skin="pixel"] .bar .opt, :root[data-skin="pixel"] .progress .fill { background: var(--good); }
-  :root[data-skin="pixel"] .ring circle { stroke-linecap: butt; }
-  :root[data-skin="pixel"] .ring svg { filter: none !important; }
-  :root[data-skin="pixel"] .search svg { z-index: 1; }
+  
+  
+  
+  
   /* pixel-art diamond (logo and start screen) replaces the smooth one */
   .px-only { display: none; }
-  :root[data-skin="pixel"] .px-only { display: block; }
-  :root[data-skin="pixel"] .hd-only { display: none; }
-  :root[data-skin="pixel"] .logo svg.px-only { width: 24px; height: 20px; }
-  :root[data-skin="pixel"] .glyph .px-gem { width: 78px; height: 60px; margin: 0 auto; }
+  
+  
+  
+  
 
   /* reading font option (help page): VT323 instead of Jersey 15; font-size-adjust scales it to the same size */
-  :root[data-font="vt323"], :root[data-font="vt323"][data-skin="pixel"] { --font: "VT323", ui-monospace, monospace; }
+  :root[data-font="vt323"] { --font: "VT323", ui-monospace, monospace; }
   /* ---------- start-up splash: shown until fonts and icons are ready (max 5 s) ---------- */
   #splash { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: var(--bg); transition: opacity .35s ease, visibility .35s; }
   #splash.done { opacity: 0; visibility: hidden; pointer-events: none; }
@@ -789,8 +792,8 @@
   .splash-bar { width: 140px; height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
   .splash-bar i { display: block; height: 100%; width: 40%; border-radius: inherit; background: var(--accent); animation: splash-run 1s ease-in-out infinite; }
   @keyframes splash-run { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
-  :root[data-skin="pixel"] .splash-in b { font-size: 16px; text-shadow: 3px 3px 0 var(--px-shadow); }
-  :root[data-skin="pixel"] .splash-bar i { animation-timing-function: steps(6, end); }
+  
+  
   @media (prefers-reduced-motion: reduce) { .splash-gem, .splash-bar i { animation: none; } }
   /* ---------- helper dialogue (start screen): anz speaking, RPG style ---------- */
   .tip { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; max-width: 380px; margin: 24px auto 0; padding: 9px 30px 9px 9px;
@@ -804,9 +807,9 @@
   @keyframes tip-blink { to { visibility: hidden; } }
   .tip.pop .tip-line { animation: tip-pop .25s var(--ease); }
   @keyframes tip-pop { from { opacity: .3; transform: translateY(3px); } to { opacity: 1; transform: none; } }
-  :root[data-skin="pixel"] .tip { border: 2px solid var(--line); border-radius: 12px; box-shadow: var(--px-btn); }
+  
 
-  :root[data-skin="pixel"] .tip-name { font-size: 10px; font-size-adjust: none; }
+  
   @media (prefers-reduced-motion: reduce) { .tip-next { animation: none; } }
   .credit { color: var(--muted); }
   /* ---------- in-game record ---------- */
@@ -846,7 +849,7 @@
   .guide-other .obs-title { font-weight: 600; }
   .guide-nav { display: flex; justify-content: space-between; margin-top: 18px; }
   .guide-sheet .verdict { margin: 10px 0 0; }
-  :root[data-skin="pixel"] .talk { border: 2px solid var(--line); border-radius: 12px; box-shadow: var(--px-btn); }
+  
   .g-recipe { display: grid; gap: 8px; margin-top: 14px; padding: 12px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); }
   .g-recipe > div:not(.g-count) { display: grid; grid-template-columns: 64px minmax(0, 1fr); align-items: center; gap: 8px; }
   .g-recipe .chip { justify-self: start; }
@@ -858,7 +861,7 @@
   .g-how p { margin: 4px 0 0; color: var(--muted); line-height: 1.45; }
   .g-how p b { color: var(--text); }
   .g-how .charm-chips { margin-top: 10px; }
-  :root[data-skin="pixel"] .g-recipe, :root[data-skin="pixel"] .g-how { border: 2px solid var(--line); border-radius: 12px; }
+  
   .same-formula { margin-top: 12px; padding: 10px 12px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); }
   .same-formula summary { cursor: pointer; list-style: none; display: grid; gap: 2px; }
   .same-formula summary::-webkit-details-marker { display: none; }
@@ -867,7 +870,7 @@
   .same-formula summary small { color: var(--muted); font-size: 12px; }
   .same-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
   .rec-plus { color: var(--muted); font-weight: 400; font-size: 12px; }
-  :root[data-skin="pixel"] .same-formula { border: 2px solid var(--line); border-radius: 12px; }
+  
   /* ---------- my projects ---------- */
   .proj-list { display: grid; gap: 8px; }
   .proj-row { display: flex; align-items: stretch; gap: 6px; }
@@ -884,11 +887,11 @@
   .proj-go { flex: 0 0 auto; font-size: 13px; color: var(--accent); font-weight: 700; }
   .proj-x { flex: 0 0 auto; width: 34px; border-radius: 12px; border: 1px solid var(--line); background: transparent; color: var(--muted); font-size: 18px; cursor: pointer; }
   .btn.starred { color: var(--gold); border-color: color-mix(in srgb, var(--gold) 45%, var(--line)); }
-  :root[data-skin="pixel"] :is(.proj-open, .proj-x) { border: 2px solid var(--line); border-radius: 12px; box-shadow: var(--px-btn); }
+  
   .data-pick { display: grid; gap: 8px; margin: -6px 0 16px; padding-bottom: 14px; border-bottom: 1px solid var(--line-2); color: var(--muted); font-size: 14px; }
   .data-btns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .data-btns .btn { width: 100%; }
-  :root[data-skin="pixel"] .data-pick { border-bottom: 2px dashed var(--line); }
+  
   .cstock { margin: 0; }
   .cstock-wrap { padding: 0 12px 12px; }
   .charm-chip:not(.on) { opacity: .5; }
@@ -929,7 +932,7 @@
   .coach-bubble { position: fixed; left: 16px; right: 16px; max-width: 420px; margin: 0 auto; display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 16px; background: var(--bg-2); border: 1px solid var(--line-2); box-shadow: 0 16px 40px rgba(0, 0, 0, .45); animation: rise .35s var(--ease) both; }
   .coach-bubble img { width: 52px; height: auto; flex: 0 0 auto; }
   .coach-bubble p { margin: 2px 0 8px; font-size: 15px; line-height: 1.45; }
-  :root[data-skin="pixel"] .coach-bubble { border: 2px solid var(--line); border-radius: 12px; box-shadow: var(--px-raised); }
+  
   /* ---------- no shortcut: the plan is plain pairing ---------- */
   .hero.plain, :root[data-theme="light"] .hero.plain { background: var(--surface); border: 1px solid var(--gold); }
   .hero.plain::before { display: none; }
@@ -949,7 +952,7 @@
   .pair-flow.one-row .pf-arrow { flex: 0 0 auto; font-size: 12px; }
   .plain-facts { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 16px; margin: 12px 0 4px; color: var(--muted); }
   .plain-facts b { color: var(--text); }
-  :root[data-skin="pixel"] .plain-badge { border-radius: 6px; }
+  
   /* the target is below the item's max: say so where the plan is shown */
   .lvl-note { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin-top: 10px; padding: 8px 8px 8px 12px; border-radius: 12px; border: 1px solid rgba(246, 196, 83, .45); background: rgba(246, 196, 83, .1); }
   .lvl-note b { color: var(--gold); }
@@ -1003,25 +1006,25 @@
   .type-tile span { max-width: 100%; line-height: 1.1; font-size: 11.5px; overflow-wrap: normal; word-break: keep-all; }
   :root[data-theme="light"] .home-hero { background: radial-gradient(120% 90% at 0% 0%, rgba(139, 124, 255, .7), transparent 60%),
                 radial-gradient(90% 80% at 100% 100%, rgba(55, 211, 154, .55), transparent 60%), linear-gradient(150deg, #3a2a86, #5a2a7a 45%, #1a4a6a); }
-  :root[data-skin="pixel"] .home-hero { border: 2px solid var(--line) !important; }
-  :root[data-skin="pixel"] .home-cta { border-radius: 12px; }
+  
+  
   @media (prefers-reduced-motion: reduce) { .home-cta { animation: none; } }
   /* ---------- game theme: the pixel look in Pixel Odyssey's own colours ---------- */
   .lvr { display: none; }
   :root[data-flavor="game"] .lvn { display: none; }
   :root[data-flavor="game"] .lvr { display: inline; }
-  :root[data-flavor="game"][data-skin="pixel"] {
+  :root[data-flavor="game"] {
     --bg: #081713; --bg-2: #0b1d18;
     --surface: rgba(15, 36, 30, .8); --surface-2: #143027; --surface-3: #1b3d31;
     --tile: #0f2a22; --tile-2: #173a2e; --tile-on: #1d4a38;
     --text: #eaf6ee; --muted: #8fb8a2; --soft: #6a917d;
-    --accent: #5fd873; --accent-2: #5fd873; --on-accent: #06180f;
+    --accent: #2f9e57; --accent-2: #2f9e57; --on-accent: #f0fff4;
     --gold: #ffd84a; --gold-ink: #102010;
     --good: #5fd873; --warn: #ffd84a; --bad: #ff5a5a; --info: #7ab8ff;
     --line: #21483a; --line-2: #2f6a52;
     --px-shadow: #030a08;
   }
-  :root[data-flavor="game"][data-skin="pixel"][data-theme="light"] {   /* the sandy daylight of the Step screen */
+  :root[data-flavor="game"][data-theme="light"] {   /* the sandy daylight of the Step screen */
     --bg: #eadcc2; --bg-2: #e2d2b4;
     --surface: rgba(244, 234, 214, .82); --surface-2: #ecdfc4; --surface-3: #dfcfae;
     --tile: #f4ead6; --tile-2: #ecdfc4; --tile-on: #d8ecd0;
@@ -1033,18 +1036,13 @@
     --px-shadow: #b8a27c;
   }
   :root[data-flavor="game"] body { background: var(--bg); }
-  /* primary buttons: dark green with a bright green frame, like Take Step and Craft */
-  /* doubled classes: the pixel theme's button rule is weighted up by its .seg.accent button.on branch */
-  :root[data-flavor="game"][data-skin="pixel"] .btn.btn.primary, :root[data-flavor="game"][data-skin="pixel"] .btn.btn.home-cta, :root[data-flavor="game"][data-skin="pixel"] .btn.btn.guide-cta {
-    background: #0c2a1e !important; color: #c8ffd2 !important; border-width: 3px !important; border-style: solid !important; border-color: #5fd873 !important; box-shadow: 0 0 0 0 transparent !important; }
-  :root[data-flavor="game"][data-skin="pixel"][data-theme="light"] .btn.btn.primary, :root[data-flavor="game"][data-skin="pixel"][data-theme="light"] .btn.btn.home-cta { background: #11402a !important; color: #eafff0 !important; }
   :root[data-flavor="game"] .home-cta { animation: none; }
   :root[data-flavor="game"] .home-title span { background: none; color: #ffd84a; -webkit-text-fill-color: #ffd84a; }
   /* level badges: a white Roman numeral on a chip with a corner glow in the level's colour */
-  :root[data-flavor="game"][data-skin="pixel"] .chip.chip { --lvc: #3aa84a; background: radial-gradient(130% 150% at 100% 0%, color-mix(in srgb, var(--lvc) 75%, transparent) 0, transparent 58%), var(--tile) !important; border-color: var(--line) !important; }
-  :root[data-flavor="game"][data-skin="pixel"] .chip.chip b { background: transparent !important; box-shadow: none !important; border: 0 !important; color: #fff !important;
+  :root[data-flavor="game"] .chip.chip { --lvc: #3aa84a; background: radial-gradient(130% 150% at 100% 0%, color-mix(in srgb, var(--lvc) 75%, transparent) 0, transparent 58%), var(--tile) !important; border-color: var(--line) !important; }
+  :root[data-flavor="game"] .chip.chip b { background: transparent !important; box-shadow: none !important; border: 0 !important; color: #fff !important;
     font-family: var(--font); font-size: 15px; padding: 0 2px; white-space: nowrap; text-shadow: 1px 1px 0 #000; }
-  :root[data-flavor="game"][data-skin="pixel"][data-theme="light"] .chip.chip b { color: #1a2a22 !important; text-shadow: none; }
+  :root[data-flavor="game"][data-theme="light"] .chip.chip b { color: #1a2a22 !important; text-shadow: none; }
   :root[data-flavor="game"] .chip.lv1 { --lvc: #3aa84a; } :root[data-flavor="game"] .chip.lv2 { --lvc: #4cc85a; }
   :root[data-flavor="game"] .chip.lv3 { --lvc: #c8d24a; } :root[data-flavor="game"] .chip.lv4 { --lvc: #8a6ae0; }
   :root[data-flavor="game"] .chip.lv5 { --lvc: #5a5af0; } :root[data-flavor="game"] .chip.lv6 { --lvc: #c060e0; }
@@ -1056,7 +1054,7 @@
   #scene { position: fixed; left: 0; top: 0; width: 100%; height: 100vh; height: 100lvh; z-index: 0; display: none; image-rendering: pixelated; pointer-events: none; }   /* lvh: still full screen when the phone's address bar slides away */
   body:not(.has-item) #scene { display: block; }
   body:not(.has-item) { background: #07061a; }
-  .home-hero.home-hero, :root[data-skin="pixel"] .home-hero.home-hero, :root[data-flavor="game"] .home-hero.home-hero {
+  .home-hero.home-hero, :root[data-flavor="game"] .home-hero.home-hero {
     background: none !important; border: 0 !important; box-shadow: none !important; border-image: none !important; overflow: visible; padding: 34px 6px 26px; color: #fff; }
   .home-hero::after { display: none; }
   .home-hero .home-copy { justify-items: center; text-align: center; margin: 0 auto; }
@@ -1069,9 +1067,6 @@
   :root[data-theme="light"] .home-hero .home-kicker { color: #fff4c0; }
   body:not(.has-item) #resultsBody > .card { background: color-mix(in srgb, var(--surface) 84%, transparent) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
   body:not(.has-item) .tip { background: color-mix(in srgb, var(--surface) 88%, transparent); }
-  /* game look: deep forest green for filled highlights (the full bright green was too loud) */
-  :root[data-flavor="game"][data-skin="pixel"] :is(.logo, .step-num, .skin-btn[aria-pressed="true"], .hd-btn[aria-pressed="true"], .toast.tappable, .filter.on, .chip-btn.on:not(.gold)) {
-    background: #1f5a3c !important; color: #d8ffe2 !important; border-color: #3f9a62 !important; }
   /* ---------- the landscape behind planning screens: still and dim ---------- */
   body.has-item #scene { display: block; opacity: .32; }
   /* ---------- game-style tab bar ---------- */
@@ -1098,47 +1093,42 @@
   .topbar { z-index: 56; }   /* above the sheets, which tuck 1px under it: no gap between the bar and a sheet */
   @media (max-width: 719px) { .sheet { height: 100%; padding-top: 0; } }
   @media (min-width: 720px) { .sheet { height: min(100%, 900px); } }
-  :root[data-skin="pixel"] .tabbar { background: var(--bg-2); border-top: var(--px-w) solid var(--line); box-shadow: none; }
-  @media (min-width: 720px) { :root[data-skin="pixel"] .tabbar { border: var(--px-w) solid var(--line); border-radius: 22px; box-shadow: var(--px-raised); } }
-  :root[data-skin="pixel"] .tab { border-radius: 16px; font-family: var(--font); }
-  :root[data-skin="pixel"] .tab.on { background: var(--accent); box-shadow: var(--px-btn); }
-  :root[data-flavor="game"][data-skin="pixel"] .tab.on { background: #1f5a3c; color: #e0ffe8; border-radius: 14px; box-shadow: none; }
-  :root[data-flavor="game"][data-skin="pixel"] .tab.on .tab-glyph { color: #e0ffe8; }
-  :root[data-flavor="game"][data-skin="pixel"] .tab-label { color: #eaf6ee; }
+  :root[data-flavor="game"] .tab.on .tab-glyph { color: #e0ffe8; }
+  :root[data-flavor="game"] .tab-label { color: #eaf6ee; }
   /* ---------- game look, stage 3: the plan as a quest log ---------- */
   /* level headers: a chapter banner with the Roman numeral in gold */
-  :root[data-flavor="game"][data-skin="pixel"] .lvl-head { background: color-mix(in srgb, var(--bg-2) 92%, transparent); }
-  :root[data-flavor="game"][data-skin="pixel"] .lvl-head .lv { display: inline-flex; align-items: center; gap: 10px; color: var(--gold); font-size: 18px; text-transform: uppercase; letter-spacing: 1px; text-shadow: 2px 2px 0 var(--px-shadow); }
-  :root[data-flavor="game"][data-skin="pixel"] .lvl-head .lv .lvr { font-size: 20px; }
-  :root[data-flavor="game"][data-skin="pixel"] .lvl-head .lv::before, :root[data-flavor="game"][data-skin="pixel"] .lvl-head .lv::after {
+  :root[data-flavor="game"] .lvl-head { background: color-mix(in srgb, var(--bg-2) 92%, transparent); }
+  :root[data-flavor="game"] .lvl-head .lv { display: inline-flex; align-items: center; gap: 10px; color: var(--gold); font-size: 18px; text-transform: uppercase; letter-spacing: 1px; text-shadow: 2px 2px 0 var(--px-shadow); }
+  :root[data-flavor="game"] .lvl-head .lv .lvr { font-size: 20px; }
+  :root[data-flavor="game"] .lvl-head .lv::before, :root[data-flavor="game"] .lvl-head .lv::after {
     content: ""; width: 8px; height: 8px; background: var(--gold); transform: rotate(45deg); box-shadow: 2px 2px 0 var(--px-shadow); }
   /* steps: quest cards in a pixel frame, with a square pixel checkbox */
-  :root[data-flavor="game"][data-skin="pixel"] .steps { gap: 12px; }
-  :root[data-flavor="game"][data-skin="pixel"] .step.step { position: relative; background: color-mix(in srgb, var(--surface) 92%, transparent) !important;
+  :root[data-flavor="game"] .steps { gap: 12px; }
+  :root[data-flavor="game"] .step.step { position: relative; background: color-mix(in srgb, var(--surface) 92%, transparent) !important;
     border: 2px solid var(--line-2) !important; border-radius: 14px !important; box-shadow: 3px 3px 0 var(--px-shadow); }
-  :root[data-flavor="game"][data-skin="pixel"] .step .check { width: 28px; height: 28px; border-radius: 8px; background: var(--bg); border: 3px solid var(--line-2); box-shadow: inset 2px 2px 0 rgba(0, 0, 0, .35); }
-  :root[data-flavor="game"][data-skin="pixel"] .step.done .check { background: #1f5a3c; border-color: #5fd873; box-shadow: none; }
-  :root[data-flavor="game"][data-skin="pixel"] .step.done { opacity: .72; }
-  :root[data-flavor="game"][data-skin="pixel"] .step.done .recipe { text-decoration: none; filter: saturate(.5); }
-  :root[data-flavor="game"][data-skin="pixel"] .step.done::after { content: "Clear"; position: absolute; right: 10px; top: -10px; transform: rotate(4deg);
+  :root[data-flavor="game"] .step .check { width: 28px; height: 28px; border-radius: 8px; background: var(--bg); border: 3px solid var(--line-2); box-shadow: inset 2px 2px 0 rgba(0, 0, 0, .35); }
+  :root[data-flavor="game"] .step.done .check { background: #1f5a3c; border-color: #5fd873; box-shadow: none; }
+  :root[data-flavor="game"] .step.done { opacity: .72; }
+  :root[data-flavor="game"] .step.done .recipe { text-decoration: none; filter: saturate(.5); }
+  :root[data-flavor="game"] .step.done::after { content: "Clear"; position: absolute; right: 10px; top: -10px; transform: rotate(4deg);
     padding: 3px 7px; font: 14px/1 var(--font); text-transform: uppercase; color: var(--gold); border: 2px solid var(--gold); background: var(--bg);
     pointer-events: none; animation: clear-stamp .32s steps(4) both; }
   @keyframes clear-stamp { from { transform: rotate(4deg) scale(1.8); opacity: 0; } to { transform: rotate(4deg) scale(1); opacity: 1; } }
   /* the item: an inventory slot with a soft glow */
-  :root[data-flavor="game"][data-skin="pixel"] .item-head .icon-frame { background: radial-gradient(circle at 50% 40%, #2f6a52 0, var(--tile) 70%) !important; box-shadow: 3px 3px 0 var(--px-shadow); }
-  :root[data-flavor="game"][data-skin="pixel"][data-theme="light"] .item-head .icon-frame { background: radial-gradient(circle at 50% 40%, #fff6dc 0, var(--tile) 70%) !important; }
+  :root[data-flavor="game"] .item-head .icon-frame { background: radial-gradient(circle at 50% 40%, #2f6a52 0, var(--tile) 70%) !important; box-shadow: 3px 3px 0 var(--px-shadow); }
+  :root[data-flavor="game"][data-theme="light"] .item-head .icon-frame { background: radial-gradient(circle at 50% 40%, #fff6dc 0, var(--tile) 70%) !important; }
   /* anz: an RPG dialogue box with a name plate and a blinking "more" arrow */
-  :root[data-flavor="game"][data-skin="pixel"] .talk { position: relative; border-radius: 14px !important; padding-bottom: 18px; background: var(--surface) !important; }
-  :root[data-flavor="game"][data-skin="pixel"] .talk .tip-name { justify-self: start; padding: 4px 8px 3px; background: var(--gold); color: #1a1206; font: 14px/1 var(--font); text-transform: uppercase; box-shadow: 2px 2px 0 var(--px-shadow); }
-  :root[data-flavor="game"][data-skin="pixel"] .talk::after { content: ""; position: absolute; right: 12px; bottom: 7px; width: 10px; height: 6px; background: var(--gold);
+  :root[data-flavor="game"] .talk { position: relative; border-radius: 14px !important; padding-bottom: 18px; background: var(--surface) !important; }
+  :root[data-flavor="game"] .talk .tip-name { justify-self: start; padding: 4px 8px 3px; background: var(--gold); color: #1a1206; font: 14px/1 var(--font); text-transform: uppercase; box-shadow: 2px 2px 0 var(--px-shadow); }
+  :root[data-flavor="game"] .talk::after { content: ""; position: absolute; right: 12px; bottom: 7px; width: 10px; height: 6px; background: var(--gold);
     clip-path: polygon(0 0, 100% 0, 50% 100%); animation: talk-more 1s steps(2) infinite; }
   @keyframes talk-more { 50% { transform: translateY(3px); } }
   /* toasts: a dialogue box at the bottom, above the tab bar */
-  :root[data-flavor="game"][data-skin="pixel"] .toast { top: auto; bottom: calc(var(--tabbar-h) + 14px); transform: translate(-50%, 12px); 
+  :root[data-flavor="game"] .toast { top: auto; bottom: calc(var(--tabbar-h) + 14px); transform: translate(-50%, 12px); 
     background: var(--surface-2) !important; color: var(--text) !important; border: 3px solid var(--gold) !important; border-radius: 14px !important;
     box-shadow: 4px 4px 0 var(--px-shadow); padding: 12px 30px 12px 16px; text-align: left; font-family: var(--font); font-size: 15px; }
-  :root[data-flavor="game"][data-skin="pixel"] .toast.show { transform: translate(-50%, 0); }
-  :root[data-flavor="game"][data-skin="pixel"] .toast::after { content: ""; position: absolute; right: 10px; bottom: 9px; width: 8px; height: 5px; background: var(--gold);
+  :root[data-flavor="game"] .toast.show { transform: translate(-50%, 0); }
+  :root[data-flavor="game"] .toast::after { content: ""; position: absolute; right: 10px; bottom: 9px; width: 8px; height: 5px; background: var(--gold);
     clip-path: polygon(0 0, 100% 0, 50% 100%); animation: talk-more 1s steps(2) infinite; }
   /* "LEVEL V · CLEAR!" banner */
   .lvl-clear { position: fixed; left: 50%; top: 38%; z-index: 70; display: grid; justify-items: center; gap: 8px; padding: 16px 26px 14px; pointer-events: none;
@@ -1160,7 +1150,7 @@
   .hb-dots { display: flex; justify-content: center; gap: 6px; }
   .hb-dots i { width: 6px; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, .3); transition: width .2s, background .2s; }
   .hb-dots i.on { width: 16px; background: #fff; }
-  :root[data-skin="pixel"] .hb-dots i { border-radius: 0; }
+  
   :root[data-flavor="game"] .hb-dots i.on { background: #ffd84a; }
   /* the landscape shows through the sheets too */
   .sheet { background: color-mix(in srgb, var(--bg-2) 82%, transparent); }
@@ -1168,28 +1158,30 @@
   body.locked :is(main.app, body > footer) { visibility: hidden; }   /* only the world shows through a sheet, not the page under it */
   .sheet-backdrop { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(4, 6, 12, .35); }
   /* top bar and tab bar: a little see-through, so the world shows behind them too */
-  .topbar, :root[data-skin="pixel"] .topbar, .tabbar, :root[data-skin="pixel"] .tabbar {
+  .topbar, .tabbar {
     background: color-mix(in srgb, var(--bg-2) 72%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }   /* blur: page text sliding under stays unreadable */
   /* ---------- test look: the modern look with a pixel finish (same sizes, borders, radii, colours) ---------- */
-  :root[data-flavor="test"] .glow { display: none; }
-  :root[data-flavor="test"] .px-only { display: block; }
-  :root[data-flavor="test"] .hd-only { display: none; }
-  :root[data-flavor="test"] .logo svg.px-only { width: 24px; height: 20px; }
-  :root[data-flavor="test"] img, :root[data-flavor="test"] canvas, :root[data-flavor="test"] svg.pixel { image-rendering: pixelated; }
+  :root[data-finish="retro"] .glow { display: none; }
+  :root[data-finish="retro"] .px-only { display: block; }
+  :root[data-finish="retro"] .hd-only { display: none; }
+  :root[data-finish="retro"] .logo svg.px-only { width: 24px; height: 20px; }
+  :root[data-finish="retro"] img, :root[data-finish="retro"] canvas, :root[data-finish="retro"] svg.pixel { image-rendering: pixelated; }
   /* hard pixel drop shadows instead of soft glows */
-  :root[data-flavor="test"] :is(.card, .home-best, .deal, .proj-open, .proj-x, .coach-bubble, .talk, .tip, .icon-btn, .btn:not(.ghost), .chip-btn, .tile-item, .icon-only, .charm-chip, .row) {
+  :root[data-finish="retro"] :is(.card, .home-best, .deal, .proj-open, .proj-x, .coach-bubble, .talk, .tip, .icon-btn, .btn:not(.ghost), .chip-btn, .tile-item, .icon-only, .charm-chip, .row) {
     box-shadow: 3px 3px 0 rgba(0, 0, 0, .4); }
   /* filled highlights: flat colour with a pixel bevel (light top edge, dark bottom edge) */
-  :root[data-flavor="test"] :is(.btn.primary, .chip-btn.on, .seg.accent button.on, .step-num, .logo, .skin-btn[aria-pressed="true"], .hd-btn[aria-pressed="true"], .toast.tappable, .tab.on, .home-cta, .guide-cta) {
+  :root[data-finish="retro"] :is(.btn.primary, .chip-btn.on, .seg.accent button.on, .step-num, .logo, .skin-btn[aria-pressed="true"], .hd-btn[aria-pressed="true"], .toast.tappable, .tab.on, .home-cta, .guide-cta) {
     background: var(--accent) !important;
     box-shadow: inset 0 3px 0 rgba(255, 255, 255, .22), inset 0 -3px 0 rgba(0, 0, 0, .28), 3px 3px 0 rgba(0, 0, 0, .45) !important; }
-  :root[data-flavor="test"] .chip-btn.on.gold { background: #f6b73c !important; }
-  :root[data-flavor="test"] .chip.perfect b { background: #f6b73c; box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .25); }
-  :root[data-flavor="test"] .home-cta { animation: none; }
-  :root[data-flavor="test"] :is(.btn, .icon-btn, .chip-btn, .tile-item, .icon-only, .charm-chip, .row, .deal, .home-best):active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(0, 0, 0, .4) !important; }
-  :root[data-flavor="test"] .ring svg { filter: none !important; }
-  :root[data-flavor="test"] .ring circle { stroke-linecap: butt; }
-  :root[data-flavor="test"] .brand h1 { text-shadow: 2px 2px 0 rgba(0, 0, 0, .45); }
+  :root[data-finish="retro"] .chip-btn.on.gold { background: #f6b73c !important; }
+  :root[data-finish="retro"] .chip.perfect b { background: #f6b73c; box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .25); }
+  :root[data-finish="retro"] .home-cta { animation: none; }
+  :root[data-finish="retro"] :is(.btn, .icon-btn, .chip-btn, .tile-item, .icon-only, .charm-chip, .row, .deal, .home-best):active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(0, 0, 0, .4) !important; }
+  :root[data-finish="retro"] .ring svg { filter: none !important; }
+  :root[data-finish="retro"] .ring circle { stroke-linecap: butt; }
+  :root[data-finish="retro"] .glyph .px-gem { width: 78px; height: 60px; margin: 0 auto; }
+  :root:where([data-finish="retro"]) { --px-shadow: rgba(0, 0, 0, .45); }   /* :where: the Pixel and Game palettes set their own */
+  :root[data-finish="retro"] .brand h1 { text-shadow: 2px 2px 0 rgba(0, 0, 0, .45); }
 </style>
 </head>
 <body>
@@ -1291,7 +1283,7 @@
         <button class="btn small" type="button" data-action="check-update"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Check for update</button>
       </div>
       <div class="font-pick theme-pick"><span>Look</span><div class="seg" role="group" aria-label="Look">
-        <button type="button" data-action="skin-pick" data-skin="modern">Modern</button><button type="button" data-action="skin-pick" data-skin="pixel">Pixel</button><button type="button" data-action="skin-pick" data-skin="game">Game</button><button type="button" data-action="skin-pick" data-skin="test">Test</button>
+        <button type="button" data-action="skin-pick" data-skin="modern">Modern</button><button type="button" data-action="skin-pick" data-skin="retro">Retro</button><button type="button" data-action="skin-pick" data-skin="pixel">Pixel</button><button type="button" data-action="skin-pick" data-skin="game">Game</button>
       </div></div>
       <div class="font-pick"><span>Font</span><div class="seg" role="group" aria-label="Font">
         <button type="button" data-action="font" data-font="jersey">Jersey 15</button><button type="button" data-action="font" data-font="vt323">VT323</button>
@@ -1805,13 +1797,17 @@ __SOLVER_JS__
     syncTopbar();
   }
   // Three looks: modern (default), pixel, and game (the pixel look in Pixel Odyssey's own colours and level badges)
-  const SKINS = { modern: 'Modern theme', pixel: 'Pixel theme', game: 'Game theme', test: 'Test theme' };
+  // Four looks on one structure (Modern's): Retro adds the pixel finish (hard shadows, bevelled buttons, pixel gem),
+  // Pixel and Game add their own colours on top of that, and Game its extras (Roman levels, quest cards, dialogue)
+  const SKINS = { modern: 'Modern theme', retro: 'Retro theme', pixel: 'Pixel theme', game: 'Game theme' };
   let skin = 'modern';
   function setSkin(next) {
+    if (next === 'test') next = 'retro';
     skin = SKINS[next] ? next : 'modern';
     const d = document.documentElement;
-    d.setAttribute('data-skin', skin === 'modern' || skin === 'test' ? 'modern' : 'pixel');
-    if (skin === 'game' || skin === 'test') d.setAttribute('data-flavor', skin); else d.removeAttribute('data-flavor');
+    d.setAttribute('data-skin', 'modern');
+    if (skin === 'modern') { d.removeAttribute('data-flavor'); d.removeAttribute('data-finish'); }
+    else { d.setAttribute('data-flavor', skin); d.setAttribute('data-finish', 'retro'); }
     syncTopbar();
     const b = document.querySelector('[data-action="skin"]');
     if (b) b.setAttribute('aria-pressed', String(skin !== 'modern'));
@@ -2255,7 +2251,7 @@ __SOLVER_JS__
   };
   function scenePalette() {
     const d = document.documentElement, light = d.dataset.theme === 'light';
-    const base = d.dataset.flavor === 'game' ? 'game' : d.dataset.skin === 'pixel' ? 'pixel' : 'modern';
+    const base = d.dataset.flavor === 'game' ? 'game' : d.dataset.flavor === 'pixel' ? 'pixel' : 'modern';
     return SCENES[base + (light ? 'Light' : '')];
   }
   function sceneRand(seed) { let t = seed >>> 0; return () => { t += 0x6D2B79F5; let r = Math.imul(t ^ (t >>> 15), 1 | t); r ^= r + Math.imul(r ^ (r >>> 7), 61 | r); return ((r ^ (r >>> 14)) >>> 0) / 4294967296; }; }
@@ -2266,6 +2262,7 @@ __SOLVER_JS__
     // pixels across, big screens see more land instead of a blown-up picture
     const cw = c.clientWidth || innerWidth, ch = c.clientHeight || innerHeight, px = Math.max(1, Math.min(cw / 180, ch / 200, 3));
     const W = Math.round(cw / px), H = Math.round(ch / px);
+    scene.px = px;
     if (scene.W !== W || scene.H !== H) {
       scene.W = W; scene.H = H; c.width = W; c.height = H;
       scene.ctx = c.getContext('2d');
@@ -2301,7 +2298,9 @@ __SOLVER_JS__
     }
     g.globalAlpha = 1;
     // moon or sun, with a soft stepped halo
-    const mx = Math.round(W * 0.74), my = Math.round(H * 0.13), mr = 8;
+    // the moon (with its halo) sits wholly below the top bar, whatever the bar's height
+    const mr = 8, bar = document.querySelector('.topbar'), barH = bar ? bar.getBoundingClientRect().bottom / (scene.px || 2) : 0;
+    const mx = Math.round(W * 0.74), my = Math.max(Math.round(H * 0.13), Math.ceil(barH) + mr + 7);
     g.fillStyle = pal.moon; g.globalAlpha = 0.12;
     for (let y = -mr - 5; y <= mr + 5; y++) for (let x = -mr - 5; x <= mr + 5; x++) if (x * x + y * y <= (mr + 5) * (mr + 5)) g.fillRect(mx + x, my + y, 1, 1);
     g.globalAlpha = 1;
@@ -3540,7 +3539,7 @@ __SOLVER_JS__
     const act = el.dataset.action;
     switch (act) {
       case 'home': e.preventDefault(); if (ui.pickerSheet.hidden && ui.infoSheet.hidden && ui.guideSheet.hidden) goHome(); else closeSheets(); break;
-      case 'skin': setSkin({ modern: 'pixel', pixel: 'game', game: 'test', test: 'modern' }[skin]); toast(SKINS[skin]); break;
+      case 'skin': setSkin({ modern: 'retro', retro: 'pixel', pixel: 'game', game: 'modern' }[skin]); toast(SKINS[skin]); break;
       case 'skin-pick': setSkin(el.dataset.skin); toast(SKINS[skin]); break;
       case 'icon-style': setIconStyle(iconStyle === 'modern' ? 'pixelhd' : 'modern'); toast(ICON_STYLES[iconStyle].label); break;
       case 'reload': location.reload(); break;
