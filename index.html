@@ -869,7 +869,7 @@
   .gf-edit input::-webkit-inner-spin-button, .gf-edit input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
   .gf-edit input.changed { color: var(--gold); border-bottom-color: var(--gold); }
   .gf-card.changed { border-color: var(--gold); }
-  #guideBody:not(.edited) .when-edited, #guideBody.edited .when-same { display: none; }
+  #guideBody:not(.edited) .when-edited, #guideBody.edited .when-same, #guideBody:not(.better) .when-better, #guideBody.better .when-worse { display: none; }
   .gf-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; max-width: 340px; margin-top: -6px; }
   .gf-slot { display: grid; justify-items: center; align-content: start; gap: 5px; }
   .gf-slot > small { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
@@ -2064,7 +2064,7 @@
         <li><b>Key step</b> marks a refine that makes a perfect item from one below perfect. That is where the savings come from, so check the game's preview matches before you refine.</li>
       </ul>
       <h3>If a result comes out different</h3>
-      <p>In the guide, set the game's numbers on the result with − and +, or tap the pencil on a step in the plan. PORE re-plans the rest from what you have, tells you what changed, and can finish a little lower instead of making items again. The <b>Safe</b> switch plans with a little margin, so no refine can come up short. The game keeps small values its screen doesn't show, so two items that are both below perfect can land one point lower than expected; Safe counts on that.</p>
+      <p>In the guide, set the game's numbers on the result with − and +, or tap the pencil on a step in the plan. PORE re-plans the rest from what you have, tells you what changed, and can finish a little lower instead of making items again. A result <b>higher</b> than planned never hurts: keep your plan. The <b>Safe</b> switch plans with a little margin, so no refine can come up short. The game keeps small values its screen doesn't show, so two items that are both below perfect can land one point lower than expected; Safe counts on that.</p>
       <h3>Items you already have</h3>
       <p>Add refined copies you own and PORE uses them for free wherever they fit. Counts you enter in Inventory show whether you can do a plan right now.</p>
       <h3>Good to know</h3>
@@ -3304,7 +3304,7 @@ function createSolver() {
     const sig = rateSig(item.rates), n = item.stats.length;
     return observations.filter(o => o.rates && o.actual.length === n && o.base.length === n && rateSig(o.rates) === sig);
   }
-  function overridesFor(item) { return obsForFormula(item).map(o => ({ baseL: o.baseL, base: o.base, matL: o.matL, mat: o.mat, actual: o.actual })); }
+  function overridesFor(item) { return obsForFormula(item).filter(o => o.plan !== false).map(o => ({ baseL: o.baseL, base: o.base, matL: o.matL, mat: o.mat, actual: o.actual })); }
   function formulaSigOf(statsList, catOf) { return statsList.map(st => { const c = CATS[catOf(st)]; return `${c.num}/${c.den}:${st.value}`; }).join('|'); }
   let FORMULA_GROUPS = null;
   function sameFormulaItems(item) {
@@ -3319,12 +3319,13 @@ function createSolver() {
     const sig = formulaSigOf(item.stats, st => st.cat);
     return (FORMULA_GROUPS.get(sig) || []).filter(it => it.key !== item.key);
   }
-  function addObservation(item, step, actual) {
+  function addObservation(item, step, actual, noPlan) {
     const key = obsKey(item.key, step.base.L, step.base.s, step.mat.L, step.mat.s);
     observations = observations.filter(o => obsKey(o.item, o.baseL, o.base, o.matL, o.mat) !== key);
     observations.push({ id: 'o' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), item: item.key, itemName: item.name, ts: Date.now(),
       baseL: step.base.L, base: step.base.s.slice(), matL: step.mat.L, mat: step.mat.s.slice(), predicted: step.result.s.slice(), actual: actual.slice(),
       rates: item.stats.map(st => rateOf(st.cat)), statNames: item.stats.map(st => st.name), model: state.m });
+    if (noPlan) observations[observations.length - 1].plan = false;
     saveJSON(STORAGE.obs, observations);
   }
   function removeObservation(id) { observations = observations.filter(o => o.id !== id); saveJSON(STORAGE.obs, observations); }
@@ -4132,7 +4133,11 @@ function createSolver() {
   function statStepMark(input) {
     input.classList.toggle('changed', Math.round(Number(input.value)) !== Number(input.dataset.pred));
     const card = input.closest('.gf-card'); if (card) card.classList.toggle('changed', !!card.querySelector('input.changed'));
-    if (input.closest('#guideBody')) ui.guideBody.classList.toggle('edited', !!ui.guideBody.querySelector('[data-guide-input].changed'));
+    if (input.closest('#guideBody')) {
+      const all = Array.from(ui.guideBody.querySelectorAll('[data-guide-input]'));
+      ui.guideBody.classList.toggle('edited', all.some(x => x.classList.contains('changed')));
+      ui.guideBody.classList.toggle('better', all.every(x => Math.round(Number(x.value)) >= Number(x.dataset.pred)));   // nothing lower
+    }
   }
   function obsFormHTML(id, step, item) {
     const inputs = item.stats.map((st, i) => statStepHTML(st.short, 'data-obs-input', i, step.result.s[i])).join('');
@@ -5870,7 +5875,7 @@ function createSolver() {
       const note = guide.replan && guide.replan.note ? guide.replan.note + '<br><br>' : '';
       const say = note + `${guide.i === steps.length - 1 ? 'Last one! ' : ''}Next, make <b>${n} × ${rName}</b>.` +
         (risky ? `<span class="talk-warn">⚠ Watch this one: the game could give one point more or less. Tell me what you got.</span>`
-          : isKeyStep(item, st) ? `<span class="talk-key">Key step: a perfect ${rName} from an item below perfect. Before you refine, check the game shows ${st.result.s.join('/')}. If not, set its numbers below and I'll re-plan.</span>` : '');
+          : isKeyStep(item, st) ? `<span class="talk-key">Key step: a perfect ${rName} from an item below perfect. Before you refine, check the game shows at least ${st.result.s.join('/')}. If it shows less, set its numbers below and I'll re-plan.</span>` : '');
       const makeBtn = guideMakeBtn;
       const recipe = forgeHTML(st, item, makeBtn, null, !isDone) + `<div class="g-count">Do it <b>${n}×</b>: uses ${uses}, makes ${n} × ${rName}</div>`;
       body = anzSays(say) + recipe + sharedTagHTML(sharedBases(a.steps)(st), item) + guideHowTo(st) + verdictHTML(item, st) +
@@ -5878,13 +5883,15 @@ function createSolver() {
         (isDone
           ? `<button class="btn primary block" type="button" data-action="guide-skip">Already done ✓ · next step</button><button class="btn small ghost" type="button" data-action="guide-undo">Not done yet</button>`
           : `<button class="btn primary block when-same" type="button" data-action="guide-match">✓ Done, I got ${n} × ${rName}</button>` +
-            `<button class="btn primary block when-edited" type="button" data-action="guide-save">Use the game's numbers &amp; re-plan</button>` +
+            `<button class="btn primary block when-edited when-better" type="button" data-action="guide-better">✓ Done: even better, keep my plan</button>` +
+            `<button class="btn primary block when-edited when-worse" type="button" data-action="guide-save">Use the game's numbers &amp; re-plan</button>` +
+            `<button class="btn small when-edited when-better" type="button" data-action="guide-save">Re-plan anyway (maybe cheaper)</button>` +
             `<button class="btn small ghost when-edited" type="button" data-action="stat-reset">Back to PORE's numbers</button>`) +
         `</div>` +
         `<div class="guide-nav"><button class="btn small ghost" type="button" data-action="guide-back">← Back</button><button class="btn small ghost" type="button" data-action="guide-skip">Skip →</button></div>`;
     }
     ui.guideBody.innerHTML = head + body;
-    ui.guideBody.classList.remove('edited');
+    ui.guideBody.classList.remove('edited'); ui.guideBody.classList.add('better');
   }
   function guideStep() { const steps = guideSteps(); return steps[guide.i]; }
   // what the plan still asks for: refines not ticked yet and the base items they use
@@ -7208,10 +7215,14 @@ function createSolver() {
         }
         rbSave(); renderGuide(); if (act !== 'rb-undo') guideTop(); break;
       }
-      case 'guide-done': case 'guide-match': {
+      case 'guide-done': case 'guide-match': case 'guide-better': {
         guide.replan = null;
         const st = guideStep(); if (!st || !last) return;
         if (act === 'guide-match') addObservation(last.item, st, st.result.s.slice());
+        if (act === 'guide-better') {   // recorded as it came out, the plan stays: later results may show a point more
+          const actual = last.item.stats.map((x, k) => Math.round(Number((ui.guideBody.querySelector(`[data-guide-input="${k}"]`) || {}).value)));
+          addObservation(last.item, st, actual, true);
+        }
         setDone(stepId(st), true); haptic(14);
         guide.i++; guide.other = false;
         const btnAt = fxAt(el), d = loadDone();
@@ -7222,7 +7233,7 @@ function createSolver() {
           if (levelDone) fxAdd(FXK.coins(btnAt));   // the level's last step
         }
         renderGuide(); guideTop();
-        toast(guide.i >= guideSteps().length ? 'All done!' : levelDone ? `Level ${st.L} done!` : 'Nice! Next step');   // to untick: Back, then "Not done yet"
+        toast(act === 'guide-better' ? 'Better than planned: your plan still works (later results may show a point more)' : guide.i >= guideSteps().length ? 'All done!' : levelDone ? `Level ${st.L} done!` : 'Nice! Next step');   // to untick: Back, then "Not done yet"
         break;
       }
       case 'guide-save': {
