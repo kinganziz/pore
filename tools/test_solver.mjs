@@ -112,6 +112,16 @@ for (const [name, base, mults] of [['b20', [20], [M.combat]], ['ws', [10, 5], [M
   }
 }
 
+// Game previews (Blue Shield DEF/HP, the refine screen; the game builds on the stronger item). Two more the formula
+// cannot match from the visible stats, kept out: 82/120 + 80/117 -> 102/150, 79/116 + 79/116 -> 98/144.
+{
+  const rates = [{ num: 1, den: 4 }, { num: 1, den: 4 }];
+  const seen = [[[82, 120], [79, 116], '101/149'], [[80, 117], [79, 116], '99/146'], [[82, 120], [66, 96], '98/144'], [[81, 119], [35, 50], '89/131'],
+    [[81, 119], [80, 117], '101/148'], [[81, 119], [79, 116], '100/148'], [[59, 86], [59, 86], '73/107'], [[67, 98], [67, 98], '83/122'],
+    [[81, 119], [81, 119], '101/148'], [[69, 101], [69, 101], '86/126']];
+  for (const [b, m, want] of seen) check(`game ${b.join('/')} + ${m.join('/')}`, S.predict('exact', b, m, rates).join('/'), want);
+}
+
 // Safe's margin: 1 less per stat when neither item is perfect (brute force over every tree up to level 5)
 {
   const rates = [{ num: 1, den: 4 }, { num: 1, den: 4 }];
