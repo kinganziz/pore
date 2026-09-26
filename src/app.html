@@ -1809,6 +1809,11 @@
     /* the item grids fill the panel instead of five game-sized columns */
     .slots.named { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); max-width: none; }
   }
+  @media (min-width: 980px) {
+    .inv-list, .map-list, .lib-col, #invGrid > :is(.npc-head, .map-head, .boss-head, .boss-stats, .enc-desc, .npc-spells),
+    #pickerBody:has(> .inv-list) > .list-title { max-width: 640px; margin-left: auto; margin-right: auto; }
+    #invGrid > .inv-back { display: block; width: fit-content; margin-left: max(2px, calc(50% - 320px)); }
+  }
   @media (min-width: 1200px) {
     :is(#pickerSheet, #charmsSheet) .sheet { max-width: 960px; }   /* the two grid pages get more columns */
   }
@@ -3290,13 +3295,19 @@ __SOLVER_JS__
   for (const t of ['pointerdown', 'keydown', 'wheel', 'touchmove']) document.addEventListener(t, saverWake, { capture: true, passive: t === 'wheel' || t === 'touchmove' });
   document.addEventListener('visibilitychange', () => { if (!document.hidden) saverWake(); });
   function saverStart() { clearTimeout(saverT); document.body.classList.add('saver'); sceneHide(); sceneShow(); saverTick(); }
-  // a tap on empty space on Home (not on a button, the carousel or the text) starts the screensaver right away
+  // A tap on empty space on Home (not on a button, the carousel or the text) starts the screensaver right away; on a
+  // wide screen so does a click beside any page (Items, Projects, Inventory, Settings, a plan). About is a dialog:
+  // a click beside it still closes it.
+  const wideScreen = () => matchMedia('(min-width: 980px)').matches;
   document.addEventListener('click', e => {
-    if (saverOn() || document.body.classList.contains('has-item') || document.body.classList.contains('locked') || document.body.classList.contains('menu-open')) return;
+    if (saverOn() || document.body.classList.contains('menu-open')) return;
     const t = e.target;
     if (!t || t.closest('button, a, input, textarea, select, label, [data-action], .hb-track, .home-copy > *, .bg-switch, .tabbar, .topbar, .toast')) return;
-    if (!(t.closest('main') || t === document.body || t === document.documentElement || t.id === 'scene')) return;
-    saverStart();
+    const bare = t === document.body || t === document.documentElement || t.id === 'scene';
+    const home = !document.body.classList.contains('has-item') && !document.body.classList.contains('locked') && (t.closest('main') || bare);   // locked: a page is open over Home
+    const beside = wideScreen() && ([ui.pickerSheet, ui.projectsSheet, ui.charmsSheet, ui.settingsSheet].includes(t) ||
+      (document.body.classList.contains('has-item') && (bare || t.matches('main.app'))));
+    if (home || beside) saverStart();
   });
   function setSaver(secs) {
     saverSecs = secs;
@@ -5465,8 +5476,8 @@ __SOLVER_JS__
       const one = invLib && ([...spells, ...talents, ...books].find(e => e.name === invLib) || (o => o && E(o.name, `+${o.value} ${esc(o.stat)} · ${esc(o.tier)}`,
         `<p>An obol adds +${o.value} ${esc(o.stat)}. Its material sets how much (iron +1 up to bismuth +14), its symbol which stat.</p>`))(obolAll.find(o => o.name === invLib)));
       if (one) {   // one entry's page
-        box.innerHTML = `<button type="button" class="inv-back" data-action="inv-lib-back">‹ Library</button>` +
-          `<div class="lib-page"><div class="npc-head">${iconSVG(libKey(one.name), 'npc-face')}<small>${one.sub}</small></div><div class="lib-body">${one.body}</div></div>`;
+        box.innerHTML = `<div class="lib-col"><button type="button" class="inv-back" data-action="inv-lib-back">‹ Library</button>` +
+          `<div class="lib-page"><div class="npc-head">${iconSVG(libKey(one.name), 'npc-face')}<small>${one.sub}</small></div><div class="lib-body">${one.body}</div></div></div>`;
         invRenderPop();
         return;
       }
@@ -5481,7 +5492,8 @@ __SOLVER_JS__
       const sec = (title, list, top) => !list.length ? '' : `<h3 class="lib-h">${title} <small>${list.length}</small></h3>${top || ''}` +
         (libView === 'list' ? list.map(row).join('') : `<div class="place-grid lib-grid ${libView === 'icons' ? 'bare' : ''}">${list.map(tile).join('')}</div>`);
       const html = sec('Spells', spells) + sec('Talents', talents) + obols + sec('Books', books, booksTop);
-      box.innerHTML = (html || '<p class="inv-hint">Nothing matches.</p>') + `<p class="inv-hint">From the wiki. Tap an entry to ${libView === 'list' ? 'open it' : 'see it'}.</p>`;
+      const body = (html || '<p class="inv-hint">Nothing matches.</p>') + `<p class="inv-hint">From the wiki. Tap an entry to ${libView === 'list' ? 'open it' : 'see it'}.</p>`;
+      box.innerHTML = libView === 'list' ? `<div class="lib-col">${body}</div>` : body;
       invRenderPop();
       return;
     }
@@ -6219,7 +6231,7 @@ __SOLVER_JS__
     }
   });
 
-  ui.pickerSheet.addEventListener('click', e => { if (e.target === ui.pickerSheet) closePicker(); });
+  ui.pickerSheet.addEventListener('click', e => { if (e.target === ui.pickerSheet && !wideScreen()) closePicker(); });   // wide screens: the screensaver instead
   ui.infoSheet.addEventListener('click', e => { if (e.target === ui.infoSheet) closeInfo(); });
   document.addEventListener('keydown', e => {
     if (e.key === 'Tab') {
