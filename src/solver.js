@@ -37,8 +37,9 @@ function createSolver() {
   const WORK_BUDGET = 2e7;         // with owned items: pairs tried + frontier comparisons per search (about a second)
 
   const GOLD = { 2: 250, 3: 500, 4: 750, 5: 1000, 6: 1250, 7: 1500, 8: 1750, 9: 2000, 10: 3000 };
-  // base success chance per level (the wiki's table; level 5 is 15% in the game's refine screen, the wiki says 20%)
-  const SUCCESS = { 2: 100, 3: 60, 4: 30, 5: 15, 6: 10, 7: 5, 8: 3, 9: 1, 10: 0.5 };
+  // base success chance per level (the wiki's table, except where the game's refine screen showed otherwise:
+  // level 5 is 15% there, the wiki says 20%; level 6 is 8%, the wiki says 10%)
+  const SUCCESS = { 2: 100, 3: 60, 4: 30, 5: 15, 6: 8, 7: 5, 8: 3, 9: 1, 10: 0.5 };
 
   const now = () => (typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now());
   const f32 = Math.fround;
