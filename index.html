@@ -814,6 +814,8 @@
   .verdict { margin: -4px 12px 10px; padding: 4px 10px; border-radius: 8px; font-size: 12px; text-align: center; }
   .verdict.ok { color: var(--good); background: color-mix(in srgb, var(--good) 12%, transparent); }
   .verdict.diff { color: var(--info); background: color-mix(in srgb, var(--info) 12%, transparent); }
+  .verdict.key { color: var(--gold); background: color-mix(in srgb, var(--gold) 10%, transparent); }
+  .talk-key { display: block; margin-top: 6px; color: var(--gold); font-size: 13px; }
   .verdict.risk { color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); }
   .verdict.shared { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
   .verdict + .verdict { margin-top: -6px; }
@@ -921,6 +923,9 @@
   .proj-main { flex: 1 1 auto; min-width: 0; display: grid; gap: 4px; }
   .proj-main b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .proj-main b small { color: var(--muted); font-weight: 400; }
+  .proj-again { display: block; width: 100%; margin: 10px 0 4px; padding: 10px 12px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--gold) 45%, var(--line)); background: color-mix(in srgb, var(--gold) 8%, transparent); color: var(--text); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+  .proj-again b { color: var(--gold); }
+  .proj-again-note { margin: 2px 0 6px; font-size: 12px; color: var(--muted); }
   .proj-foot { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 10px; }   /* Continue follows the line, wrapping under it when the line is long */
   .proj-foot small { color: var(--muted); font-size: 12px; }
   .proj-bar { height: 6px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
@@ -2047,6 +2052,7 @@
       <h3>How it works</h3>
       <p>Refining combines two copies of the same item: the <b>base</b> goes up one level and gains stats from the <b>material</b>. Done the standard way, a perfect P10 takes <b>512</b> base items.</p>
       <p>PORE looks at every other way to combine them. Weaker materials often give the very same stats, so the plan it finds usually needs far fewer base items. Pick an item, choose a level, and PORE walks you through each refine.</p>
+      <p>PORE plans with the game's refining formula. The game shows every result before you refine, so check it: if it ever shows other numbers, PORE re-plans before you spend anything.</p>
       <p><b>World boss weapons</b> go up to <b>P5</b> only, and their fees are paid in world boss tokens (WB) instead of gold.</p>
       <h3>Reading a plan</h3>
       <ul>
@@ -2055,9 +2061,10 @@
         <li><b>Charms</b>: PORE uses the fewest charms that make each refine a sure success, and only the charms you switch on.</li>
         <li><b>P4</b> is a level-4 item with perfect stats; <b>L4</b> is a level-4 item below perfect. Each one shows the exact stats it needs.</li>
         <li><b>⚠ test this</b> marks a refine the game might land one point off. Do those first.</li>
+        <li><b>Key step</b> marks a refine that makes a perfect item from one below perfect. That is where the savings come from, so check the game's preview matches before you refine.</li>
       </ul>
       <h3>If a result comes out different</h3>
-      <p>Tap the pencil on that step and enter what you got. PORE re-plans the rest around it. The <b>Safe</b> switch plans with a little margin, so no refine can come up short. The game keeps small values its screen doesn't show, so two items that are both below perfect can land one point lower than expected; Safe counts on that.</p>
+      <p>In the guide, set the game's numbers on the result with − and +, or tap the pencil on a step in the plan. PORE re-plans the rest from what you have, tells you what changed, and can finish a little lower instead of making items again. The <b>Safe</b> switch plans with a little margin, so no refine can come up short. The game keeps small values its screen doesn't show, so two items that are both below perfect can land one point lower than expected; Safe counts on that.</p>
       <h3>Items you already have</h3>
       <p>Add refined copies you own and PORE uses them for free wherever they fit. Counts you enter in Inventory show whether you can do a plan right now.</p>
       <h3>Good to know</h3>
@@ -3135,7 +3142,7 @@ function createSolver() {
   const MODEL_KEYS = new Set(S.models.map(m => m.key));
 
   /* ================= state ================= */
-  const state = { item: null, custom: null, L: 10, w: 0, wl: 0, t: {}, o: [], k: {}, stock: 0, view: 'up', m: 'exact', cf: 0, ch: {} };
+  const state = { item: null, custom: null, L: 10, w: 0, wl: 0, t: {}, o: [], k: {}, stock: 0, view: 'up', m: 'exact', cf: 0, ch: {}, p: null };
   const ui = {};
   ['projectsSheet', 'projectsBody', 'charmsSheet', 'charmsBody', 'settingsSheet', 'tabbar', 'itemBody', 'itemHint', 'targetCard', 'targetBody', 'targetHint', 'ownedCard', 'ownedBody', 'resultsBody', 'pickerSheet', 'pickerBody', 'filters', 'searchInput', 'infoSheet', 'guideSheet', 'guideBody', 'toast', 'fx', 'themeBtn', 'infoBtn', 'catGrid', 'dataDate']
     .forEach(id => ui[id] = document.getElementById(id));
@@ -3182,6 +3189,7 @@ function createSolver() {
     if (state.stock) s.s = state.stock;
     if (state.view !== 'up') s.v = state.view;
     if (state.m !== 'exact') s.m = state.m;
+    if (state.item) s.p = state.p || '';   // '' a new plan; on another device a project id matches nothing and is dropped
     if (forShare && state.item) {
       const ob = observations.filter(o => o.item === state.item).map(o => [o.baseL, o.base, o.matL, o.mat, o.actual]);
       if (ob.length) s.ob = ob;
@@ -3202,6 +3210,9 @@ function createSolver() {
     state.stock = Math.max(0, Math.min(99999, Number(s.s) || 0));
     state.view = s.v === 'down' || s.v === 'jit' ? s.v : 'up';
     state.m = typeof s.m === 'string' && MODEL_KEYS.has(s.m) ? s.m : 'exact';
+    const pb = baseIdOf(state.item, state.custom);
+    if (s.p === undefined && projects.some(x => x.id === pb)) state.p = pb;   // saved before an item could have several projects
+    else state.p = typeof s.p === 'string' && projects.some(x => x.id === s.p && (x.base || x.id) === pb) ? s.p : null;
     state.cf = Math.max(0, Math.min(100000, Math.round(Number(s.cf) || 0)));
     state.ch = {};
     if (s.ch && typeof s.ch === 'object') for (const c of CHARMS) { const n = Math.round(Number(s.ch[c.key]) || 0); if (n > 0) state.ch[c.key] = Math.min(9, n); }
@@ -3665,6 +3676,9 @@ function createSolver() {
       ${assumed ? `<div class="assumed-note">Dashed category = not listed on the wiki's refining page, best guess. Change it if you know better.</div>` : ''}
       ${sameFormulaHTML(item)}
       ${item.key !== 'custom' && (WHERE[item.key] || []).length ? `<details class="item-where"><summary>Where to get base items</summary>${whereHTML(item.key)}</details>` : ''}
+      ${!currentProject() ? projects.filter(x => (x.base || x.id) === baseIdOf(state.item, state.custom)).slice(0, 3).map(x =>
+        `<button class="proj-again" type="button" data-action="project-open" data-id="${esc(x.id)}">You have ${esc(projName(x))} → P${x.L}${x.total ? ` · ${x.done || 0}/${x.total} steps` : ''}. <b>Continue it ›</b></button>`).join('') +
+        (projects.some(x => (x.base || x.id) === baseIdOf(state.item, state.custom)) ? '<p class="proj-again-note">Or plan here: this one becomes a new project of its own.</p>' : '') : ''}
       <div class="item-actions">
         <button class="btn small" type="button" data-action="open-picker">Change item</button>
         ${item.key !== 'custom' ? `<button class="btn small ghost" type="button" data-action="compare-pick">Compare</button>` : ''}
@@ -3810,7 +3824,13 @@ function createSolver() {
   }
   function stepId(st) { return `${st.L}|${st.result.s.join(',')}|${st.base.k}${st.base.L}:${st.base.s.join(',')}|${st.mat.k}${st.mat.L}:${st.mat.s.join(',')}`; }
   // Ticks belong to the plan without its recorded results: recording a result (even a match) must not lose them.
-  function doneSig(overrides) { const r = last.req; return JSON.stringify([last.item.key, r.base, r.rates, r.level, r.target, r.owned, r.model].concat(overrides ? [overrides] : [])); }
+  function doneSig(overrides) { const r = last.req, pid = sigPid(); return JSON.stringify([last.item.key, r.base, r.rates, r.level, r.target, r.owned, r.model].concat(overrides ? [overrides] : [], pid ? ['#' + pid] : [])); }
+  // the project part of that key: none for an item's first project; 'new' for a new plan while the first is taken
+  function sigPid() {
+    const b = baseIdOf(state.item, state.custom);
+    if (state.p) return state.p === b ? '' : state.p;
+    return projects.some(x => x.id === b) ? 'new' : '';
+  }
   function doneKey() { return STORAGE.done + 'p' + hashStr(doneSig()); }
   function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); }
   function loadDone() {
@@ -4013,6 +4033,8 @@ function createSolver() {
   // a refine is worth testing in-game when the formula variants disagree on its result (a rounding boundary)
   const riskCache = new Map();
   const RISK_MODELS = ['v1f64', 'v1f32', 'dec64', 'dec32', 'main64', 'main32'];
+  // a key step: a perfect result from an input below perfect (the savings rest on these, so the preview is checked)
+  const isKeyStep = (item, st) => isPerfectNode(st.result, item.chain) && !(isPerfectNode(st.base, item.chain) && isPerfectNode(st.mat, item.chain));
   function isRisky(item, st) {
     const key = `${item.key}|${st.base.s.join(',')}|${st.mat.s.join(',')}`;
     if (riskCache.has(key)) return riskCache.get(key);
@@ -5079,7 +5101,7 @@ function createSolver() {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></svg>
             Choose an item
           </button>
-          ${projects[0] ? `<button type="button" class="home-continue" data-action="project-open" data-id="${esc(projects[0].id)}">Continue: <b>${esc(projects[0].name)} → P${projects[0].L}</b>${projects[0].total ? ` · ${projects[0].done || 0}/${projects[0].total} steps` : ''} ›</button>` : ''}
+          ${projects[0] ? `<button type="button" class="home-continue" data-action="project-open" data-id="${esc(projects[0].id)}">Continue: <b>${esc(projName(projects[0]))} → P${projects[0].L}</b>${projects[0].total ? ` · ${projects[0].done || 0}/${projects[0].total} steps` : ''} ›</button>` : ''}
           ${(() => { const n = projects.reduce((t, pr) => t + (pr.saved || 0), 0); const tries = triesSaved(); return n > 0 ? `<p class="home-saved"><b>${fmt(n)}</b> base items spared${tries ? ` · ~${fmt(tries)} tries skipped` : ' so far'}</p>` : ''; })()}
         </div>
       </section>`;
@@ -5228,7 +5250,8 @@ function createSolver() {
       const isDone = done.has(id);
       if (isDone) doneCount++;
       const observed = obsKeys.has(fKey(item.rates, st.base.L, st.base.s, st.mat.L, st.mat.s));
-      const verdict = observed ? verdictHTML(item, st) : isRisky(item, st) ? `<div class="verdict risk" title="The formula variants give different results for this refine">⚠ test this: could land ±1 in-game</div>` : '';
+      const verdict = observed ? verdictHTML(item, st) : isRisky(item, st) ? `<div class="verdict risk" title="The formula variants give different results for this refine">⚠ test this: could land ±1 in-game</div>`
+        : isKeyStep(item, st) ? `<div class="verdict key" title="A perfect item from one below perfect: the savings rest on this refine">Key step: check the game's preview first</div>` : '';
       return `<div class="step ${isDone ? 'done' : ''} ${observed ? 'observed' : ''}" data-step-card="${esc(id)}">
           <label class="step-main">
             <input type="checkbox" data-field="step" data-step="${esc(id)}" ${isDone ? 'checked' : ''}>
@@ -5846,7 +5869,8 @@ function createSolver() {
       const uses = sameNode(st.base, st.mat) ? `${n * 2} × ${bName}` : `${n} × ${bName} and ${n} × ${mName}`;
       const note = guide.replan && guide.replan.note ? guide.replan.note + '<br><br>' : '';
       const say = note + `${guide.i === steps.length - 1 ? 'Last one! ' : ''}Next, make <b>${n} × ${rName}</b>.` +
-        (risky ? `<span class="talk-warn">⚠ Watch this one: the game could give one point more or less. Tell me what you got.</span>` : '');
+        (risky ? `<span class="talk-warn">⚠ Watch this one: the game could give one point more or less. Tell me what you got.</span>`
+          : isKeyStep(item, st) ? `<span class="talk-key">Key step: a perfect ${rName} from an item below perfect. Before you refine, check the game shows ${st.result.s.join('/')}. If not, set its numbers below and I'll re-plan.</span>` : '');
       const makeBtn = guideMakeBtn;
       const recipe = forgeHTML(st, item, makeBtn, null, !isDone) + `<div class="g-count">Do it <b>${n}×</b>: uses ${uses}, makes ${n} × ${rName}</div>`;
       body = anzSays(say) + recipe + sharedTagHTML(sharedBases(a.steps)(st), item) + guideHowTo(st) + verdictHTML(item, st) +
@@ -6067,28 +6091,48 @@ function createSolver() {
   // An item you work on (a tick, the guide, or the star) becomes a project: its settings and progress are kept
   // and it is listed on the start screen, so several items can be on the go at once.
   let projects = [];
-  function projectId() { return state.item === 'custom' ? 'custom:' + ((state.custom && state.custom.name) || '') : state.item; }
+  // An item can have several projects: the first one's id is the item's own (as before), later ones add #2, #3…
+  function baseIdOf(key, custom) { return key === 'custom' ? 'custom:' + ((custom && custom.name) || '') : key; }
   function saveProjects() { saveJSON(STORAGE.projects, projects); }
-  function currentProject() { return state.item ? projects.find(x => x.id === projectId()) : null; }
+  function currentProject() { return state.item && state.p ? projects.find(x => x.id === state.p) : null; }
+  const projName = pr => pr.name + (pr.num > 1 ? ' #' + pr.num : '');
+  // a new plan becoming a project: the ticks, rebuilds and inventory log it has so far move to the project's key
+  function moveProgress(fromKey, fromRb) {
+    if (!last || !last.req) return;
+    const toKey = doneKey(), toRb = rbKey();
+    if (toKey === fromKey) return;
+    const done = loadJSON(fromKey, null); if (done) { saveJSON(toKey, done); try { localStorage.removeItem(fromKey); } catch (e) { /* ignore */ } }
+    const rb = loadJSON(fromRb, null); if (rb) { saveJSON(toRb, rb); try { localStorage.removeItem(fromRb); } catch (e) { /* ignore */ } }
+    for (const k of Object.keys(inv.log)) if (k.startsWith(fromKey + '|')) { inv.log[toKey + k.slice(fromKey.length)] = inv.log[k]; delete inv.log[k]; }
+    invSave(); guide.rbFor = null;
+  }
   function upsertProject(extra) {
     if (!state.item) return;
     const item = resolveItem(); if (!item) return;
-    const id = projectId();
-    let pr = projects.find(x => x.id === id);
+    let pr = currentProject();
+    if (!pr) {
+      const b = baseIdOf(state.item, state.custom), same = projects.filter(x => (x.base || x.id) === b);
+      const num = same.length ? Math.max(...same.map(x => x.num || 1)) + 1 : 1;
+      const id = num === 1 && !projects.some(x => x.id === b) ? b : b + '#' + Date.now().toString(36);
+      const fromKey = last && last.req ? doneKey() : null, fromRb = fromKey ? rbKey() : null;
+      pr = { id, base: b, num }; projects.unshift(pr);
+      state.p = id;
+      if (fromKey) moveProgress(fromKey, fromRb);
+    }
     const snap = JSON.stringify(encodeState(false));
-    if (pr && pr.snap === snap && Object.keys(extra || {}).every(k => pr[k] === extra[k])) return;   // nothing new
-    if (!pr) { pr = { id }; projects.unshift(pr); }
+    if (pr.snap === snap && Object.keys(extra || {}).every(k => pr[k] === extra[k])) return;   // nothing new
     Object.assign(pr, { name: item.name, key: state.item === 'custom' ? null : state.item, L: state.L, snap, ts: Date.now() }, extra || {});
     projects.sort((x, y) => y.ts - x.ts);
     projects = projects.slice(0, 24);
     saveProjects();
   }
-  function removeProject(id) { projects = projects.filter(x => x.id !== id); saveProjects(); }
+  function removeProject(id) { projects = projects.filter(x => x.id !== id); if (state.p === id) state.p = null; saveProjects(); }
   function openProject(id) {
     const pr = projects.find(x => x.id === id); if (!pr) return;
     closePicker({ keepHistory: true }); closeProjects({ fromHistory: true });
     pushScreen({}, location.pathname + location.search + '#s=');
     try { applyState(JSON.parse(pr.snap)); } catch (e) { return; }
+    state.p = pr.id;
     resetPlan(); pendingScroll = null; revealResults = true;
     jumpTo(0);
     renderAll(); scheduleSolve(0);
@@ -6139,11 +6183,11 @@ function createSolver() {
       const icon = pr.key ? iconSVG(pr.key) : '<span class="proj-custom">✦</span>';
       return `<div class="proj-row ${i === 0 ? 'first' : ''}">` +
         `<button class="proj-open" type="button" data-action="project-open" data-id="${esc(pr.id)}">${icon}` +
-        `<span class="proj-main"><b>${esc(pr.name)} <small>→ P${pr.L}</small></b>` +
+        `<span class="proj-main"><b>${esc(projName(pr))} <small>→ P${pr.L}</small></b>` +
         `<span class="proj-bar"><i style="width:${pct}%"></i></span>` +
         `<span class="proj-foot"><small>${pr.total ? `${pr.done || 0}/${pr.total} steps done` : 'not started'}${pr.star ? ' · ★' : ''}${pr.ready === 1 ? ' · <span class="proj-ready">✓ ready</span>' : pr.ready === 0 && pr.short ? ` · <span class="proj-short">short: ${esc(pr.short)}</span>` : ''}</small>` +
         `${i === 0 ? '<span class="proj-go">Continue ›</span>' : ''}</span></span></button>` +
-        `<button class="proj-x" type="button" data-action="project-remove" data-id="${esc(pr.id)}" aria-label="Remove ${esc(pr.name)} from my projects" title="Remove from my projects"><svg viewBox="0 0 7 7" shape-rendering="crispEdges"><path fill="currentColor" d="M0 0h2v1h1v1h1V1h1V0h2v2H6v1H5v1h1v1h1v2H5V6H4V5H3v1H2v1H0V5h1V4h1V3H1V2H0z"/></svg></button></div>`;
+        `<button class="proj-x" type="button" data-action="project-remove" data-id="${esc(pr.id)}" aria-label="Remove ${esc(projName(pr))} from my projects" title="Remove from my projects"><svg viewBox="0 0 7 7" shape-rendering="crispEdges"><path fill="currentColor" d="M0 0h2v1h1v1h1V1h1V0h2v2H6v1H5v1h1v1h1v2H5V6H4V5H3v1H2v1H0V5h1V4h1V3H1V2H0z"/></svg></button></div>`;
     }).join('');
     return shoppingHTML() + `<div class="card projects"><div class="section-title"><h3>My projects</h3><span class="hint">${projects.length} item${projects.length === 1 ? '' : 's'}</span></div><div class="proj-list">${rows}</div>` + savedTotalHTML() +
       `<button class="proj-new" type="button" data-action="tab" data-tab="items"><span>+</span> New project <small>pick an item to plan</small></button></div>`;
@@ -6318,7 +6362,7 @@ function createSolver() {
 
   function pickItem(key) {
     if (!ui.charmsSheet.hidden) { invSel = null; closeCharms({ fromHistory: true }); }   // "Plan it" from the inventory
-    state.item = key;
+    state.item = key; state.p = null;   // a new plan: it becomes a project of its own (the item's projects stay as they are)
     state.t = {}; state.o = []; state.stock = 0; state.k = {};
     last = null; openObsForm = null;
     if (key !== 'custom') { recent = [key].concat(recent.filter(k => k !== key)).slice(0, 5); saveJSON(STORAGE.recent, recent); }
@@ -7128,7 +7172,7 @@ function createSolver() {
       }
       case 'project-remove': removeProject(el.dataset.id); renderResults(); renderProjects(); renderTabbar(); toast('Removed from my projects'); break;
       case 'project-toggle': {
-        if (currentProject()) { removeProject(projectId()); toast('Removed from my projects'); }
+        if (currentProject()) { removeProject(state.p); toast('Removed from my projects'); }
         else { upsertProject({ star: true }); toast('Added to my projects'); burst('star', el); }
         renderItem(); break;
       }
