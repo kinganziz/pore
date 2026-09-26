@@ -6393,7 +6393,24 @@ __SOLVER_JS__
       case 'guide-next': guide.replan = null; guide.i++; guide.other = false; renderGuide(); guideTop(); break;
       case 'guide-back': guide.replan = null; guide.i--; guide.other = false; renderGuide(); guideTop(); break;
       case 'guide-skip': guide.replan = null; guide.i++; guide.other = false; renderGuide(); guideTop(); break;
-      case 'guide-undo': { const st = guideStep(); if (st) setDone(stepId(st), false); renderGuide(); break; }
+      case 'guide-undo': {   // not done after all: the tick goes, and so do the numbers you set for it (the plan's numbers again)
+        const st = guideStep(); if (!st || !last) break;
+        const item = last.item, snap = undoPoint();
+        const o = observations.find(x => x.item === item.key && !x.shared && x.baseL === st.base.L && x.matL === st.mat.L && sameVec(x.base, st.base.s) && sameVec(x.mat, st.mat.s));
+        const set = loadDone(), ids = [stepId(st)];
+        if (o && o.predicted) ids.push(stepId(Object.assign({}, st, { result: Object.assign({}, st.result, { s: o.predicted }) })));   // its id before the numbers were set
+        for (const id of ids) if (set.has(id)) { invStep(id, false, st); set.delete(id); }   // what the tick used comes back
+        saveJSON(doneKey(), Array.from(set));
+        const back = !!o && !sameVec(o.actual, o.predicted || o.actual);
+        if (o) {
+          const steered = o.plan !== false;
+          removeObservation(o.id);
+          if (steered) { last = null; renderItem(); renderTarget(); renderOwned(); persist(); scheduleSolve(0); }
+        }
+        renderGuide();
+        toastUndo(back ? `Not done: back to the planned ${o.predicted.join('/')}` : 'Marked as not done', snap);
+        break;
+      }
       case 'guide-other': guide.other = !guide.other; renderGuide(); break;
       case 'guide-make': rebuildStart(el.dataset.side); rbSave(); haptic(6); renderGuide(); guideTop(); break;
       case 'rb-go': case 'rb-skip': case 'rb-back': case 'rb-done': case 'rb-undo': case 'rb-leave': {
