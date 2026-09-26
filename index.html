@@ -2292,7 +2292,7 @@ function createSolver() {
 
   // kind: 0 = base item (P1), 1 = owned item, 2 = refine(base, mat)
   function mkState(L, p, s, u, kind, b, m, j) {
-    return { L: L, p: p, s: s, u: u, k: kind, b: b, m: m, j: j, t: sum(s) };
+    return { L: L, p: p, s: s, u: u, k: kind, b: b, m: m, j: j, t: sum(s), um: -1, w: 0 };   // um: bit mask of the owned rows it uses (worked out when needed)
   }
 
   // Keep non-dominated states. Dominance: cost <=, usage no worse (uLeq, default: <= for every owned row),
@@ -2309,15 +2309,17 @@ function createSolver() {
     const uLeq = inv ? inv.leq : leq, uW = inv ? inv.weight : sum, map = hasU && inv ? inv.map : null;
     const n4 = inv ? 1 + (inv.cap.length >> 1) : 1;   // work per marked map point (it tries a move per owned row)
     let cmp = 0;
-    list.sort((a, b) => (a.p - b.p) || (b.t - a.t) || (hasU ? uW(a.u) - uW(b.u) : 0));
-    const groups = new Map(), glist = [], kept = [];
+    if (hasU) for (const s of list) s.w = uW(s.u);   // the inventory weight once per state, not per comparison
+    list.sort((a, b) => (a.p - b.p) || (b.t - a.t) || (hasU ? a.w - b.w : 0));
+    const groups = new Map(), glist = [], kept = [];   // glist: highest stat total first, so a scan stops at the first lower one
     outer: for (let i = 0; i < list.length; i++) {
       const s = list[i];
       let si = -1;
       for (let gi = 0; gi < glist.length; gi++) {
         const g = glist[gi];
         if ((++cmp & 8191) === 0) spend(8192);
-        if (g.t < s.t || !geq(g.s, s.s)) continue;   // not as good in every stat (the sum first: cheapest test)
+        if (g.t < s.t) break;                       // this group and all after it are weaker in total
+        if (!geq(g.s, s.s)) continue;              // not as good in every stat
         if (!hasU) continue outer;                  // kept states come first in cost order: this one is dominated
         if (g.bits) { if (si < 0) si = map.idx(s.u); if (map.has(g.bits, si)) continue outer; continue; }
         const ks = g.k;
@@ -2328,7 +2330,12 @@ function createSolver() {
       }
       const key = s.s.join(',');
       let g = groups.get(key);
-      if (!g) { g = { s: s.s, t: s.t, k: [], bits: null }; groups.set(key, g); glist.push(g); }
+      if (!g) {
+        g = { s: s.s, t: s.t, k: [], bits: null }; groups.set(key, g);
+        let lo = 0, hi = glist.length;   // keep glist in descending total
+        while (lo < hi) { const mid = (lo + hi) >> 1; if (glist[mid].t >= g.t) lo = mid + 1; else hi = mid; }
+        glist.splice(lo, 0, g);
+      }
       g.k.push(s);
       if (map) {
         if (g.bits) spend(map.up(g.bits, s.u) * n4);
@@ -2361,6 +2368,7 @@ function createSolver() {
     const idx = u => { let t = 0; for (let j = 0; j < n; j++) t += u[j] * radix[j]; return t; };
     const coord = (i, j) => Math.floor(i / radix[j]) % (cap[j] + 1);
     let stack = new Int32Array(1024);
+    const cs = new Int32Array(n);   // the coordinates of the point being marked
     function up(bits, u) {   // marks every point from which u can be had; returns how many it marked
       let top = 0, marked = 0;
       stack[top++] = idx(u);
@@ -2370,11 +2378,12 @@ function createSolver() {
         bits[i >>> 5] |= 1 << (i & 31);
         marked++;
         if (top + 2 * n >= stack.length) { const bigger = new Int32Array(stack.length * 2); bigger.set(stack); stack = bigger; }
+        for (let j = 0, r = i; j < n; j++) { const m = cap[j] + 1, c = r % m; cs[j] = c; r = (r - c) / m; }
         for (let j = 0; j < n; j++) {
-          const cj = coord(i, j);
+          const cj = cs[j];
           if (cj < cap[j]) { const w = i + radix[j]; if (!(bits[w >>> 5] & (1 << (w & 31)))) stack[top++] = w; }
           const b = below[j];
-          if (b >= 0 && cj > 0 && coord(i, b) + mult[j] <= cap[b]) { const w = i - radix[j] + mult[j] * radix[b]; if (!(bits[w >>> 5] & (1 << (w & 31)))) stack[top++] = w; }
+          if (b >= 0 && cj > 0 && cs[b] + mult[j] <= cap[b]) { const w = i - radix[j] + mult[j] * radix[b]; if (!(bits[w >>> 5] & (1 << (w & 31)))) stack[top++] = w; }
         }
       }
       return marked;
@@ -2525,12 +2534,15 @@ function createSolver() {
           }
           groups = Array.from(gm.values());
         }
+        const tu = hasU ? new Array(q.length) : null, useMaskL = hasU && q.length <= 30;
+        const rowMask = y => { if (y.um < 0) { let m = 0; for (let j = 0; j < q.length && j < 30; j++) if (y.u[j] > 0) m |= 1 << j; y.um = m; } return y.um; };
+        const fullOf = x => { let m = 0; for (let j = 0; j < q.length && j < 30; j++) if (x.u[j] >= q[j]) m |= 1 << j; return m; };
         const tryPair = (x, g, y, target, bestP) => {   // the merged state if the pair fits the inventory and the target, else null
           let u = null;
           if (hasU) {
-            u = new Array(q.length);
-            for (let j = 0; j < q.length; j++) { const v = x.u[j] + y.u[j]; if (v > q[j]) return null; u[j] = v; }
-            if (!inv.fits(u)) return null;
+            for (let j = 0; j < q.length; j++) { const v = x.u[j] + y.u[j]; if (v > q[j]) return null; tu[j] = v; }
+            if (!inv.fits(tu)) return null;
+            u = tu.slice();
           }
           let s;
           if (sep && !g.ov) { s = new Array(n); for (let i = 0; i < n; i++) s[i] = x.s[i] + g.s[i]; } else s = combine(x.s, y.s, rates, ctx, x.L, y.L);
@@ -2544,6 +2556,7 @@ function createSolver() {
           for (let xi = 0; xi < bases.length; xi++) {
             const x = bases[xi];
             if (x.p >= bestP) break;                       // bases are sorted by cost
+            const full = useMaskL ? fullOf(x) : 0;         // rows this base has used up: materials needing them are skipped
             if (groups) {
               const k = x.s.join(',');
               let gs = fitting.get(k);
@@ -2557,6 +2570,7 @@ function createSolver() {
                   const g = list[yi];
                   if (x.p + g.p >= bestP) break;          // each group is sorted by cost
                   if ((++tick & 8191) === 0) spend(8192);
+                  if (full && (rowMask(g.y) & full)) continue;
                   const w = tryPair(x, g, g.y, target, bestP);
                   if (w) { bestP = w.p; win = w; break; }
                 }
@@ -2566,6 +2580,7 @@ function createSolver() {
                 const y = matsG[yi];
                 if (x.p + y.p >= bestP) break;             // materials are sorted by cost
                 if ((++tick & 8191) === 0) spend(8192);
+                if (full && (rowMask(y) & full)) continue;
                 const w = tryPair(x, null, y, target, bestP);
                 if (w) { bestP = w.p; win = w; break; }  // the cheapest material that fits this base
               }
@@ -2593,22 +2608,42 @@ function createSolver() {
       const best = new Map();
       // scratch buffers: a pair's stats and inventory use are worked out in place, and copied only when kept
       const ss = new Array(n), su = hasU ? new Array(q.length) : null;
+      const NY = ys.length, Q = hasU ? q.length : 0, useMask = hasU && Q <= 30;
+      const yP = new Float64Array(NY), yS = new Float64Array(NY * n), yU = hasU ? new Int32Array(NY * Q) : null, yM = new Int32Array(NY), yF = new Uint8Array(NY), yO = new Array(NY);
+      for (let k = 0; k < NY; k++) {
+        const g = sep ? ys[k] : null, y = sep ? g.y : ys[k], sv = sep && !g.ov ? g.s : y.s;
+        yO[k] = y; yP[k] = y.p; yF[k] = sep && !g.ov ? 1 : 0;   // 1: stats add the gain; 0: worked out by combine()
+        for (let i = 0; i < n; i++) yS[k * n + i] = sv[i];
+        if (hasU) { let m = 0; for (let j = 0; j < Q; j++) { yU[k * Q + j] = y.u[j]; if (y.u[j] > 0 && j < 30) m |= 1 << j; } yM[k] = m; }
+      }
+      // materials bucketed by the owned rows they use (each bucket cheapest first): a base skips whole buckets
+      const buckets = [];
+      if (useMask) {
+        const bm = new Map();
+        for (let k = 0; k < NY; k++) { let b = bm.get(yM[k]); if (!b) { b = { m: yM[k], ids: [] }; bm.set(yM[k], b); buckets.push(b); } b.ids.push(k); }
+      } else buckets.push({ m: 0, ids: Array.from({ length: NY }, (v, k) => k) });
       for (let xi = 0; xi < xs.length; xi++) {
-        const x = xs[xi];
-        if (x.p >= cap) break;                   // bases are sorted by cost
-        for (let yi = 0; yi < ys.length; yi++) {
-          const g = sep ? ys[yi] : null, y = sep ? g.y : ys[yi];
-          const p = x.p + y.p;
-          if (p >= cap) break;                   // materials are sorted by cost
+        const x = xs[xi], xp = x.p, xsv = x.s, xu = x.u;
+        if (xp >= cap) break;                    // bases are sorted by cost
+        let full = 0;                            // the owned rows this base has used up
+        if (useMask) for (let j = 0; j < Q; j++) if (xu[j] >= q[j]) full |= 1 << j;
+        for (let bi = 0; bi < buckets.length; bi++) {
+          if (buckets[bi].m & full) continue;    // they need a row this base has used up
+          const ids = buckets[bi].ids;
+          for (let t = 0; t < ids.length; t++) {
+          const yi = ids[t];
+          const p = xp + yP[yi];
+          if (p >= cap) break;                   // each bucket is sorted by cost
           if ((++tick & 8191) === 0) spend(8192);
           let s = ss;
-          if (sep && !g.ov) { for (let i = 0; i < n; i++) ss[i] = x.s[i] + g.s[i]; } else s = combine(x.s, y.s, rates, ctx, x.L, y.L);
+          if (yF[yi]) { const o = yi * n; for (let i = 0; i < n; i++) ss[i] = xsv[i] + yS[o + i]; } else s = combine(xsv, yO[yi].s, rates, ctx, x.L, yO[yi].L);
           if (floor) { let ok = true; for (let i = 0; i < n; i++) if (s[i] < floor[i]) { ok = false; break; } if (!ok) continue; }
           let uKey = 0;
           if (hasU) {
             let ok = true, radix = 1;
-            for (let j = 0; j < q.length; j++) {
-              const v = x.u[j] + y.u[j];
+            const o = yi * Q;
+            for (let j = 0; j < Q; j++) {
+              const v = xu[j] + yU[o + j];
               if (v > q[j]) { ok = false; break; }
               su[j] = v; uKey += v * radix; radix *= (q[j] + 1);
             }
@@ -2618,7 +2653,8 @@ function createSolver() {
           for (let i = n - 1; i >= 0; i--) { if (s[i] >= R) text = true; key = key * R + s[i]; }
           key = text ? s.join(',') + '|' + uKey : key * K + uKey;
           const prev = best.get(key);
-          if (prev === undefined || prev.p > p) best.set(key, mkState(L, p, s.slice(), su ? su.slice() : null, 2, x, y, -1));
+          if (prev === undefined || prev.p > p) best.set(key, mkState(L, p, s.slice(), su ? su.slice() : null, 2, x, yO[yi], -1));
+          }
         }
       }
       const list = F[L].concat(Array.from(best.values()));
