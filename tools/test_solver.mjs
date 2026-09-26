@@ -145,5 +145,52 @@ for (const [name, base, mults] of [['b20', [20], [M.combat]], ['ws', [10, 5], [M
   check('override level-specific', leaked, false);
 }
 
+// ---- owned items against exhaustive search (every reachable item and usage, no pruning) ----
+{
+  const exact = (b, m, r) => b.map((v, i) => Math.floor((v * r[i].den + Math.max(2 * r[i].den, m[i] * r[i].num)) / r[i].den));
+  function brute(base, rates, maxL, owned) {
+    const q = owned.map(o => o.qty), F = [null];
+    for (let L = 1; L <= maxL; L++) F.push(new Map());
+    const put = (L, s, u, p) => { const k = s.join(',') + '|' + u.join(','); const o = F[L].get(k); if (!o || o.p > p) F[L].set(k, { s, u, p }); };
+    put(1, base, q.map(() => 0), 1);
+    owned.forEach((o, j) => { const u = q.map(() => 0); u[j] = 1; put(o.level, o.stats, u, 0); });
+    for (let L = 2; L <= maxL; L++) {
+      const mats = []; for (let l = 1; l < L; l++) mats.push(...F[l].values());
+      for (const x of [...F[L - 1].values()]) for (const y of mats) {
+        const u = x.u.map((v, j) => v + y.u[j]); if (u.some((v, j) => v > q[j])) continue;
+        put(L, exact(x.s, y.s, rates), u, x.p + y.p);
+      }
+    }
+    return F;
+  }
+  let seed = 99; const rnd = n => { seed = (seed * 1103515245 + 12345) % 2147483648; return Math.floor(seed / 65536) % n; };
+  const bases = [[[20], [M.combat]], [[10, 5], [M.combat, M.combat]], [[17, 30], [M.crit, M.crit]], [[45, 12], [M.combat, M.resource]], [[94, 20], [M.combat, M.crit]]];
+  let bad = 0;
+  for (let t = 0; t < 60; t++) {
+    const [base, rates] = bases[rnd(bases.length)], maxL = 5 + rnd(2), chain = S.perfectChain(base, rates, maxL);
+    const owned = [];
+    for (let j = 0, m = 1 + rnd(3); j < m; j++) { const lv = 2 + rnd(maxL - 2); owned.push({ level: lv, stats: rnd(3) ? chain[lv].slice() : chain[lv].map(v => Math.max(1, v - 1 - rnd(3))), qty: 1 + rnd(3) }); }
+    const target = rnd(2) ? chain[maxL] : chain[maxL].map(v => v - 2);
+    let want = null; for (const v of brute(base, rates, maxL, owned)[maxL].values()) if (v.s.every((x, i) => x >= target[i])) want = want == null ? v.p : Math.min(want, v.p);
+    const r = S.solve({ base, rates, level: maxL, maxLevel: maxL, target, owned });
+    if (r.cost !== want) { bad++; console.log(`FAIL owned brute ${JSON.stringify({ base, maxL, owned, target })}: solver ${r.cost}, best ${want}`); }
+    else if (r.plan) {
+      const a = S.analyze(r.plan, owned.length);
+      a.ownedUse.forEach((n, j) => { if (n > owned[j].qty) { bad++; console.log('FAIL owned overuse', j); } });
+    }
+  }
+  check('owned items: 60 random inventories match exhaustive search', bad, 0);
+  // nine perfect P2 make a P5 (a world boss weapon's max) out of nothing
+  const cf = S.perfectChain([94, 20], [M.combat, M.crit], 5);
+  check('9 perfect P2 -> free P5', S.solve({ base: [94, 20], rates: [M.combat, M.crit], level: 5, maxLevel: 5, target: cf[5], owned: [{ level: 2, stats: cf[2], qty: 9 }] }).cost, 0);
+  // identical owned rows are solved as one and their uses handed back row by row
+  const rs = S.solve({ base: [94, 20], rates: [M.combat, M.crit], level: 5, maxLevel: 5, target: cf[5], owned: [{ level: 2, stats: cf[2], qty: 5 }, { level: 2, stats: cf[2], qty: 4 }] });
+  const as = S.analyze(rs.plan, 2);
+  check('identical rows: cost', rs.cost, 0);
+  check('identical rows: uses split 5 + 3', as.ownedUse.join('+'), '5+3');
+  // nothing is computed above the item's max level
+  check('max level respected', S.solve({ base: [94, 20], rates: [M.combat, M.crit], level: 5, maxLevel: 5, target: cf[5], owned: [] }).ladder.filter(r => r.level > 5).every(r => r.cost == null), true);
+}
+
 console.log(failures ? `\n${failures} FAILURE(S)` : '\nall good');
 process.exit(failures ? 1 : 0);

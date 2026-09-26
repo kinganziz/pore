@@ -19,14 +19,19 @@
  * limited quantity is tracked exactly as a usage vector inside the frontier while the usage
  * lattice is small. Larger inventories are solved with capped quantities and the leftovers are
  * substituted greedily into the expanded plan (feasible, near-optimal, flagged "approximate").
+ * With the default formula a material adds gains that do not depend on the base (integer base +
+ * floor(...)), so materials are compared by the gains they add: far fewer candidates, same optimum.
+ * The DP only runs up to the item's max level; above the requested level it may stop early (the
+ * ladder rungs there stay unknown) rather than weaken the plan.
  */
 function createSolver() {
   'use strict';
 
   const MIN_GAIN = 2;              // every refine adds at least +2 to each stat
   const MAX_LEVEL = 10;
-  const K_MAX = 64;                // largest owned-usage lattice solved exactly
+  const K_START = 512;             // largest owned-usage lattice tried first (it shrinks while the search is too big)
   const CANDIDATE_BUDGET = 3e6;    // per-level base x material pairs before reducing the lattice
+  const TOTAL_BUDGET = 6e6;        // all levels together, with owned items: keeps the worst case to a second or two
 
   const GOLD = { 2: 250, 3: 500, 4: 750, 5: 1000, 6: 1250, 7: 1500, 8: 1750, 9: 2000, 10: 3000 };
   const SUCCESS = { 2: 100, 3: 60, 4: 30, 5: 20, 6: 10, 7: 5, 8: 3, 9: 1, 10: 0.5 };
@@ -47,7 +52,7 @@ function createSolver() {
    */
   function perStat(fn) { return (b, m, r) => b.map((v, i) => fn(v, m[i], r[i])); }
   const MODELS = {
-    exact: { label: 'Exact fractions, round down', group: 'per stat',
+    exact: { label: 'Exact fractions, round down', group: 'per stat', sep: true,
       desc: 'floor(base + max(2, material × rate)) with the rate as an exact fraction. PORE default.',
       fn: perStat((b, m, r) => Math.floor((b * r.den + Math.max(MIN_GAIN * r.den, m * r.num)) / r.den)) },
     v1f64: { label: 'Legacy expression, 64-bit float', group: 'per stat',
@@ -68,13 +73,13 @@ function createSolver() {
     main32: { label: 'Main-stat penalty, 32-bit float', group: 'item level',
       desc: 'The same in single precision.',
       fn: (b, m, r) => { const pen = f32(1 - f32(f32(b[0] - m[0]) / b[0])); return b.map((v, i) => Math.floor(f32(v + Math.max(MIN_GAIN, f32(f32(v * f32(r[i].f64)) * pen))))); } },
-    round: { label: 'Round to nearest', group: 'per stat',
+    round: { label: 'Round to nearest', group: 'per stat', sep: true,
       desc: 'base + max(2, round(material × rate)).',
       fn: perStat((b, m, r) => b + Math.max(MIN_GAIN, Math.floor(m * r.num / r.den + 0.5))) },
-    ceil: { label: 'Round up', group: 'per stat',
+    ceil: { label: 'Round up', group: 'per stat', sep: true,
       desc: 'base + max(2, ceil(material × rate)).',
       fn: perStat((b, m, r) => b + Math.max(MIN_GAIN, Math.ceil(m * r.num / r.den - 1e-9))) },
-    min1: { label: 'Exact, minimum gain +1', group: 'per stat',
+    min1: { label: 'Exact, minimum gain +1', group: 'per stat', sep: true,
       desc: 'Like the default but the guaranteed gain is +1 instead of +2.',
       fn: perStat((b, m, r) => Math.floor((b * r.den + Math.max(1 * r.den, m * r.num)) / r.den)) },
   };
@@ -100,7 +105,9 @@ function createSolver() {
         map.set(recipeKey(o.baseL, o.base, o.matL, o.mat), o.actual.map(Number));
       }
     }
-    return { model: model.fn, name: model.fn === MODELS.exact.fn ? 'exact' : modelName, overrides: map, hits: 0 };
+    // sep: the model adds a gain that depends on the material alone (integer base + floor(...)), so materials that
+    // add the same gains are interchangeable. Recorded results (overrides) are per recipe and switch this off.
+    return { model: model.fn, name: model.fn === MODELS.exact.fn ? 'exact' : modelName, overrides: map, hits: 0, sep: !!model.sep && !map };
   }
 
   function combine(base, mat, rates, ctx, baseL, matL) {
@@ -154,8 +161,10 @@ function createSolver() {
 
   class BudgetExceeded extends Error {}
 
-  /* Frontier DP. owned = [{level, stats, qty}], qty already capped by the caller. */
-  function solveCore(base, rates, maxLevel, owned, ctx) {
+  /* Frontier DP. owned = [{level, stats, qty}], qty already capped by the caller.
+     need: the level that was asked for. Above it the frontier only feeds the ladder, so when it grows too big there
+     the DP stops (those ladder rungs stay unknown) instead of failing the whole plan. */
+  function solveCore(base, rates, maxLevel, owned, ctx, need) {
     const n = base.length;
     const hasU = owned.length > 0;
     const q = owned.map(o => o.qty);
@@ -179,16 +188,31 @@ function createSolver() {
       F[o.level].push(mkState(o.level, 0, o.stats.slice(), u, 1, null, null, j));
     });
 
-    let mats = pareto(F[1].slice(), hasU);
+    // Separable models: a material only matters through the gains it adds, so the material list is kept as its
+    // Pareto frontier over (cost, usage, gains): far fewer candidates, the same optimum.
+    const sep = !!(ctx && ctx.sep);
+    const zero = base.map(() => 0);
+    const gainList = ms => {
+      if (!sep) return ms;
+      const g = ms.map(y => { const v = ctx.model(zero, y.s, rates); return { p: y.p, s: v, u: y.u, t: sum(v), y: y }; });
+      return pareto(g, hasU);
+    };
+    let mats = pareto(F[1].slice(), hasU), matsG = gainList(mats);
     const sizes = [0, F[1].length];
+
+    let top = maxLevel, spent = 0;
     for (let L = 2; L <= maxLevel; L++) {
-      const bases = F[L - 1];
-      if (bases.length * mats.length > CANDIDATE_BUDGET) throw new BudgetExceeded('too many candidates');
+      const bases = F[L - 1], pairs = bases.length * matsG.length;
+      spent += pairs;
+      if (pairs > CANDIDATE_BUDGET || (hasU && spent > TOTAL_BUDGET)) {
+        if (need && L > need) { top = L - 1; break; }
+        throw new BudgetExceeded('too many candidates');
+      }
       const best = new Map();
       for (let xi = 0; xi < bases.length; xi++) {
         const x = bases[xi];
-        for (let yi = 0; yi < mats.length; yi++) {
-          const y = mats[yi];
+        for (let yi = 0; yi < matsG.length; yi++) {
+          const g = sep ? matsG[yi] : null, y = sep ? g.y : matsG[yi];
           let u = null, uKey = 0;
           if (hasU) {
             u = new Array(q.length);
@@ -200,7 +224,8 @@ function createSolver() {
             }
             if (!ok) continue;
           }
-          const s = combine(x.s, y.s, rates, ctx, x.L, y.L);
+          let s;
+          if (sep) { s = new Array(n); for (let i = 0; i < n; i++) s[i] = x.s[i] + g.s[i]; } else s = combine(x.s, y.s, rates, ctx, x.L, y.L);
           let key = 0;
           for (let i = n - 1; i >= 0; i--) key = key * R + Math.min(s[i], R - 1);
           key = key * K + uKey;
@@ -212,9 +237,9 @@ function createSolver() {
       const list = F[L].concat(Array.from(best.values()));
       F[L] = pareto(list, hasU);
       sizes.push(F[L].length);
-      if (L < maxLevel) mats = pareto(mats.concat(F[L]), hasU);
+      if (L < maxLevel) { mats = pareto(mats.concat(F[L]), hasU); matsG = gainList(mats); }
     }
-    return { F: F, sizes: sizes, chain: chain };
+    return { F: F, sizes: sizes, chain: chain, top: top };
   }
 
   function choose(list, target) {
@@ -241,7 +266,7 @@ function createSolver() {
   }
 
   // Greedily replace the most expensive sub-trees with leftover owned items that dominate them.
-  function substitute(root, owned, leftover) {
+  function substitute(root, owned, leftover, rates, ctx) {
     const all = [];
     (function collect(nd, role) { nd.role = role; all.push(nd); if (nd.k === 2) { collect(nd.b, 'base'); collect(nd.m, 'mat'); } })(root, 'root');
     all.sort((a, b) => b.p - a.p);
@@ -265,8 +290,8 @@ function createSolver() {
         leftover[j]--;
       }
     }
-    // recompute p bottom-up
-    (function fix(nd) { if (nd.k === 2) { fix(nd.b); fix(nd.m); nd.p = nd.b.p + nd.m.p; } })(root);
+    // recompute cost and stats bottom-up: a replaced sub-plan is at least as good, so results can only rise
+    (function fix(nd) { if (nd.k === 2) { fix(nd.b); fix(nd.m); nd.p = nd.b.p + nd.m.p; if (saved) nd.s = combine(nd.b.s, nd.m.s, rates, ctx, nd.b.L, nd.m.L); } })(root);
     return saved;
   }
 
@@ -300,39 +325,51 @@ function createSolver() {
     const base = req.base.map(Number);
     const rates = (req.rates || req.mults).map(normRate);
     const level = Math.min(MAX_LEVEL, Math.max(2, req.level | 0));
-    const owned = (req.owned || []).filter(o => o && o.qty > 0 && o.level >= 2 && o.level <= MAX_LEVEL)
-      .map(o => ({ level: o.level | 0, stats: o.stats.map(Number), qty: o.qty | 0 }));
+    const topLevel = Math.min(MAX_LEVEL, Math.max(level, (req.maxLevel | 0) || MAX_LEVEL));   // the item's own max: no work above it
+    // owned rows that are the same item (level and stats) are one row with the counts added: a smaller lattice
+    const rows = (req.owned || []).map((o, i) => ({ o: o, i: i })).filter(r => r.o && r.o.qty > 0 && r.o.level >= 2 && r.o.level <= MAX_LEVEL);
+    const owned = [], rowOf = new Map(), members = [];
+    for (const r of rows) {
+      const k = (r.o.level | 0) + ':' + r.o.stats.map(Number).join(',');
+      let j = rowOf.get(k);
+      if (j == null) { j = owned.length; rowOf.set(k, j); owned.push({ level: r.o.level | 0, stats: r.o.stats.map(Number), qty: 0 }); members.push([]); }
+      owned[j].qty += r.o.qty | 0; members[j].push(r.i);
+    }
     const target = (req.target || base.map(() => null)).map(t => (t == null ? null : Number(t)));
     const ctx = makeCtx(req.model || 'exact', req.overrides || [], base.length);
 
-    // Cap quantities so the usage lattice stays small; higher-level items get priority.
-    const caps = owned.map(() => 0);
-    let K = 1;
+    // Cap quantities so the usage lattice (the product of qty + 1) stays within kMax, handing counts out one at a
+    // time with higher-level items first; the leftovers are substituted into the plan afterwards.
     const prio = owned.map((o, j) => j).sort((a, b) => (owned[b].level - owned[a].level) || (sum(owned[b].stats) - sum(owned[a].stats)));
-    let grew = true;
-    while (grew) {
-      grew = false;
-      for (const j of prio) {
-        if (caps[j] >= owned[j].qty) continue;
-        const K2 = K / (caps[j] + 1) * (caps[j] + 2);
-        if (K2 > K_MAX) continue;
-        caps[j]++; K = K2; grew = true;
+    function capsFor(kMax) {
+      const caps = owned.map(() => 0);
+      let k = 1, grew = true;
+      while (grew) {
+        grew = false;
+        for (const j of prio) {
+          if (caps[j] >= owned[j].qty) continue;
+          const k2 = k / (caps[j] + 1) * (caps[j] + 2);
+          if (k2 > kMax) continue;
+          caps[j]++; k = k2; grew = true;
+        }
       }
+      return { caps: caps, k: k };
     }
 
-    let res = null, pick = null;
-    let capped = owned.map((o, j) => ({ level: o.level, stats: o.stats, qty: caps[j] }));
+    let res = null, pick = null, K = 1, kMax = K_START, capped;
     for (;;) {
+      const c = capsFor(kMax);
+      K = c.k;
+      capped = owned.map((o, j) => ({ level: o.level, stats: o.stats, qty: c.caps[j] }));
       try {
-        res = solveCore(base, rates, MAX_LEVEL, capped, ctx);
+        res = solveCore(base, rates, topLevel, capped, ctx, level);
         pick = choose(res.F[level], target);
         break;
       } catch (err) {
         if (!(err instanceof BudgetExceeded)) throw err;
-        // shrink the lattice and retry
-        const active = capped.filter(o => o.qty > 0);
-        if (!active.length) { res = solveCore(base, rates, MAX_LEVEL, [], ctx); pick = choose(res.F[level], target); break; }
-        capped = capped.map(o => ({ level: o.level, stats: o.stats, qty: Math.floor(o.qty / 2) }));
+        // too big: a quarter of the lattice, still balanced across the owned rows, and try again
+        if (K <= 1) { capped = owned.map(o => ({ level: o.level, stats: o.stats, qty: 0 })); res = solveCore(base, rates, topLevel, [], ctx, level); pick = choose(res.F[level], target); break; }
+        kMax = Math.max(1, Math.floor(K / 4));
       }
     }
     const chain = res.chain;
@@ -344,14 +381,17 @@ function createSolver() {
       if (!exact) {
         const used = usageOf(serializeTree(tree), owned.length);
         const leftover = owned.map((o, j) => o.qty - used[j]);
-        substituted = substitute(tree, owned, leftover);
+        substituted = substitute(tree, owned, leftover, rates, ctx);
       }
       plan = serializeTree(tree);
+      // owned items point back at the caller's rows; merged rows share their uses out in order (see analyze)
+      for (const nd of plan.nodes) if (nd.k === 1) nd.j = members[nd.j][0];
+      plan.split = members.filter(m => m.length > 1).map(m => m.map(i => [i, req.owned[i].qty | 0]));
     }
 
     const ladder = [];
     for (let L = 2; L <= MAX_LEVEL; L++) {
-      const s = choose(res.F[L], chain[L]);
+      const s = L <= res.top ? choose(res.F[L], chain[L]) : null;
       ladder.push({ level: L, cost: s ? s.p : null, standard: Math.pow(2, L - 1) });
     }
 
@@ -426,6 +466,11 @@ function createSolver() {
     }
     const list = Array.from(merged.values());
     list.sort((a, b) => (a.L - b.L) || (sum(b.result.s) - sum(a.result.s)) || (b.count - a.count));
+    // identical owned rows were solved as one: hand the uses back out, filling each row up to its count
+    for (const grp of plan.split || []) {
+      let left = 0; for (const [i] of grp) { left += ownedUse[i] || 0; ownedUse[i] = 0; }
+      for (const [i, q] of grp) { const t = Math.min(q, left); ownedUse[i] = t; left -= t; }
+    }
     return { steps: list, p1: p1, ownedUse: ownedUse, refines: refines, gold: gold, byLevel: byLevel, count: count };
   }
 

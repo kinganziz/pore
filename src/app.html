@@ -2447,6 +2447,7 @@ __SOLVER_JS__
       base: item.stats.map(st => st.value),
       rates: item.rates,
       level: state.L,
+      maxLevel: item.maxL,
       target: targetVector(item),
       owned: state.o.map(o => ({ level: o.L, stats: ownedVector(item, o), qty: o.q })),
       model: state.m,
