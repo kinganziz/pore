@@ -461,12 +461,14 @@
   .obs-form .obs-title { font-size: 13px; font-weight: 600; }
   .obs-form .obs-title small { display: block; color: var(--muted); font-weight: 500; }
   .obs-inputs { display: flex; flex-wrap: wrap; gap: 8px 14px; }
-  .res-stat { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); font-weight: 600; }
-  .res-stat .stepper { margin-left: 0; }
-  .res-stat .stepper button { width: 38px; height: 40px; color: var(--text); font-size: 18px; cursor: pointer; }
-  .res-stat .stepper input { width: 56px; height: 40px; color: var(--text); font: inherit; font-size: 16px; font-weight: 700; -moz-appearance: textfield; }
-  .res-stat .stepper input::-webkit-inner-spin-button, .res-stat .stepper input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-  .res-stat .stepper input.changed { color: var(--gold); }
+  .res-stat { display: inline-flex; align-items: center; gap: 0; font-size: 12px; color: var(--muted); font-weight: 600; }
+  .step-ic { width: 30px; height: 32px; padding: 0; border: 0; background: none; color: var(--soft); cursor: pointer; display: inline-grid; place-items: center; }
+  .step-ic svg { width: 11px; height: 11px; display: block; }
+  .step-ic:hover, .step-ic:focus-visible { color: var(--gold); }
+  .step-ic:active { transform: scale(.85); }
+  .res-stat input { width: 50px; height: 32px; padding: 0; border: 0; border-bottom: 1px dashed var(--line-2); background: none; color: var(--text); font: inherit; font-size: 16px; font-weight: 700; text-align: center; -moz-appearance: textfield; }
+  .res-stat input::-webkit-inner-spin-button, .res-stat input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  .res-stat input.changed { color: var(--gold); border-bottom-color: var(--gold); }
   .obs-inputs label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); font-weight: 600; }
   .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px 4px 6px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); font-size: 13px; line-height: 1.2; max-width: 100%; }
   .chip span { min-width: 0; overflow-wrap: anywhere; }
@@ -857,12 +859,11 @@
   .g-forge { margin-top: 14px; padding: 14px 12px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); display: grid; gap: 12px; justify-items: center; }
   .gf-top { display: flex; flex-direction: column; align-items: center; gap: 6px; }
   .gf-hint { font-size: 11px; color: var(--muted); }
-  .gf-card.result.edit { width: 188px; }
+  .gf-card.result.edit { width: 170px; }
   .gf-edit { align-items: center; }
-  .gf-edit small { min-width: 30px; text-align: right; }
-  .gf-edit button { width: 30px; height: 30px; border: 1px solid var(--line-2); border-radius: 9px; background: rgba(255, 255, 255, .06); color: var(--text); font: inherit; font-size: 17px; line-height: 1; cursor: pointer; }
-  .gf-edit button:active { transform: scale(.9); background: rgba(255, 255, 255, .14); }
-  .gf-edit input { width: 46px; height: 30px; padding: 0; border: 0; border-bottom: 1px dashed var(--line-2); background: none; color: var(--text); font: inherit; font-weight: 700; text-align: center; -moz-appearance: textfield; }
+  .gf-edit { gap: 0 !important; }
+  .gf-edit small { min-width: 30px; text-align: right; margin-right: 2px; }
+  .gf-edit input { width: 44px; height: 30px; padding: 0; border: 0; border-bottom: 1px dashed var(--line-2); background: none; color: var(--text); font: inherit; font-weight: 700; text-align: center; -moz-appearance: textfield; }
   .gf-edit input::-webkit-inner-spin-button, .gf-edit input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
   .gf-edit input.changed { color: var(--gold); border-bottom-color: var(--gold); }
   .gf-card.changed { border-color: var(--gold); }
@@ -920,7 +921,8 @@
   .proj-main { flex: 1 1 auto; min-width: 0; display: grid; gap: 4px; }
   .proj-main b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .proj-main b small { color: var(--muted); font-weight: 400; }
-  .proj-main > small { color: var(--muted); font-size: 12px; }
+  .proj-foot { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 10px; }   /* Continue follows the line, wrapping under it when the line is long */
+  .proj-foot small { color: var(--muted); font-size: 12px; }
   .proj-bar { height: 6px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
   .proj-bar i { display: block; height: 100%; background: var(--good); border-radius: inherit; }
   .proj-go { flex: 0 0 auto; font-size: 13px; color: var(--accent); font-weight: 700; }
@@ -1333,10 +1335,10 @@
   #projectsBody .proj-main { gap: 6px; }
   #projectsBody .proj-main b { font-size: 18px; text-shadow: 1px 1px 0 rgba(0, 0, 0, .5); }
   #projectsBody .proj-main b small { color: var(--gold); font-size: 14px; }
-  #projectsBody .proj-main > small { font-size: 13px; }
+  #projectsBody .proj-foot small { font-size: 13px; }
   #projectsBody .proj-bar { height: 8px; border-radius: 1px; background: repeating-linear-gradient(90deg, rgba(255, 255, 255, .14) 0 9px, transparent 9px 11px); }   /* an XP bar in blocks */
   #projectsBody .proj-bar i { border-radius: 0; background: repeating-linear-gradient(90deg, var(--good) 0 9px, transparent 9px 11px); filter: drop-shadow(0 0 3px color-mix(in srgb, var(--good) 60%, transparent)); }
-  #projectsBody .proj-go { position: absolute; right: 8px; bottom: 12px; color: var(--gold); text-transform: uppercase; font-size: 12px; letter-spacing: 1px; text-shadow: 1px 1px 0 rgba(0, 0, 0, .5); }
+  #projectsBody .proj-go { margin-left: auto; color: var(--gold); text-transform: uppercase; font-size: 12px; letter-spacing: 1px; text-shadow: 1px 1px 0 rgba(0, 0, 0, .5); }
   #projectsBody .proj-x { width: 36px; height: 44px; border: 0 !important; background: none !important; box-shadow: none !important; color: var(--soft); font-size: 22px; opacity: .55; transition: opacity .15s, color .15s; }
   #projectsBody .proj-x svg { width: 12px; height: 12px; display: block; margin: 0 auto; }   /* a square pixel cross (the font's x was tall and narrow) */
   #projectsBody .proj-x:hover, #projectsBody .proj-x:focus-visible { opacity: 1; color: var(--bad); }
@@ -4102,10 +4104,8 @@ function createSolver() {
 
   // one stat of a result the game gave: type it, or nudge it with - and + (a stat off the prediction turns gold)
   function statStepHTML(short, attr, i, v) {
-    return `<div class="res-stat"><span>${short}</span><span class="stepper">` +
-      `<button type="button" data-action="stat-step" data-delta="-1" aria-label="${short} one less">−</button>` +
-      `<input type="number" inputmode="numeric" min="1" step="1" value="${v}" data-pred="${v}" ${attr}="${i}" aria-label="${short}">` +
-      `<button type="button" data-action="stat-step" data-delta="1" aria-label="${short} one more">+</button></span></div>`;
+    return `<div class="res-stat"><span>${short}</span>${stepBtn(short, -1)}` +
+      `<input type="number" inputmode="numeric" min="1" step="1" value="${v}" data-pred="${v}" ${attr}="${i}" aria-label="${short}">${stepBtn(short, 1)}</div>`;
   }
   function statStepMark(input) {
     input.classList.toggle('changed', Math.round(Number(input.value)) !== Number(input.dataset.pred));
@@ -5860,12 +5860,15 @@ function createSolver() {
   function sameNode(x, y) { return x.L === y.L && x.k === y.k && sameVec(x.s, y.s); }
   // A step drawn like the game's refine screen: the result on top, the left and right items under it (a perfect item
   // shines, as in the game), the charms to put in, and base chance × charm factor = success chance.
+  const STEP_ICON = { '-1': '<svg viewBox="0 0 7 7" shape-rendering="crispEdges"><path fill="currentColor" d="M0 3h7v1H0z"/></svg>',
+    '1': '<svg viewBox="0 0 7 7" shape-rendering="crispEdges"><path fill="currentColor" d="M3 0h1v3h3v1H4v3H3V4H0V3h3z"/></svg>' };
+  const stepBtn = (short, d) => `<button class="step-ic" type="button" data-action="stat-step" data-delta="${d}" aria-label="${short} one ${d < 0 ? 'less' : 'more'}">${STEP_ICON[d]}</button>`;
   function forgeCard(nd, item, role, edit) {
     const perfect = isPerfectNode(nd, item.chain);
     const stat = (v, i) => !edit ? `<span><small>${item.stats[i].short}</small><b>${v}</b></span>`
-      : `<span class="gf-edit"><button type="button" data-action="stat-step" data-delta="-1" aria-label="${item.stats[i].short} one less">−</button>` +
-        `<small>${item.stats[i].short}</small><input type="number" inputmode="numeric" min="1" step="1" value="${v}" data-pred="${v}" data-guide-input="${i}" aria-label="${item.stats[i].short}">` +
-        `<button type="button" data-action="stat-step" data-delta="1" aria-label="${item.stats[i].short} one more">+</button></span>`;
+      : `<span class="gf-edit"><small>${item.stats[i].short}</small>${stepBtn(item.stats[i].short, -1)}` +
+        `<input type="number" inputmode="numeric" min="1" step="1" value="${v}" data-pred="${v}" data-guide-input="${i}" aria-label="${item.stats[i].short}">` +
+        `${stepBtn(item.stats[i].short, 1)}</span>`;
     return `<div class="gf-card ${role} ${perfect ? 'shine' : ''} ${edit ? 'edit' : ''}" title="${perfect ? 'Perfect' : 'Not perfect'} ${nodeName(nd, item)}">` +
       `<span class="gf-lv">${ROMAN[nd.L] || nd.L}</span><span class="gf-ic">${iconSVG(item.key)}</span>` +
       `<span class="gf-st">${nd.s.map(stat).join('')}</span>` +
@@ -6076,8 +6079,8 @@ function createSolver() {
         `<button class="proj-open" type="button" data-action="project-open" data-id="${esc(pr.id)}">${icon}` +
         `<span class="proj-main"><b>${esc(pr.name)} <small>→ P${pr.L}</small></b>` +
         `<span class="proj-bar"><i style="width:${pct}%"></i></span>` +
-        `<small>${pr.total ? `${pr.done || 0}/${pr.total} steps done` : 'not started'}${pr.star ? ' · ★' : ''}${pr.ready === 1 ? ' · <span class="proj-ready">✓ ready</span>' : pr.ready === 0 && pr.short ? ` · <span class="proj-short">short: ${esc(pr.short)}</span>` : ''}</small></span>` +
-        `${i === 0 ? '<span class="proj-go">Continue ›</span>' : ''}</button>` +
+        `<span class="proj-foot"><small>${pr.total ? `${pr.done || 0}/${pr.total} steps done` : 'not started'}${pr.star ? ' · ★' : ''}${pr.ready === 1 ? ' · <span class="proj-ready">✓ ready</span>' : pr.ready === 0 && pr.short ? ` · <span class="proj-short">short: ${esc(pr.short)}</span>` : ''}</small>` +
+        `${i === 0 ? '<span class="proj-go">Continue ›</span>' : ''}</span></span></button>` +
         `<button class="proj-x" type="button" data-action="project-remove" data-id="${esc(pr.id)}" aria-label="Remove ${esc(pr.name)} from my projects" title="Remove from my projects"><svg viewBox="0 0 7 7" shape-rendering="crispEdges"><path fill="currentColor" d="M0 0h2v1h1v1h1V1h1V0h2v2H6v1H5v1h1v1h1v2H5V6H4V5H3v1H2v1H0V5h1V4h1V3H1V2H0z"/></svg></button></div>`;
     }).join('');
     return shoppingHTML() + `<div class="card projects"><div class="section-title"><h3>My projects</h3><span class="hint">${projects.length} item${projects.length === 1 ? '' : 's'}</span></div><div class="proj-list">${rows}</div>` + savedTotalHTML() +
