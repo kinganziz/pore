@@ -889,11 +889,11 @@
   .cstock summary::before { content: "▸ "; color: var(--accent); }
   .cstock[open] summary::before { content: "▾ "; }
   .cstock summary small { display: block; margin-left: 14px; color: var(--muted); font-weight: 400; font-size: 12px; }
-  .cstock-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 6px; margin-top: 10px; }
+  .cstock-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 10px; margin-top: 10px; }
   .cstock-grid label { display: grid; justify-items: center; gap: 4px; min-width: 0; }
   .cstock-grid .pixel { width: 30px; height: 30px; }
   .cstock-grid span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }   /* name for screen readers; the icon shows it */
-  .cstock-grid input { width: 100%; text-align: center; }
+  .cstock-grid input, .cstock-grid .num.small { width: 100%; min-width: 0; text-align: center; }
   .shop-row.short .what small b { color: var(--bad); }
   .rec-none { font-size: 12px; color: var(--muted); }
   .need-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
@@ -961,7 +961,7 @@
   .home-copy { position: relative; z-index: 1; display: grid; justify-items: start; gap: 10px; max-width: 520px; }
   .home-kicker { font-size: 12px; letter-spacing: 1.4px; text-transform: uppercase; font-weight: 700; color: #c9bfff; }
   .home-title { font-family: var(--display); font-size: clamp(30px, 8.6vw, 44px); line-height: 1.02; margin: 0; letter-spacing: -.5px; }
-  .home-title span { background: linear-gradient(90deg, #ffe08a, #ff9ad8 55%, #8ff0ff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .home-title span { color: var(--gold); }   /* plain: the words carry it */
   .home-sub { margin: 0; color: rgba(255, 255, 255, .78); max-width: 34ch; }
   .home-sub b { color: #fff; }
   .home-best { display: flex; align-items: center; gap: 12px; padding: 10px 14px 10px 10px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, .22);
@@ -1192,7 +1192,7 @@
   @keyframes cta-breathe { 0%, 100% { opacity: 1; } 50% { opacity: .62; } }
   /* day world: text straight on the pale sky reads in dark ink with a soft light edge (panels stay dark glass) */
   :root[data-sky="day"] .home-hero :is(.home-title, .home-best, .home-best b, .btn.home-cta.home-cta.home-cta) { color: #1b1f33 !important; text-shadow: 1px 1px 0 rgba(255, 255, 255, .7), 0 0 12px rgba(255, 255, 255, .6) !important; }
-  :root[data-sky="day"] .home-hero .home-title span { background: linear-gradient(90deg, #b05a00, #b8265f 55%, #0f6f97); -webkit-background-clip: text; background-clip: text; color: transparent !important; filter: none; text-shadow: none !important; }   /* no edge: it showed through the see-through gradient letters */
+  :root[data-sky="day"] .home-hero .home-title span { color: #8a4a00 !important; filter: none; }
   :root[data-sky="day"] .home-hero :is(.home-sub, .home-hint, .home-best small) { color: #2c3350 !important; text-shadow: 0 0 8px rgba(255, 255, 255, .8); }
   :root[data-sky="day"] .home-hero .home-sub b { color: #1b1f33; }
   :root[data-sky="day"] .home-hero .home-kicker { color: #8a5200 !important; text-shadow: 0 0 8px rgba(255, 255, 255, .8); }
@@ -1202,9 +1202,8 @@
   /* ---------- juice: title drop, bobbing item, hopping tab ---------- */
   .home-title .tw { font-style: normal; }
   .home-title.drop .tw { display: inline-block; animation: tw-drop .6s cubic-bezier(.3, 1.6, .5, 1) both; animation-delay: calc(var(--i) * 110ms + 80ms); }
-  .home-title.drop span { display: inline-block; animation: tl-pop .55s cubic-bezier(.3, 1.7, .5, 1) .5s both; }
+  .home-title.drop span { display: inline-block; animation: tw-drop .6s cubic-bezier(.3, 1.6, .5, 1) .32s both; }
   @keyframes tw-drop { from { transform: translateY(-46px); opacity: 0; } 50% { opacity: 1; } to { transform: none; opacity: 1; } }
-  @keyframes tl-pop { from { transform: scale(.2) rotate(-4deg); opacity: 0; } to { transform: none; opacity: 1; } }
   .home-best .hb-icon .pixel { animation: hb-bob 1.6s steps(4, jump-none) infinite alternate; }
   @keyframes hb-bob { from { transform: translateY(1px); } to { transform: translateY(-3px); } }
   .tab.hop .tab-icon { animation: tab-hop .3s ease-out; }   /* a press: the icon squeezes in and springs back */
@@ -1417,6 +1416,7 @@
   .ie-acts.gm-opts span { margin-right: auto; color: var(--muted); }
   /* ---------- the bag, game style: search on top, 5-wide slots with a corner glow, level and count, category icons at the bottom ---------- */
   #charmsBody { display: flex; flex-direction: column; }
+  .inv-top { flex: 0 0 auto; padding: 0 16px; }
   .inv-search { display: flex; align-items: center; gap: 8px; padding: 4px 6px 10px; color: var(--soft); }
   .inv-search svg { width: 20px; height: 20px; flex: 0 0 auto; }
   .inv-search input { flex: 1; min-width: 0; background: none !important; border: 0 !important; box-shadow: none !important; color: var(--text); font: inherit; font-size: 16px; padding: 6px 0; }
@@ -1891,6 +1891,7 @@
       <h2 id="charmsTitle">Inventory<small class="inv-cat-name" id="invCatName"></small></h2>
       <button class="icon-btn" type="button" data-action="close-charms" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
+    <div class="inv-top" id="invTop"></div>
     <div class="sheet-body" id="charmsBody"></div>
     <div class="inv-cats" id="invCats" role="tablist"></div>
     <div class="inv-pop" id="invPop" data-action="inv-pop-close" hidden></div>
@@ -6024,10 +6025,12 @@ function createSolver() {
     const nameEl = document.getElementById('invCatName'); if (nameEl) nameEl.textContent = invTab === 'all' ? (invGear ? 'Gear only' : '') : invTab === 'maps' && invMap ? invMap : invTab === 'npcs' && invNpc ? invNpc : invTab === 'monsters' && invMob ? invMob : invTab === 'chests' && invChest ? invChest : invTab === 'encounters' && invEnc ? invEnc : invTab === 'bosses' && invBoss ? invBoss : invTab === 'library' && invLib ? invLib : catName;
     const detail = !!((invTab === 'maps' && invMap) || (invTab === 'npcs' && invNpc) || (invTab === 'monsters' && invMob) || (invTab === 'bosses' && invBoss) || (invTab === 'chests' && invChest) || (invTab === 'encounters' && invEnc) || (invTab === 'library' && invLib));   // one map, NPC, monster or boss open: no view buttons
     const mapList = (invTab === 'maps' && !invMap) || (invTab === 'npcs' && !invNpc) || (invTab === 'monsters' && !invMob) || invTab === 'bosses' || (invTab === 'chests' && !invChest) || (invTab === 'encounters' && !invEnc) || invTab === 'library';   // the list of maps: no gear filter or item views to pick
-    ui.charmsBody.innerHTML = `<label class="inv-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></svg><input type="search" placeholder="${mapList ? (invTab === 'npcs' ? 'Search NPCs' : invTab === 'monsters' ? 'Search monsters' : invTab === 'chests' ? 'Search chests' : invTab === 'encounters' ? 'Search encounters' : invTab === 'library' ? 'Search spells, talents, obols, books' : invTab === 'bosses' ? 'Search bosses' : 'Search maps') : 'Search items or places'}" value="${esc(invQ)}" data-field="inv-q" aria-label="Search the inventory">` +
+    // the search row (and view buttons) sits above the scrolling list, so it stays in place
+    document.getElementById('invTop').innerHTML = `<label class="inv-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></svg><input type="search" placeholder="${mapList ? (invTab === 'npcs' ? 'Search NPCs' : invTab === 'monsters' ? 'Search monsters' : invTab === 'chests' ? 'Search chests' : invTab === 'encounters' ? 'Search encounters' : invTab === 'library' ? 'Search spells, talents, obols, books' : invTab === 'bosses' ? 'Search bosses' : 'Search maps') : 'Search items or places'}" value="${esc(invQ)}" data-field="inv-q" aria-label="Search the inventory">` +
       (mapList || detail ? '' : `<button type="button" class="inv-gear ${invGear ? 'on' : ''}" data-action="inv-gear" aria-pressed="${invGear}" aria-label="Gear only: hide what you cannot equip" title="Gear only">${iconSVG((ITEMS.find(it => it.name === 'Iron Sword') || ITEMS[0]).key)}</button>`) +
       (detail ? '</label>' : `<span class="inv-views" role="group" aria-label="View">${['grid', 'list', 'icons'].map(v => `<button type="button" class="${(invTab === 'library' ? libView : mapList ? placeView : invView) === v ? 'on' : ''}" data-action="inv-view" data-view="${v}" aria-label="${v === 'grid' ? 'Tiles with names' : v === 'list' ? 'List' : 'Icons only'}" title="${v === 'grid' ? 'Tiles' : v === 'list' ? 'List' : 'Icons'}">${INV_VIEW_SVG[v]}</button>`).join('')}</span></label>`) +
-      `<div id="invGrid"></div>`;
+      '';
+    ui.charmsBody.innerHTML = '<div id="invGrid"></div>';
     // the category icons: a fixed strip at the foot of the sheet, right above the tab bar (like the game)
     const goodArt = t => { const g = GOODS.find(x => x.name === (GOOD_TYPES.find(y => y[0] === t) || [])[3]) || GOODS.find(x => x.type === t); return g ? iconSVG(g.key) : ''; };
     const clover = CHARMS.find(c => c.name === 'Clover') || CHARMS[0];
