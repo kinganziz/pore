@@ -876,6 +876,9 @@
   .gf-card.changed { border-color: var(--gold); }
   #guideBody:not(.edited) .when-edited, #guideBody.edited .when-same, #guideBody:not(.better) .when-better, #guideBody:not(.absorbs) .when-absorbs,
   #guideBody:not(.better):not(.absorbs) .when-ok, #guideBody.better .when-worse, #guideBody.absorbs .when-worse { display: none; }
+  .g-check { margin-top: 12px; padding: 12px; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--gold) 45%, var(--line)); background: color-mix(in srgb, var(--gold) 7%, transparent); display: grid; gap: 8px; }
+  .g-check p { margin: 0; font-size: 13px; color: var(--soft); }
+  .g-check .g-wait { margin: 0; color: var(--gold); }
   .g-wait { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; color: var(--muted); }
   .g-spin { width: 12px; height: 12px; border: 2px solid var(--line-2); border-top-color: var(--gold); border-radius: 50%; animation: g-spin .8s linear infinite; }
   @keyframes g-spin { to { transform: rotate(360deg); } }
@@ -2129,6 +2132,7 @@ function createSolver() {
   const MAX_LEVEL = 10;
   const K_START = 512;             // largest owned-usage lattice tried first (it shrinks while the search is too big)
   const QUICK_K = 64;              // the quick plan's owned-usage lattice (its cost bounds the exact search)
+  const QUICK_SKIP = 20000;        // req.quick: from this many owned-usage combinations on, no exact search in the first answer
   const QUICK_K_SEP = 512;         // the same for the fast (separable) search: a wider quick plan, a much better bound
   const CANDIDATE_BUDGET = 3e6;    // per-level base x material pairs before reducing the lattice
   const WORK_BUDGET = 2e7;         // with owned items: pairs tried + frontier comparisons per search (about a second)
@@ -2188,7 +2192,9 @@ function createSolver() {
   const ROBUST_SET = ['exact', 'v1f64', 'v1f32', 'dec64', 'dec32', 'main64', 'main32'];
   // margin: the game keeps values its screen doesn't show, and two imperfect items came out 1 lower than the formula
   // (79/116 + 79/116 -> 98/144 instead of 98/145). Safe plans for 1 less per stat whenever neither item is perfect.
-  MODELS.robust = { label: 'Safe: lowest of all plausible variants', group: 'safe', margin: true,
+  // ubExact: never more than the exact formula (a minimum over variants that include it, less a margin), so the exact
+  // formula's gains bound it and the search's usefulness floors hold for it too
+  MODELS.robust = { label: 'Safe: lowest of all plausible variants', group: 'safe', margin: true, ubExact: true,
     desc: 'Plans with, per stat, the lowest result any plausible variant predicts, and 1 less per stat when neither item is perfect, so a refine can never come up short. Costs a few more items.',
     fn: (b, m, r) => { let out = null; for (const k of ROBUST_SET) { const v = MODELS[k].fn(b, m, r); out = out ? out.map((x, i) => Math.min(x, v[i])) : v; } return out; } };
 
@@ -2213,11 +2219,14 @@ function createSolver() {
     // add the same gains are interchangeable. Recorded results (overrides) are per recipe and switch this off.
     const ovMat = map ? new Set(overrides.filter(o => o && o.mat).map(o => o.matL + '|' + o.mat.join(','))) : null;
     return { model: model.fn, name: model.fn === MODELS.exact.fn ? 'exact' : modelName, overrides: map, ovMat: ovMat, hits: 0, sep: !!model.sep, ovList: map ? overrides : null,
-      margin: !!model.margin, chain: null, memo: new Map(), ids: new Map(), tag: ++ctxTag };   // chain: the perfect items, set by perfectChain (the margin needs them)
+      margin: !!model.margin, ubExact: !!model.ubExact, chain: null, memo: new Map(), ids: new Map(), tag: ++ctxTag };   // chain: the perfect items, set by perfectChain (the margin needs them)
   }
 
   // with recorded results the fast search stays on only if none beats the formula (checked once the rates are known)
   function sepCheck(ctx, rates) {
+    if (ctx.ubExact && ctx.overrides) for (const o of ctx.ovList) {   // a recorded result above the exact formula: no bound
+      if (o && o.base && o.mat && o.actual && o.actual.some((v, i) => Number(v) > MODELS.exact.fn(o.base.map(Number), o.mat.map(Number), rates)[i])) { ctx.ubExact = false; break; }
+    }
     if (!ctx.sep || !ctx.overrides) return;
     for (const o of ctx.ovList) {
       if (!o || !o.base || !o.mat || !o.actual) continue;
@@ -2465,11 +2474,13 @@ function createSolver() {
     const sizes = [0, F[1].length];
 
     const lookup = !!(targets && targets.length && need === maxLevel);
+    // the gains the floors are worked out with: the model's own (separable), or the exact formula's as a bound (Safe)
+    const gainUB = sep ? gainOf : (ctx && ctx.ubExact ? v => MODELS.exact.fn(zero, v, rates) : null);
     // usefulness floors T[L] (see above); an item below T[L] in any stat cannot be in a plan that meets a target
     let T = null, Mb = null, Gb = null;   // Mb[l]: strongest possible level-l base; Gb[l]: strongest gain from a material up to level l
-    if (lookup && sep) {
+    if (lookup && gainUB) {
       const ginv = (i, v) => {   // the smallest stat whose gain reaches v (per stat: separable models are per stat)
-        const one = x => { const vec = zero.slice(); vec[i] = x; return gainOf(vec)[i]; };
+        const one = x => { const vec = zero.slice(); vec[i] = x; return gainUB(vec)[i]; };
         if (!(v > one(0))) return -Infinity;
         let lo = 0, hi = 1;
         while (one(hi) < v) { hi *= 2; if (hi > 1e9) return Infinity; }
@@ -2479,17 +2490,17 @@ function createSolver() {
       // M[l]: no item at level l beats it in any stat; Mup[l]: the same over every level up to l (any material there)
       const M = [null, base.slice()], Mup = [null, base.slice()];
       for (let l = 2; l < need; l++) {
-        const g = gainOf(Mup[l - 1]);
+        const g = gainUB(Mup[l - 1]);
         M[l] = M[l - 1].map((v, i) => v + g[i]);
         for (const o of owned) if (o.level === l) for (let i = 0; i < n; i++) M[l][i] = Math.max(M[l][i], o.stats[i]);
         Mup[l] = Mup[l - 1].map((v, i) => Math.max(v, M[l][i]));
       }
       Mb = M; Gb = [];
-      for (let l = 1; l < need; l++) Gb[l] = gainOf(Mup[l]);
+      for (let l = 1; l < need; l++) Gb[l] = gainUB(Mup[l]);
       T = [];
       T[need] = base.map((v, i) => { let t = Infinity; for (const tg of targets) t = Math.min(t, tg[i] == null ? -Infinity : tg[i]); return t; });
       for (let L = need - 1; L >= 1; L--) {
-        const gmax = gainOf(Mup[L]);
+        const gmax = gainUB(Mup[L]);
         T[L] = base.map((v, i) => {
           const asBase = T[L + 1][i] - gmax[i];
           let asMat = Infinity;
@@ -2577,7 +2588,7 @@ function createSolver() {
       let xs = bases, ys = matsG;
       if (floor) {
         xs = bases.filter(x => { for (let i = 0; i < n; i++) if (x.s[i] + Gb[L - 1][i] < floor[i]) return false; return true; });
-        ys = matsG.filter(g => { for (let i = 0; i < n; i++) if (Mb[L - 1][i] + g.s[i] < floor[i]) return false; return true; });
+        ys = matsG.filter(g => { const gs = sep ? g.s : gainUB(g.s); for (let i = 0; i < n; i++) if (Mb[L - 1][i] + gs[i] < floor[i]) return false; return true; });
       }
       const best = new Map();
       // scratch buffers: a pair's stats and inventory use are worked out in place, and copied only when kept
@@ -2848,6 +2859,9 @@ function createSolver() {
     const ub = qk && qk.built ? qk.built.cost : Infinity;
     if (built) { /* the unlimited plan fits: it is the best one */ }
     else if (qk && ub === 0) { use(qk); status = 'proven'; }   // nothing is cheaper than free
+    // req.quick (the app's first answer): a big inventory gets its quick plan at once, marked approximate; the
+    // app's background search (exhaustive) finds the best one
+    else if (req.quick && !boundless && qk && qk.built && K > QUICK_SKIP) { use(qk); status = 'capped'; }
     else {
       try {
         const r = solveCore(base, rates, level, owned, ctx, level, lvTargets, false, ub), pk = choose(r.F[level], target);
@@ -3538,7 +3552,7 @@ function createSolver() {
     solving = true;
     Solver.cancelDeep();
     renderResults();
-    Solver.post({ type: 'solve', id, req }, msg => {
+    Solver.post({ type: 'solve', id, req: Object.assign({}, req, { quick: true }) }, msg => {   // quick: the first answer fast
       if (id !== solveSeq) return;
       solving = false;
       if (!msg.ok) { last = { item, req, sig, error: msg.error }; renderResults(); return; }
@@ -3555,12 +3569,14 @@ function createSolver() {
       // replaces this one when it is done, if it is still the plan on screen
       if (res.approximate && res.plan && !last.pinned) {
         if (guide.replan) guide.replan.searching = true;
+        last.deepSince = Date.now();
         last.deep = Solver.deep(req, dm => {
           if (!last || last.sig !== sig) return;
           last.deep = false;
           const r2 = dm.ok && dm.result;
-          if (r2 && r2.ok && r2.plan && r2.cost <= last.res.cost && !loadJSON(pinKey(), null)) {   // not once you follow this plan (a tick pins it)
-            if (!ui.guideSheet.hidden && r2.cost < last.res.cost) { guide.resync = true; toast(`Found a cheaper plan: ${fmt(r2.cost)} base items`); }
+          if (r2 && r2.ok && r2.plan && r2.cost >= last.res.cost) last.res = Object.assign({}, last.res, { approximate: false, mode: 'exact' });   // nothing cheaper: this plan is the best, it stays as it is
+          else if (r2 && r2.ok && r2.plan && !loadJSON(pinKey(), null)) {   // cheaper, and you haven't started this one (a tick or "use this plan" pins it)
+            if (!ui.guideSheet.hidden) { guide.resync = true; toast(`Found a cheaper plan: ${fmt(r2.cost)} base items`); }
             last.res = r2;
             last.analysis = S.analyze(r2.plan, req.owned.length);
             if (isBossItem(item)) last.analysis.gold = last.analysis.steps.reduce((t, st) => t + st.count * feeAt(item, st.L), 0);
@@ -5973,8 +5989,12 @@ function createSolver() {
           : isKeyStep(item, st) ? `<span class="talk-key">Key step: a perfect ${rName} from an item below perfect. Before you refine, check the game shows at least ${st.result.s.join('/')}. If it shows less, set its numbers below and I'll re-plan.</span>` : '');
       const makeBtn = guideMakeBtn;
       const recipe = forgeHTML(st, item, makeBtn, null, !isDone) + `<div class="g-count">Do it <b>${n}×</b>: uses ${uses}, makes ${n} × ${rName}</div>`;
-      body = anzSays(say) + recipe + sharedTagHTML(sharedBases(a.steps)(st), item) + guideHowTo(st) + verdictHTML(item, st) +
-        `<div class="guide-actions">` +
+      const checking = last.deep && !loadJSON(pinKey(), null);   // the plan may still change: hold on before refining
+      const hold = checking ? `<div class="g-check"><div class="g-wait"><i class="g-spin"></i><span>Checking for a cheaper plan… <span data-wait="${last.deepSince || Date.now()}">0 s</span></span></div>` +
+        `<p>Don't refine yet: this plan may still change. Wait a moment, or use it as it is.</p><button class="btn small block" type="button" data-action="plan-accept">Use this plan now</button></div>` : '';
+      if (checking) waitTick();
+      body = anzSays(say) + recipe + sharedTagHTML(sharedBases(a.steps)(st), item) + guideHowTo(st) + verdictHTML(item, st) + hold +
+        `<div class="guide-actions" ${checking ? 'hidden' : ''}>` +
         (isDone
           ? `<button class="btn primary block" type="button" data-action="guide-skip">Already done ✓ · next step</button><button class="btn small ghost" type="button" data-action="guide-undo">Not done yet</button>`
           : `<button class="btn primary block when-same" type="button" data-action="guide-match">✓ Done, I got ${n} × ${rName}</button>` +
@@ -7336,6 +7356,8 @@ function createSolver() {
         renderItem(); break;
       }
       case 'close-guide': closeGuide(); break;
+      case 'plan-accept':   // follow the plan on screen: the background search stops, the plan is pinned
+        pinPlan(); Solver.cancelDeep(); if (last) last.deep = false; haptic(8); renderResults(); renderGuide(); toast('Using this plan'); break;
       case 'replan-keep': {
         const r = guide.replan, item = last && last.item; if (!r || !r.keep || !item) break;
         const snap = undoPoint();

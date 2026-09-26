@@ -876,6 +876,9 @@
   .gf-card.changed { border-color: var(--gold); }
   #guideBody:not(.edited) .when-edited, #guideBody.edited .when-same, #guideBody:not(.better) .when-better, #guideBody:not(.absorbs) .when-absorbs,
   #guideBody:not(.better):not(.absorbs) .when-ok, #guideBody.better .when-worse, #guideBody.absorbs .when-worse { display: none; }
+  .g-check { margin-top: 12px; padding: 12px; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--gold) 45%, var(--line)); background: color-mix(in srgb, var(--gold) 7%, transparent); display: grid; gap: 8px; }
+  .g-check p { margin: 0; font-size: 13px; color: var(--soft); }
+  .g-check .g-wait { margin: 0; color: var(--gold); }
   .g-wait { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; color: var(--muted); }
   .g-spin { width: 12px; height: 12px; border: 2px solid var(--line-2); border-top-color: var(--gold); border-radius: 50%; animation: g-spin .8s linear infinite; }
   @keyframes g-spin { to { transform: rotate(360deg); } }
@@ -2638,7 +2641,7 @@ __SOLVER_JS__
     solving = true;
     Solver.cancelDeep();
     renderResults();
-    Solver.post({ type: 'solve', id, req }, msg => {
+    Solver.post({ type: 'solve', id, req: Object.assign({}, req, { quick: true }) }, msg => {   // quick: the first answer fast
       if (id !== solveSeq) return;
       solving = false;
       if (!msg.ok) { last = { item, req, sig, error: msg.error }; renderResults(); return; }
@@ -2655,12 +2658,14 @@ __SOLVER_JS__
       // replaces this one when it is done, if it is still the plan on screen
       if (res.approximate && res.plan && !last.pinned) {
         if (guide.replan) guide.replan.searching = true;
+        last.deepSince = Date.now();
         last.deep = Solver.deep(req, dm => {
           if (!last || last.sig !== sig) return;
           last.deep = false;
           const r2 = dm.ok && dm.result;
-          if (r2 && r2.ok && r2.plan && r2.cost <= last.res.cost && !loadJSON(pinKey(), null)) {   // not once you follow this plan (a tick pins it)
-            if (!ui.guideSheet.hidden && r2.cost < last.res.cost) { guide.resync = true; toast(`Found a cheaper plan: ${fmt(r2.cost)} base items`); }
+          if (r2 && r2.ok && r2.plan && r2.cost >= last.res.cost) last.res = Object.assign({}, last.res, { approximate: false, mode: 'exact' });   // nothing cheaper: this plan is the best, it stays as it is
+          else if (r2 && r2.ok && r2.plan && !loadJSON(pinKey(), null)) {   // cheaper, and you haven't started this one (a tick or "use this plan" pins it)
+            if (!ui.guideSheet.hidden) { guide.resync = true; toast(`Found a cheaper plan: ${fmt(r2.cost)} base items`); }
             last.res = r2;
             last.analysis = S.analyze(r2.plan, req.owned.length);
             if (isBossItem(item)) last.analysis.gold = last.analysis.steps.reduce((t, st) => t + st.count * feeAt(item, st.L), 0);
@@ -5073,8 +5078,12 @@ __SOLVER_JS__
           : isKeyStep(item, st) ? `<span class="talk-key">Key step: a perfect ${rName} from an item below perfect. Before you refine, check the game shows at least ${st.result.s.join('/')}. If it shows less, set its numbers below and I'll re-plan.</span>` : '');
       const makeBtn = guideMakeBtn;
       const recipe = forgeHTML(st, item, makeBtn, null, !isDone) + `<div class="g-count">Do it <b>${n}×</b>: uses ${uses}, makes ${n} × ${rName}</div>`;
-      body = anzSays(say) + recipe + sharedTagHTML(sharedBases(a.steps)(st), item) + guideHowTo(st) + verdictHTML(item, st) +
-        `<div class="guide-actions">` +
+      const checking = last.deep && !loadJSON(pinKey(), null);   // the plan may still change: hold on before refining
+      const hold = checking ? `<div class="g-check"><div class="g-wait"><i class="g-spin"></i><span>Checking for a cheaper plan… <span data-wait="${last.deepSince || Date.now()}">0 s</span></span></div>` +
+        `<p>Don't refine yet: this plan may still change. Wait a moment, or use it as it is.</p><button class="btn small block" type="button" data-action="plan-accept">Use this plan now</button></div>` : '';
+      if (checking) waitTick();
+      body = anzSays(say) + recipe + sharedTagHTML(sharedBases(a.steps)(st), item) + guideHowTo(st) + verdictHTML(item, st) + hold +
+        `<div class="guide-actions" ${checking ? 'hidden' : ''}>` +
         (isDone
           ? `<button class="btn primary block" type="button" data-action="guide-skip">Already done ✓ · next step</button><button class="btn small ghost" type="button" data-action="guide-undo">Not done yet</button>`
           : `<button class="btn primary block when-same" type="button" data-action="guide-match">✓ Done, I got ${n} × ${rName}</button>` +
@@ -6436,6 +6445,8 @@ __SOLVER_JS__
         renderItem(); break;
       }
       case 'close-guide': closeGuide(); break;
+      case 'plan-accept':   // follow the plan on screen: the background search stops, the plan is pinned
+        pinPlan(); Solver.cancelDeep(); if (last) last.deep = false; haptic(8); renderResults(); renderGuide(); toast('Using this plan'); break;
       case 'replan-keep': {
         const r = guide.replan, item = last && last.item; if (!r || !r.keep || !item) break;
         const snap = undoPoint();

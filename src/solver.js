@@ -33,6 +33,7 @@ function createSolver() {
   const MAX_LEVEL = 10;
   const K_START = 512;             // largest owned-usage lattice tried first (it shrinks while the search is too big)
   const QUICK_K = 64;              // the quick plan's owned-usage lattice (its cost bounds the exact search)
+  const QUICK_SKIP = 20000;        // req.quick: from this many owned-usage combinations on, no exact search in the first answer
   const QUICK_K_SEP = 512;         // the same for the fast (separable) search: a wider quick plan, a much better bound
   const CANDIDATE_BUDGET = 3e6;    // per-level base x material pairs before reducing the lattice
   const WORK_BUDGET = 2e7;         // with owned items: pairs tried + frontier comparisons per search (about a second)
@@ -92,7 +93,9 @@ function createSolver() {
   const ROBUST_SET = ['exact', 'v1f64', 'v1f32', 'dec64', 'dec32', 'main64', 'main32'];
   // margin: the game keeps values its screen doesn't show, and two imperfect items came out 1 lower than the formula
   // (79/116 + 79/116 -> 98/144 instead of 98/145). Safe plans for 1 less per stat whenever neither item is perfect.
-  MODELS.robust = { label: 'Safe: lowest of all plausible variants', group: 'safe', margin: true,
+  // ubExact: never more than the exact formula (a minimum over variants that include it, less a margin), so the exact
+  // formula's gains bound it and the search's usefulness floors hold for it too
+  MODELS.robust = { label: 'Safe: lowest of all plausible variants', group: 'safe', margin: true, ubExact: true,
     desc: 'Plans with, per stat, the lowest result any plausible variant predicts, and 1 less per stat when neither item is perfect, so a refine can never come up short. Costs a few more items.',
     fn: (b, m, r) => { let out = null; for (const k of ROBUST_SET) { const v = MODELS[k].fn(b, m, r); out = out ? out.map((x, i) => Math.min(x, v[i])) : v; } return out; } };
 
@@ -117,11 +120,14 @@ function createSolver() {
     // add the same gains are interchangeable. Recorded results (overrides) are per recipe and switch this off.
     const ovMat = map ? new Set(overrides.filter(o => o && o.mat).map(o => o.matL + '|' + o.mat.join(','))) : null;
     return { model: model.fn, name: model.fn === MODELS.exact.fn ? 'exact' : modelName, overrides: map, ovMat: ovMat, hits: 0, sep: !!model.sep, ovList: map ? overrides : null,
-      margin: !!model.margin, chain: null, memo: new Map(), ids: new Map(), tag: ++ctxTag };   // chain: the perfect items, set by perfectChain (the margin needs them)
+      margin: !!model.margin, ubExact: !!model.ubExact, chain: null, memo: new Map(), ids: new Map(), tag: ++ctxTag };   // chain: the perfect items, set by perfectChain (the margin needs them)
   }
 
   // with recorded results the fast search stays on only if none beats the formula (checked once the rates are known)
   function sepCheck(ctx, rates) {
+    if (ctx.ubExact && ctx.overrides) for (const o of ctx.ovList) {   // a recorded result above the exact formula: no bound
+      if (o && o.base && o.mat && o.actual && o.actual.some((v, i) => Number(v) > MODELS.exact.fn(o.base.map(Number), o.mat.map(Number), rates)[i])) { ctx.ubExact = false; break; }
+    }
     if (!ctx.sep || !ctx.overrides) return;
     for (const o of ctx.ovList) {
       if (!o || !o.base || !o.mat || !o.actual) continue;
@@ -369,11 +375,13 @@ function createSolver() {
     const sizes = [0, F[1].length];
 
     const lookup = !!(targets && targets.length && need === maxLevel);
+    // the gains the floors are worked out with: the model's own (separable), or the exact formula's as a bound (Safe)
+    const gainUB = sep ? gainOf : (ctx && ctx.ubExact ? v => MODELS.exact.fn(zero, v, rates) : null);
     // usefulness floors T[L] (see above); an item below T[L] in any stat cannot be in a plan that meets a target
     let T = null, Mb = null, Gb = null;   // Mb[l]: strongest possible level-l base; Gb[l]: strongest gain from a material up to level l
-    if (lookup && sep) {
+    if (lookup && gainUB) {
       const ginv = (i, v) => {   // the smallest stat whose gain reaches v (per stat: separable models are per stat)
-        const one = x => { const vec = zero.slice(); vec[i] = x; return gainOf(vec)[i]; };
+        const one = x => { const vec = zero.slice(); vec[i] = x; return gainUB(vec)[i]; };
         if (!(v > one(0))) return -Infinity;
         let lo = 0, hi = 1;
         while (one(hi) < v) { hi *= 2; if (hi > 1e9) return Infinity; }
@@ -383,17 +391,17 @@ function createSolver() {
       // M[l]: no item at level l beats it in any stat; Mup[l]: the same over every level up to l (any material there)
       const M = [null, base.slice()], Mup = [null, base.slice()];
       for (let l = 2; l < need; l++) {
-        const g = gainOf(Mup[l - 1]);
+        const g = gainUB(Mup[l - 1]);
         M[l] = M[l - 1].map((v, i) => v + g[i]);
         for (const o of owned) if (o.level === l) for (let i = 0; i < n; i++) M[l][i] = Math.max(M[l][i], o.stats[i]);
         Mup[l] = Mup[l - 1].map((v, i) => Math.max(v, M[l][i]));
       }
       Mb = M; Gb = [];
-      for (let l = 1; l < need; l++) Gb[l] = gainOf(Mup[l]);
+      for (let l = 1; l < need; l++) Gb[l] = gainUB(Mup[l]);
       T = [];
       T[need] = base.map((v, i) => { let t = Infinity; for (const tg of targets) t = Math.min(t, tg[i] == null ? -Infinity : tg[i]); return t; });
       for (let L = need - 1; L >= 1; L--) {
-        const gmax = gainOf(Mup[L]);
+        const gmax = gainUB(Mup[L]);
         T[L] = base.map((v, i) => {
           const asBase = T[L + 1][i] - gmax[i];
           let asMat = Infinity;
@@ -481,7 +489,7 @@ function createSolver() {
       let xs = bases, ys = matsG;
       if (floor) {
         xs = bases.filter(x => { for (let i = 0; i < n; i++) if (x.s[i] + Gb[L - 1][i] < floor[i]) return false; return true; });
-        ys = matsG.filter(g => { for (let i = 0; i < n; i++) if (Mb[L - 1][i] + g.s[i] < floor[i]) return false; return true; });
+        ys = matsG.filter(g => { const gs = sep ? g.s : gainUB(g.s); for (let i = 0; i < n; i++) if (Mb[L - 1][i] + gs[i] < floor[i]) return false; return true; });
       }
       const best = new Map();
       // scratch buffers: a pair's stats and inventory use are worked out in place, and copied only when kept
@@ -752,6 +760,9 @@ function createSolver() {
     const ub = qk && qk.built ? qk.built.cost : Infinity;
     if (built) { /* the unlimited plan fits: it is the best one */ }
     else if (qk && ub === 0) { use(qk); status = 'proven'; }   // nothing is cheaper than free
+    // req.quick (the app's first answer): a big inventory gets its quick plan at once, marked approximate; the
+    // app's background search (exhaustive) finds the best one
+    else if (req.quick && !boundless && qk && qk.built && K > QUICK_SKIP) { use(qk); status = 'capped'; }
     else {
       try {
         const r = solveCore(base, rates, level, owned, ctx, level, lvTargets, false, ub), pk = choose(r.F[level], target);
