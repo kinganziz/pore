@@ -1353,6 +1353,10 @@
   #settingsSheet .sheet, #settingsSheet .sheet-head .icon-btn { border: 0 !important; box-shadow: none !important; }
   #settingsSheet .sheet-head .icon-btn { background: none !important; position: absolute; right: 10px; color: var(--muted); }
   #settingsSheet .sheet-head { justify-content: center; position: relative; padding-top: 18px; }
+  #infoSheet .sheet, #infoSheet .sheet-head .icon-btn { border: 0 !important; box-shadow: none !important; }
+  #infoSheet .sheet-head .icon-btn { background: none !important; position: absolute; right: 10px; color: var(--muted); }
+  #infoSheet .sheet-head { justify-content: center; position: relative; padding-top: 18px; }
+  #infoSheet .sheet-head h2 { flex: 0 1 auto; text-align: center; font-size: 24px; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); text-shadow: 2px 2px 0 rgba(0, 0, 0, .55); }
   #settingsSheet .sheet-head h2 { flex: 0 1 auto; text-align: center; font-size: 24px; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); text-shadow: 2px 2px 0 rgba(0, 0, 0, .55); }
   .gm-h { display: flex; align-items: center; gap: 10px; margin: 18px 4px 6px; font-size: 14px; color: var(--gold); text-transform: uppercase; letter-spacing: 2px; text-shadow: 1px 1px 0 rgba(0, 0, 0, .5); }
   .gm-h::after { content: ""; flex: 1; height: 2px; background: linear-gradient(90deg, color-mix(in srgb, var(--gold) 45%, transparent), transparent); }
@@ -1562,6 +1566,7 @@
   main .bg-switch.open .bg-strip { transform: none; }
   html, body { overflow-x: clip; }   /* nothing may ever make the app scroll sideways (clip keeps sticky headers working) */
   .sheet-head { padding-left: 52px; }
+  @media (min-width: 880px) { .sheet-head { padding-left: 16px; } }   /* a floating panel: the menu button is not over it, titles sit in the true middle */
   .lvl-head { padding-left: 62px; }
   /* the menu: a strip that slides out to the right of the gem (name, day or night, look, help) */
   .pore-menu { position: absolute; z-index: 1; top: calc(env(safe-area-inset-top, 0px) + 4px); left: 6px; height: 46px; max-width: calc(100vw - 12px); pointer-events: auto;
@@ -1787,6 +1792,26 @@
   .lib-pages b { min-width: 56px; text-align: center; font-size: 17px; color: var(--gold); font-weight: normal; }
   .lib-left { font-size: 13px; color: var(--soft); margin: 0 2px 8px; line-height: 1.5; } .lib-left i { font-style: normal; opacity: .75; }
   .lib-grid .place-tile { position: relative; } .place-tile .pt-badge { position: absolute; top: 0; right: 14%; font-size: 11px; line-height: 1; padding: 2px 4px; border-radius: 6px; background: rgba(10, 8, 22, .8); color: var(--gold); }
+  /* ---------- wide screens (desktop): use the room ---------- */
+  .bg-dock { display: none; }
+  @media (min-width: 720px) {
+    .inv-pop { align-items: center; }   /* an item's card opens in the middle of the panel, not at its foot */
+  }
+  @media (min-width: 980px) {
+    /* the background picker is on every screen, top right; Home's own one steps aside */
+    .bg-dock { display: flex; position: fixed; z-index: 70; top: calc(env(safe-area-inset-top, 0px) + 14px); right: 18px; left: auto; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; }
+    .bg-dock .bg-cur { pointer-events: auto; width: 46px; height: 33px; }
+    .bg-dock .bg-strip { display: flex; flex-direction: column; align-items: center; gap: 6px; opacity: 0; transform: translateY(-10px); pointer-events: none; visibility: hidden;
+      transition: opacity .2s, transform .25s cubic-bezier(.3, 1.4, .5, 1), visibility 0s .25s; }
+    .bg-dock.open .bg-strip { opacity: 1; transform: none; pointer-events: auto; visibility: visible; transition: opacity .2s, transform .25s cubic-bezier(.3, 1.4, .5, 1); }
+    .bg-dock .bg-strip > * { flex-shrink: 0; }
+    main .home-hero .bg-switch { display: none; }
+    /* the item grids fill the panel instead of five game-sized columns */
+    .slots.named { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); max-width: none; }
+  }
+  @media (min-width: 1200px) {
+    :is(#pickerSheet, #charmsSheet) .sheet { max-width: 960px; }   /* the two grid pages get more columns */
+  }
 </style>
 </head>
 <body>
@@ -1823,6 +1848,11 @@
   </nav>
 </header>
 <div class="pore-scrim" data-action="pore-menu-close" aria-hidden="true"></div>
+<!-- the background picker on every screen, on wide screens (Home has its own on phones) -->
+<div class="bg-switch bg-dock" id="bgDock">
+  <button class="bg-cur" type="button" data-action="bg-toggle" aria-expanded="false" aria-label="Change background" title="Background"></button>
+  <div class="bg-strip" role="group" aria-label="Background"></div>
+</div>
 
 <main class="app">
   <div class="col col-inputs">
@@ -7054,7 +7084,7 @@ function createSolver() {
     applyLook();
     // Pixel is PORE's own look and the default; a look someone picked themselves is kept
     try { setSkin(localStorage.getItem('pore.skin.chosen') ? localStorage.getItem(STORAGE.skin) : 'pixel'); } catch (e) { setSkin('pixel'); }
-    bgLoad(); refreshBgStrips(); syncBgPicker();
+    bgLoad(); refreshBgStrips(); syncBgPicker();   /* refreshBgStrips also fills the page-level picker (#bgDock) */
     try { setFont(localStorage.getItem(STORAGE.font)); } catch (e) { setFont('vt323'); }
     if (ui.catGrid) ui.catGrid.innerHTML = Object.values(CATS).map(c => `<div><span>${c.label} <b>${c.pct}</b></span><small>${c.who}</small></div>`).join('');
     const date = (ITEM_DB.fetched || '').slice(0, 10);
