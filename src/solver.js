@@ -33,6 +33,7 @@ function createSolver() {
   const MAX_LEVEL = 10;
   const K_START = 512;             // largest owned-usage lattice tried first (it shrinks while the search is too big)
   const QUICK_K = 64;              // the quick plan's owned-usage lattice (its cost bounds the exact search)
+  const QUICK_K_SEP = 512;         // the same for the fast (separable) search: a wider quick plan, a much better bound
   const CANDIDATE_BUDGET = 3e6;    // per-level base x material pairs before reducing the lattice
   const WORK_BUDGET = 2e7;         // with owned items: pairs tried + frontier comparisons per search (about a second)
 
@@ -114,21 +115,53 @@ function createSolver() {
     }
     // sep: the model adds a gain that depends on the material alone (integer base + floor(...)), so materials that
     // add the same gains are interchangeable. Recorded results (overrides) are per recipe and switch this off.
-    return { model: model.fn, name: model.fn === MODELS.exact.fn ? 'exact' : modelName, overrides: map, hits: 0, sep: !!model.sep && !map,
-      margin: !!model.margin, chain: null };   // chain: the perfect items, set by perfectChain (the margin needs them)
+    const ovMat = map ? new Set(overrides.filter(o => o && o.mat).map(o => o.matL + '|' + o.mat.join(','))) : null;
+    return { model: model.fn, name: model.fn === MODELS.exact.fn ? 'exact' : modelName, overrides: map, ovMat: ovMat, hits: 0, sep: !!model.sep, ovList: map ? overrides : null,
+      margin: !!model.margin, chain: null, memo: new Map(), ids: new Map(), tag: ++ctxTag };   // chain: the perfect items, set by perfectChain (the margin needs them)
   }
 
+  // with recorded results the fast search stays on only if none beats the formula (checked once the rates are known)
+  function sepCheck(ctx, rates) {
+    if (!ctx.sep || !ctx.overrides) return;
+    for (const o of ctx.ovList) {
+      if (!o || !o.base || !o.mat || !o.actual) continue;
+      const f = ctx.model(o.base.map(Number), o.mat.map(Number), rates);
+      if (o.actual.some((v, i) => Number(v) > f[i])) { ctx.sep = false; return; }
+    }
+  }
+  // Results are remembered per solve: the searches meet the same pairs again and again (a slow model such as Safe
+  // works each pair out once). An item is known by an id kept on its stats array (level and stats).
+  let ctxTag = 0;
+  function itemId(ctx, arr, L) {
+    if (arr._pt === ctx.tag && arr._pl === L) return arr._pi;
+    const k = L + ':' + arr.join(',');
+    let id = ctx.ids.get(k);
+    if (id === undefined) { id = ctx.ids.size; ctx.ids.set(k, id); }
+    arr._pt = ctx.tag; arr._pl = L; arr._pi = id;
+    return id;
+  }
   function combine(base, mat, rates, ctx, baseL, matL) {
+    let key = -1;
+    if (ctx && ctx.memo && baseL != null && matL != null) {
+      key = itemId(ctx, base, baseL) * 4194304 + itemId(ctx, mat, matL);
+      const m = ctx.memo.get(key);
+      if (m) { if (m.hit) ctx.hits++; return m.s.slice(); }
+      if (ctx.memo.size > 3e6) { ctx.memo.clear(); ctx.ids.clear(); ctx.tag = ++ctxTag; key = -1; }
+    }
+    let out = null, hit = false;
     if (ctx && ctx.overrides) {
-      const hit = ctx.overrides.get(recipeKey(baseL, base, matL, mat));
-      if (hit) { ctx.hits++; return hit.slice(); }
+      const h = ctx.overrides.get(recipeKey(baseL, base, matL, mat));
+      if (h) { ctx.hits++; out = h.slice(); hit = true; }
     }
-    const out = (ctx ? ctx.model : MODELS.exact.fn)(base, mat, rates);
-    if (ctx && ctx.margin && ctx.chain) {
-      const pb = ctx.chain[baseL], pm = ctx.chain[matL];
-      const perfect = (s, p) => !!p && s.every((v, i) => v === p[i]);
-      if (!perfect(base, pb) && !perfect(mat, pm)) for (let i = 0; i < out.length; i++) out[i] = Math.max(base[i], out[i] - 1);
+    if (!out) {
+      out = (ctx ? ctx.model : MODELS.exact.fn)(base, mat, rates);
+      if (ctx && ctx.margin && ctx.chain) {
+        const pb = ctx.chain[baseL], pm = ctx.chain[matL];
+        const perfect = (s, p) => !!p && s.every((v, i) => v === p[i]);
+        if (!perfect(base, pb) && !perfect(mat, pm)) for (let i = 0; i < out.length; i++) out[i] = Math.max(base[i], out[i] - 1);
+      }
     }
+    if (key >= 0) ctx.memo.set(key, { s: out.slice(), hit: hit });
     return out;
   }
 
@@ -324,10 +357,13 @@ function createSolver() {
     const sep = !!(ctx && ctx.sep);
     const zero = base.map(() => 0);
     const gainOf = v => ctx.model(zero, v, rates);
+    const ovMat = sep && ctx.ovMat && ctx.ovMat.size ? ctx.ovMat : null;
     const gainList = ms => {
       if (!sep) return ms;
-      const g = ms.map(y => { const v = gainOf(y.s); return { p: y.p, s: v, u: y.u, t: sum(v), y: y }; });
-      return front(g);
+      const g = ms.map(y => { const v = gainOf(y.s); return { p: y.p, s: v, u: y.u, t: sum(v), y: y, ov: !!ovMat && ovMat.has(y.L + '|' + y.s.join(',')) }; });
+      if (!ovMat) return front(g);
+      const out = front(g.filter(x => !x.ov)).concat(g.filter(x => x.ov));
+      return out.sort((a, b) => a.p - b.p);   // the searches walk materials cheapest first
     };
     let mats = front(F[1].slice()), matsG = gainList(mats);
     const sizes = [0, F[1].length];
@@ -376,7 +412,10 @@ function createSolver() {
         let groups = null;
         if (sep) {
           const gm = new Map();
-          for (const g of matsG) { const k = g.s.join(','); let e = gm.get(k); if (!e) { e = { g: g.s, list: [] }; gm.set(k, e); } e.list.push(g); }
+          for (const g of matsG) {
+            const k = g.ov ? 'ov' + gm.size : g.s.join(',');   // a material with a recorded result: its own group, always tried
+            let e = gm.get(k); if (!e) { e = { g: g.ov ? g.s.map(() => Infinity) : g.s, list: [] }; gm.set(k, e); } e.list.push(g);
+          }
           groups = Array.from(gm.values());
         }
         const tryPair = (x, g, y, target, bestP) => {   // the merged state if the pair fits the inventory and the target, else null
@@ -387,7 +426,7 @@ function createSolver() {
             if (!inv.fits(u)) return null;
           }
           let s;
-          if (sep) { s = new Array(n); for (let i = 0; i < n; i++) s[i] = x.s[i] + g.s[i]; } else s = combine(x.s, y.s, rates, ctx, x.L, y.L);
+          if (sep && !g.ov) { s = new Array(n); for (let i = 0; i < n; i++) s[i] = x.s[i] + g.s[i]; } else s = combine(x.s, y.s, rates, ctx, x.L, y.L);
           if (!meets(s, target)) return null;
           return mkState(L, x.p + y.p, s, u, 2, x, y, -1);
         };
@@ -456,7 +495,7 @@ function createSolver() {
           if (p >= cap) break;                   // materials are sorted by cost
           if ((++tick & 8191) === 0) spend(8192);
           let s = ss;
-          if (sep) { for (let i = 0; i < n; i++) ss[i] = x.s[i] + g.s[i]; } else s = combine(x.s, y.s, rates, ctx, x.L, y.L);
+          if (sep && !g.ov) { for (let i = 0; i < n; i++) ss[i] = x.s[i] + g.s[i]; } else s = combine(x.s, y.s, rates, ctx, x.L, y.L);
           if (floor) { let ok = true; for (let i = 0; i < n; i++) if (s[i] < floor[i]) { ok = false; break; } if (!ok) continue; }
           let uKey = 0;
           if (hasU) {
@@ -613,6 +652,8 @@ function createSolver() {
     }
     const target = (req.target || base.map(() => null)).map(t => (t == null ? null : Number(t)));
     const ctx = makeCtx(req.model || 'exact', req.overrides || [], base.length);
+    sepCheck(ctx, rates);
+    const qK = ctx.sep ? QUICK_K_SEP : QUICK_K;
 
     // Cap quantities so the usage lattice (the product of qty + 1) stays within kMax, handing counts out one at a
     // time with higher-level items first; the leftovers are substituted into the plan afterwards.
@@ -669,12 +710,21 @@ function createSolver() {
         }
       }
     }
+    // a quick plan from given counts per row (null when the search is too big for them)
+    function quickCaps(caps) {
+      const rows = owned.map((o, j) => ({ level: o.level, stats: o.stats, qty: caps[j] }));
+      try {
+        const r = solveCore(base, rates, level, rows, ctx, level, lvTargets), pk = choose(r.F[level], target);
+        return { res: r, pick: pk, rows: rows, built: pk ? build(pk, rows) : null };
+      } catch (err) { if (!(err instanceof BudgetExceeded)) throw err; return null; }
+    }
     const use = qk => { res = qk.res; pick = qk.pick; capped = qk.rows; built = qk.built; };
     // A big inventory: first a quick plan; its cost bounds the exact search (branch and bound), which then skips
     // everything that already costs as much, and starts its last-level lookup from it.
     // First the plan with unlimited copies of every owned row, at a tiny price each (so it asks for as few as it can).
     // Nothing can be cheaper, so when that plan fits the real inventory (merges allowed) it is the best one.
-    if (owned.length && capsFor(QUICK_K).k < K) {
+    let epsUse = null;
+    if (owned.length && capsFor(qK).k < K) {
       try {
         const eps = owned.map(o => Math.pow(2, o.level - 1) * 1e-7);
         const r = solveCore(base, rates, level, owned, ctx, level, lvTargets, eps), pk = choose(r.F[level], target);
@@ -685,15 +735,19 @@ function createSolver() {
             realize(tree, owned, chainTop, rates, ctx);
             (function fix(nd) { if (nd.k === 2) { fix(nd.b); fix(nd.m); nd.p = nd.b.p + nd.m.p; } else if (nd.k === 1) nd.p = 0; })(tree);
             res = r; pick = pk; capped = owned; built = { tree: tree, sub: 0, cost: tree.p };
-          }
+          } else epsUse = u;   // it asks for more than you have: its use still says which rows matter
         }
       } catch (err) { if (!(err instanceof BudgetExceeded)) throw err; }
     }
     let qk = null;
-    if (!built && owned.length && capsFor(QUICK_K).k < K) {   // two quick plans: counts handed out evenly, or the highest rows first
-      qk = quick(QUICK_K);
-      const q2 = quick(QUICK_K, true);
+    if (!built && owned.length && capsFor(qK).k < K) {   // two quick plans: counts handed out evenly, or the highest rows first
+      qk = quick(qK);
+      const q2 = quick(qK, true);
       if (q2.built && (!qk.built || q2.built.cost < qk.built.cost)) qk = q2;
+      if (epsUse) {   // a third: the rows the unlimited plan used, as many as it used (or you have)
+        const q3 = quickCaps(owned.map((o, j) => Math.min(o.qty, epsUse[j])));
+        if (q3 && q3.built && (!qk.built || q3.built.cost < qk.built.cost)) qk = q3;
+      }
     }
     const ub = qk && qk.built ? qk.built.cost : Infinity;
     if (built) { /* the unlimited plan fits: it is the best one */ }

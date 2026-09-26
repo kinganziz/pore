@@ -2659,7 +2659,7 @@ __SOLVER_JS__
           if (!last || last.sig !== sig) return;
           last.deep = false;
           const r2 = dm.ok && dm.result;
-          if (r2 && r2.ok && r2.plan && r2.cost <= last.res.cost) {
+          if (r2 && r2.ok && r2.plan && r2.cost <= last.res.cost && !loadJSON(pinKey(), null)) {   // not once you follow this plan (a tick pins it)
             if (!ui.guideSheet.hidden && r2.cost < last.res.cost) { guide.resync = true; toast(`Found a cheaper plan: ${fmt(r2.cost)} base items`); }
             last.res = r2;
             last.analysis = S.analyze(r2.plan, req.owned.length);
