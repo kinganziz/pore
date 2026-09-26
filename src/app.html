@@ -4941,6 +4941,8 @@ __SOLVER_JS__
     ui.guideBody.innerHTML = head + body;
   }
   function guideStep() { const steps = guideSteps(); return steps[guide.i]; }
+  // a new step starts at the top of the guide: its progress, what anz says, the recipe
+  function guideTop() { ui.guideBody.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' }); }
   function nodeName(nd, item) { return `${isPerfectNode(nd, item.chain) ? 'P' : 'L'}${nd.L}`; }
   function sameNode(x, y) { return x.L === y.L && x.k === y.k && sameVec(x.s, y.s); }
   function guideHowTo(st) {
@@ -6020,14 +6022,13 @@ __SOLVER_JS__
         renderItem(); break;
       }
       case 'close-guide': closeGuide(); break;
-      case 'guide-next': guide.i++; guide.other = false; renderGuide(); break;
-      case 'guide-back': guide.i--; guide.other = false; renderGuide(); break;
-      case 'guide-skip': guide.i++; guide.other = false; renderGuide(); break;
+      case 'guide-next': guide.i++; guide.other = false; renderGuide(); guideTop(); break;
+      case 'guide-back': guide.i--; guide.other = false; renderGuide(); guideTop(); break;
+      case 'guide-skip': guide.i++; guide.other = false; renderGuide(); guideTop(); break;
       case 'guide-undo': { const st = guideStep(); if (st) setDone(stepId(st), false); renderGuide(); break; }
       case 'guide-other': guide.other = !guide.other; renderGuide(); break;
       case 'guide-done': case 'guide-match': {
         const st = guideStep(); if (!st || !last) return;
-        const snap = undoPoint();
         if (act === 'guide-match') addObservation(last.item, st, st.result.s.slice());
         setDone(stepId(st), true); haptic(14);
         guide.i++; guide.other = false;
@@ -6038,9 +6039,8 @@ __SOLVER_JS__
           fxAdd((act === 'guide-match' ? FXK.pop(btnAt, '#37d39a') : FXK.pop(btnAt)).concat(FXK.mini(btnAt)));
           if (levelDone) fxAdd(FXK.coins(btnAt));   // the level's last step
         }
-        renderGuide();
-        const back = guide.i - 1;
-        toast(`${guide.i >= guideSteps().length ? 'All done!' : levelDone ? `Level ${st.L} done!` : 'Nice! Next step'} · tap to undo`, () => { ui.toast.onclick = null; ui.toast.classList.remove('show'); if (snap.key) saveJSON(snap.key, snap.done); observations = JSON.parse(snap.obs); saveJSON(STORAGE.obs, observations); guide.i = back; renderResults(); renderGuide(); setTimeout(() => toast('Undone'), 50); }, 4500);
+        renderGuide(); guideTop();
+        toast(guide.i >= guideSteps().length ? 'All done!' : levelDone ? `Level ${st.L} done!` : 'Nice! Next step');   // to untick: Back, then "Not done yet"
         break;
       }
       case 'guide-save': {
@@ -6054,7 +6054,7 @@ __SOLVER_JS__
         carryDone.add(stepId(Object.assign({}, st, { result: Object.assign({}, st.result, { s: actual }) })));   // the same refine, now with the real result
         guide.other = false; guide.resync = true; last = null; haptic(14);
         renderItem(); renderTarget(); renderOwned(); persist(); scheduleSolve(0);
-        renderGuide();
+        renderGuide(); guideTop();
         toastUndo(sameVec(actual, st.result.s) ? 'Recorded: matched ✓' : 'Got it, re-planning from your result', snap);
         break;
       }
