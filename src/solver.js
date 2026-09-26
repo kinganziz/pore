@@ -32,6 +32,7 @@ function createSolver() {
   const MIN_GAIN = 2;              // every refine adds at least +2 to each stat
   const MAX_LEVEL = 10;
   const K_START = 512;             // largest owned-usage lattice tried first (it shrinks while the search is too big)
+  const QUICK_K = 64;              // the quick plan's owned-usage lattice (its cost bounds the exact search)
   const CANDIDATE_BUDGET = 3e6;    // per-level base x material pairs before reducing the lattice
   const WORK_BUDGET = 2e7;         // with owned items: pairs tried + frontier comparisons per search (about a second)
 
@@ -147,22 +148,41 @@ function createSolver() {
   // Keep non-dominated states. Dominance: cost <=, usage no worse (uLeq, default: <= for every owned row),
   // stats >= (all). uW orders ties so that a dominating state tends to come first.
   // the work counter of the running search: it gives up (BudgetExceeded) past workLimit
-  let work = 0, workLimit = Infinity;
+  let work = 0, workLimit = Infinity, boundless = false;   // boundless: a solve with req.exhaustive (no work limits)
   function spend(n) { work += n; if (work > workLimit) throw new BudgetExceeded('too much work'); }
 
-  function pareto(list, hasU, uLeq, uW) {
-    uLeq = uLeq || leq; uW = uW || sum;
+  // Keep non-dominated states. Dominance: cost <=, stats >= (all), inventory use no worse (inv.leq: owned rows count
+  // by count, perfect ones mergeable upwards). Kept states are grouped by their exact stats, so a state is only
+  // compared with groups at least as good in every stat; a big group answers from its inventory map instead of
+  // comparing with each member (near the target: few distinct stats, thousands of cost / inventory variants).
+  function pareto(list, hasU, inv) {
+    const uLeq = inv ? inv.leq : leq, uW = inv ? inv.weight : sum, map = hasU && inv ? inv.map : null;
+    const n4 = inv ? 1 + (inv.cap.length >> 1) : 1;   // work per marked map point (it tries a move per owned row)
     let cmp = 0;
     list.sort((a, b) => (a.p - b.p) || (b.t - a.t) || (hasU ? uW(a.u) - uW(b.u) : 0));
-    const kept = [];
+    const groups = new Map(), glist = [], kept = [];
     outer: for (let i = 0; i < list.length; i++) {
       const s = list[i];
-      for (let j = 0; j < kept.length; j++) {
-        const k = kept[j];
+      let si = -1;
+      for (let gi = 0; gi < glist.length; gi++) {
+        const g = glist[gi];
         if ((++cmp & 8191) === 0) spend(8192);
-        if (k.t < s.t) continue;                  // cannot dominate with a smaller stat sum
-        if (hasU && !uLeq(k.u, s.u)) continue;
-        if (geq(k.s, s.s)) continue outer;
+        if (g.t < s.t || !geq(g.s, s.s)) continue;   // not as good in every stat (the sum first: cheapest test)
+        if (!hasU) continue outer;                  // kept states come first in cost order: this one is dominated
+        if (g.bits) { if (si < 0) si = map.idx(s.u); if (map.has(g.bits, si)) continue outer; continue; }
+        const ks = g.k;
+        for (let j = 0; j < ks.length; j++) {
+          if ((++cmp & 8191) === 0) spend(8192);
+          if (uLeq(ks[j].u, s.u)) continue outer;
+        }
+      }
+      const key = s.s.join(',');
+      let g = groups.get(key);
+      if (!g) { g = { s: s.s, t: s.t, k: [], bits: null }; groups.set(key, g); glist.push(g); }
+      g.k.push(s);
+      if (map) {
+        if (g.bits) spend(map.up(g.bits, s.u) * n4);
+        else if (g.k.length >= 24) { g.bits = new Uint32Array(map.words); spend(map.words); for (const k of g.k) spend(map.up(g.bits, k.u) * n4); }
       }
       kept.push(s);
     }
@@ -177,6 +197,42 @@ function createSolver() {
      the rows below it, merged up level by level. Typed (non-perfect) rows are counted one by one. Asking for less
      in that sense is never worse, which keeps the frontiers small; the plan builder turns any perfect item asked
      for beyond its row into a merge of lower ones. */
+  /* The inventory map: the grid of what a plan can ask for (0..cap per owned row). up(bits, u) marks every point
+     from which u can be had (more of any row, or a perfect item split into two of the perfect row below it: the
+     reverse of a merge), stopping at points already marked (what they reach is marked already). */
+  const MAP_MAX = 1 << 21;   // grid points (one bit each: up to 256 KB per map)
+  function lattice(owned, perfect, order, cap) {
+    const n = owned.length, radix = [];
+    let K = 1;
+    const most = boundless ? MAP_MAX * 4 : MAP_MAX;   // the long background search may use bigger maps
+    for (let j = 0; j < n; j++) { radix.push(K); K *= cap[j] + 1; if (K > most) return null; }
+    const below = owned.map(() => -1), mult = owned.map(() => 0);   // the perfect row a perfect row splits into
+    for (let k = 1; k < order.length; k++) { const j = order[k], i = order[k - 1]; below[j] = i; mult[j] = Math.pow(2, owned[j].level - owned[i].level); }
+    const idx = u => { let t = 0; for (let j = 0; j < n; j++) t += u[j] * radix[j]; return t; };
+    const coord = (i, j) => Math.floor(i / radix[j]) % (cap[j] + 1);
+    let stack = new Int32Array(1024);
+    function up(bits, u) {   // marks every point from which u can be had; returns how many it marked
+      let top = 0, marked = 0;
+      stack[top++] = idx(u);
+      while (top) {
+        const i = stack[--top];
+        if (bits[i >>> 5] & (1 << (i & 31))) continue;
+        bits[i >>> 5] |= 1 << (i & 31);
+        marked++;
+        if (top + 2 * n >= stack.length) { const bigger = new Int32Array(stack.length * 2); bigger.set(stack); stack = bigger; }
+        for (let j = 0; j < n; j++) {
+          const cj = coord(i, j);
+          if (cj < cap[j]) { const w = i + radix[j]; if (!(bits[w >>> 5] & (1 << (w & 31)))) stack[top++] = w; }
+          const b = below[j];
+          if (b >= 0 && cj > 0 && coord(i, b) + mult[j] <= cap[b]) { const w = i - radix[j] + mult[j] * radix[b]; if (!(bits[w >>> 5] & (1 << (w & 31)))) stack[top++] = w; }
+        }
+      }
+      return marked;
+    }
+    const has = (bits, i) => (bits[i >>> 5] & (1 << (i & 31))) !== 0;
+    return { K: K, idx: idx, up: up, has: has, words: (K + 31) >>> 5 };
+  }
+
   function inventory(owned, chain) {
     const perfect = owned.map(o => !!chain[o.level] && o.stats.every((v, i) => v === chain[o.level][i]));
     const order = owned.map((o, j) => j).filter(j => perfect[j]).sort((a, b) => owned[a].level - owned[b].level);
@@ -199,7 +255,7 @@ function createSolver() {
       for (const j of order) { const L = owned[j].level; if (lv) for (let l = lv; l < L && carry; l++) carry = Math.floor(carry / 2); cap[j] = q[j] + carry; carry = cap[j]; lv = L; } }
     const w = owned.map(o => Math.pow(2, o.level - 1));
     return {
-      perfect: perfect, order: order, cap: cap,
+      perfect: perfect, order: order, cap: cap, map: lattice(owned, perfect, order, cap),
       fits: u => covers(q, u),
       leq: (a, b) => covers(b, a),   // a asks for no more than b
       // tie order for the frontier: less demand first, and at equal weight the higher-level demand first (it is
@@ -221,9 +277,9 @@ function createSolver() {
          meets a target survives: the plan, and every perfect ladder rung below, stay exact. */
   function solveCore(base, rates, maxLevel, owned, ctx, need, targets, free, cap) {
     const n = base.length;
-    const hasU = owned.length > 0 && !free;   // free: owned items unlimited, no counts kept (a lower bound)
+    const hasU = owned.length > 0 && !free;   // free: owned items unlimited (at 0 or at the given prices), no counts kept
     if (cap == null) cap = Infinity;          // cap: only plans cheaper than this are wanted (branch and bound)
-    work = 0; workLimit = hasU ? WORK_BUDGET : Infinity;
+    work = 0; workLimit = owned.length && !boundless ? WORK_BUDGET : Infinity;   // any search with owned items is bounded
     let tick = 0;
     const zeroU = hasU ? owned.map(() => 0) : null;
 
@@ -240,7 +296,7 @@ function createSolver() {
     for (const c of q) K *= (c + 1);
     const textKeys = Math.pow(R, n) * K >= 9e15;
 
-    const front = list => pareto(list, hasU, inv.leq, inv.weight);
+    const front = list => pareto(list, hasU, inv);
 
     const F = [];
     for (let L = 0; L <= maxLevel; L++) F.push([]);
@@ -248,7 +304,7 @@ function createSolver() {
     owned.forEach((o, j) => {
       if (o.level < 2 || o.level > maxLevel || o.qty <= 0) return;
       const u = hasU ? zeroU.slice() : null; if (u) u[j] = 1;
-      F[o.level].push(mkState(o.level, 0, o.stats.slice(), u, 1, null, null, j));
+      F[o.level].push(mkState(o.level, Array.isArray(free) ? free[j] : 0, o.stats.slice(), u, 1, null, null, j));   // free: prices, or 0
     });
 
     // Separable models: a material only matters through the gains it adds, so the material list is kept as its
@@ -303,29 +359,58 @@ function createSolver() {
     for (let L = 2; L <= maxLevel; L++) {
       const bases = F[L - 1];
       if (lookup && L === need) {   // the last level: the cheapest item for each target, looked up
+        // separable models: materials grouped by the gains they add (cheapest first in each group); a base only
+        // looks at the groups whose gains take it to the target, and bases with the same stats share that list
+        let groups = null;
+        if (sep) {
+          const gm = new Map();
+          for (const g of matsG) { const k = g.s.join(','); let e = gm.get(k); if (!e) { e = { g: g.s, list: [] }; gm.set(k, e); } e.list.push(g); }
+          groups = Array.from(gm.values());
+        }
+        const tryPair = (x, g, y, target, bestP) => {   // the merged state if the pair fits the inventory and the target, else null
+          let u = null;
+          if (hasU) {
+            u = new Array(q.length);
+            for (let j = 0; j < q.length; j++) { const v = x.u[j] + y.u[j]; if (v > q[j]) return null; u[j] = v; }
+            if (!inv.fits(u)) return null;
+          }
+          let s;
+          if (sep) { s = new Array(n); for (let i = 0; i < n; i++) s[i] = x.s[i] + g.s[i]; } else s = combine(x.s, y.s, rates, ctx, x.L, y.L);
+          if (!meets(s, target)) return null;
+          return mkState(L, x.p + y.p, s, u, 2, x, y, -1);
+        };
         for (const target of targets) {
           let bestP = cap, win = null;
           for (const o of F[L]) if (o.p < bestP && meets(o.s, target)) { bestP = o.p; win = o; }   // an owned item already there
+          const fitting = new Map();   // base stats -> the material groups that take it to the target
           for (let xi = 0; xi < bases.length; xi++) {
             const x = bases[xi];
             if (x.p >= bestP) break;                       // bases are sorted by cost
-            for (let yi = 0; yi < matsG.length; yi++) {
-              const g = sep ? matsG[yi] : null, y = sep ? g.y : matsG[yi];
-              const p = x.p + y.p;
-              if (p >= bestP) break;                       // materials are sorted by cost
-              if ((++tick & 8191) === 0) spend(8192);
-              let u = null;
-              if (hasU) {
-                u = new Array(q.length);
-                let ok = true;
-                for (let j = 0; j < q.length; j++) { const v = x.u[j] + y.u[j]; if (v > q[j]) { ok = false; break; } u[j] = v; }
-                if (!ok || !inv.fits(u)) continue;
+            if (groups) {
+              const k = x.s.join(',');
+              let gs = fitting.get(k);
+              if (!gs) {
+                gs = groups.filter(e => { for (let i = 0; i < n; i++) { const t = target[i]; if (t != null && x.s[i] + e.g[i] < t) return false; } return true; });
+                fitting.set(k, gs);
               }
-              let s;
-              if (sep) { s = new Array(n); for (let i = 0; i < n; i++) s[i] = x.s[i] + g.s[i]; } else s = combine(x.s, y.s, rates, ctx, x.L, y.L);
-              if (!meets(s, target)) continue;
-              bestP = p; win = mkState(L, p, s, u, 2, x, y, -1);
-              break;                                       // the cheapest material that fits this base
+              for (const e of gs) {
+                const list = e.list;
+                for (let yi = 0; yi < list.length; yi++) {
+                  const g = list[yi];
+                  if (x.p + g.p >= bestP) break;          // each group is sorted by cost
+                  if ((++tick & 8191) === 0) spend(8192);
+                  const w = tryPair(x, g, g.y, target, bestP);
+                  if (w) { bestP = w.p; win = w; break; }
+                }
+              }
+            } else {
+              for (let yi = 0; yi < matsG.length; yi++) {
+                const y = matsG[yi];
+                if (x.p + y.p >= bestP) break;             // materials are sorted by cost
+                if ((++tick & 8191) === 0) spend(8192);
+                const w = tryPair(x, null, y, target, bestP);
+                if (w) { bestP = w.p; win = w; break; }  // the cheapest material that fits this base
+              }
             }
           }
           if (win && F[L].indexOf(win) < 0) F[L].push(win);
@@ -335,7 +420,7 @@ function createSolver() {
         break;
       }
       const pairs = bases.length * matsG.length;
-      if (pairs > CANDIDATE_BUDGET || (hasU && work + pairs > workLimit * 2)) {
+      if (!boundless && (pairs > CANDIDATE_BUDGET || (hasU && work + pairs > workLimit * 2))) {
         if (need && L > need) { top = L - 1; break; }
         throw new BudgetExceeded('too many candidates');
       }
@@ -348,33 +433,34 @@ function createSolver() {
         ys = matsG.filter(g => { for (let i = 0; i < n; i++) if (Mb[L - 1][i] + g.s[i] < floor[i]) return false; return true; });
       }
       const best = new Map();
+      // scratch buffers: a pair's stats and inventory use are worked out in place, and copied only when kept
+      const ss = new Array(n), su = hasU ? new Array(q.length) : null;
       for (let xi = 0; xi < xs.length; xi++) {
         const x = xs[xi];
         if (x.p >= cap) break;                   // bases are sorted by cost
         for (let yi = 0; yi < ys.length; yi++) {
           const g = sep ? ys[yi] : null, y = sep ? g.y : ys[yi];
-          if (x.p + y.p >= cap) break;           // materials are sorted by cost
+          const p = x.p + y.p;
+          if (p >= cap) break;                   // materials are sorted by cost
           if ((++tick & 8191) === 0) spend(8192);
-          let u = null, uKey = 0;
+          let s = ss;
+          if (sep) { for (let i = 0; i < n; i++) ss[i] = x.s[i] + g.s[i]; } else s = combine(x.s, y.s, rates, ctx, x.L, y.L);
+          if (floor) { let ok = true; for (let i = 0; i < n; i++) if (s[i] < floor[i]) { ok = false; break; } if (!ok) continue; }
+          let uKey = 0;
           if (hasU) {
-            u = new Array(q.length);
             let ok = true, radix = 1;
             for (let j = 0; j < q.length; j++) {
               const v = x.u[j] + y.u[j];
               if (v > q[j]) { ok = false; break; }
-              u[j] = v; uKey += v * radix; radix *= (q[j] + 1);
+              su[j] = v; uKey += v * radix; radix *= (q[j] + 1);
             }
-            if (!ok || !inv.fits(u)) continue;
+            if (!ok || !inv.fits(su)) continue;
           }
-          let s;
-          if (sep) { s = new Array(n); for (let i = 0; i < n; i++) s[i] = x.s[i] + g.s[i]; } else s = combine(x.s, y.s, rates, ctx, x.L, y.L);
-          if (floor) { let ok = true; for (let i = 0; i < n; i++) if (s[i] < floor[i]) { ok = false; break; } if (!ok) continue; }
           let key = 0, text = textKeys;
           for (let i = n - 1; i >= 0; i--) { if (s[i] >= R) text = true; key = key * R + s[i]; }
           key = text ? s.join(',') + '|' + uKey : key * K + uKey;
-          const p = x.p + y.p;
           const prev = best.get(key);
-          if (prev === undefined || prev.p > p) best.set(key, mkState(L, p, s, u, 2, x, y, -1));
+          if (prev === undefined || prev.p > p) best.set(key, mkState(L, p, s.slice(), su ? su.slice() : null, 2, x, y, -1));
         }
       }
       const list = F[L].concat(Array.from(best.values()));
@@ -492,7 +578,13 @@ function createSolver() {
 
   /* req = { base:[..], rates:[{num,den,f64,dec}..], level, target:[number|null ..],
              owned:[{level, stats:[..], qty}], model:'exact'|..., overrides:[{baseL, base, matL, mat, actual}] } */
+  // req.exhaustive: no work limits, so the plan is always the best one (a big inventory can take a while: the app
+  // runs it in a worker of its own, after showing the quick plan)
   function solve(req) {
+    boundless = !!req.exhaustive;
+    try { return solveOnce(req); } finally { boundless = false; }
+  }
+  function solveOnce(req) {
     const t0 = now();
     const base = req.base.map(Number);
     const rates = (req.rates || req.mults).map(normRate);
@@ -513,9 +605,13 @@ function createSolver() {
     // Cap quantities so the usage lattice (the product of qty + 1) stays within kMax, handing counts out one at a
     // time with higher-level items first; the leftovers are substituted into the plan afterwards.
     const prio = owned.map((o, j) => j).sort((a, b) => (owned[b].level - owned[a].level) || (sum(owned[b].stats) - sum(owned[a].stats)));
-    function capsFor(kMax) {
+    function capsFor(kMax, topFirst) {
       const caps = owned.map(() => 0);
       let k = 1, grew = true;
+      if (topFirst) {   // the highest rows as full as the lattice allows, one after the other
+        for (const j of prio) { const room = Math.floor(kMax / k) - 1; caps[j] = Math.max(0, Math.min(owned[j].qty, room)); k *= caps[j] + 1; }
+        return { caps: caps, k: k };
+      }
       while (grew) {
         grew = false;
         for (const j of prio) {
@@ -530,15 +626,8 @@ function createSolver() {
 
     const chainTop = perfectChain(base, rates, topLevel, ctx);
     const lvTargets = [target, chainTop[level]];
-    let res = null, pick = null, K = 1, capped = owned, lad = null, status = 'exact';
+    let res = null, pick = null, K = 1, capped = owned, lad = null, status = 'exact', built = null;
     for (const o of owned) K *= (o.qty + 1);
-    try {
-      res = solveCore(base, rates, level, owned, ctx, level, lvTargets);
-      pick = choose(res.F[level], target);
-    } catch (err) {
-      if (!(err instanceof BudgetExceeded)) throw err;
-      res = null;
-    }
     // expand a plan into physical items: merges and swaps of owned items, their rows' counts respected
     function build(pk, rows) {
       const tree = expand(pk, pk.L);
@@ -550,42 +639,80 @@ function createSolver() {
       }
       return { tree: tree, sub: sub, cost: tree.p };
     }
-    let built = null;
-    if (!res) {
-      // Too big to solve in one go. A quick plan from part of the inventory (the rest swapped in afterwards)...
-      status = 'capped';
-      let kMax = K_START;
-      while (!res) {
-        const c = capsFor(kMax);
-        capped = owned.map((o, j) => ({ level: o.level, stats: o.stats, qty: c.caps[j] }));
+    // a quick plan from part of the inventory (handed out evenly, higher levels first), the rest swapped in afterwards
+    function quick(kMax, topFirst) {
+      for (;;) {
+        const c = capsFor(kMax, topFirst);
+        const rows = owned.map((o, j) => ({ level: o.level, stats: o.stats, qty: c.caps[j] }));
         try {
-          res = solveCore(base, rates, level, capped, ctx, level, lvTargets);
-          pick = choose(res.F[level], target);
+          const r = solveCore(base, rates, level, rows, ctx, level, lvTargets), pk = choose(r.F[level], target);
+          return { res: r, pick: pk, rows: rows, built: pk ? build(pk, rows) : null };
         } catch (err) {
           if (!(err instanceof BudgetExceeded)) throw err;
-          if (c.k <= 1) { capped = owned.map(o => ({ level: o.level, stats: o.stats, qty: 0 })); res = solveCore(base, rates, level, [], ctx, level, lvTargets); pick = choose(res.F[level], target); break; }
+          if (c.k <= 1) {
+            const r = solveCore(base, rates, level, [], ctx, level, lvTargets), pk = choose(r.F[level], target), rows = owned.map(o => ({ level: o.level, stats: o.stats, qty: 0 }));
+            return { res: r, pick: pk, rows: rows, built: pk ? build(pk, rows) : null };
+          }
           kMax = Math.max(1, Math.floor(c.k / 4));
         }
       }
-      if (pick) {
-        built = build(pick, capped);
-        const ub = built.cost;
-        // ...proven optimal if unlimited copies of every owned item could not do better...
-        if (ub === 0) status = 'proven';
-        else {
-          try {
-            const rel = solveCore(base, rates, level, owned, ctx, level, [target], true), lb = choose(rel.F[level], target);
-            if (lb && lb.p >= ub) status = 'proven';
-          } catch (err) { if (!(err instanceof BudgetExceeded)) throw err; }
+    }
+    const use = qk => { res = qk.res; pick = qk.pick; capped = qk.rows; built = qk.built; };
+    // A big inventory: first a quick plan; its cost bounds the exact search (branch and bound), which then skips
+    // everything that already costs as much, and starts its last-level lookup from it.
+    // First the plan with unlimited copies of every owned row, at a tiny price each (so it asks for as few as it can).
+    // Nothing can be cheaper, so when that plan fits the real inventory (merges allowed) it is the best one.
+    if (owned.length && capsFor(QUICK_K).k < K) {
+      try {
+        const eps = owned.map(o => Math.pow(2, o.level - 1) * 1e-7);
+        const r = solveCore(base, rates, level, owned, ctx, level, lvTargets, eps), pk = choose(r.F[level], target);
+        if (pk) {
+          const tree = expand(pk, pk.L), u = owned.map(() => 0);
+          (function walk(nd) { if (nd.k === 1) u[nd.j]++; else if (nd.k === 2) { walk(nd.b); walk(nd.m); } })(tree);
+          if (inventory(owned, chainTop).fits(u)) {
+            realize(tree, owned, chainTop, rates, ctx);
+            (function fix(nd) { if (nd.k === 2) { fix(nd.b); fix(nd.m); nd.p = nd.b.p + nd.m.p; } else if (nd.k === 1) nd.p = 0; })(tree);
+            res = r; pick = pk; capped = owned; built = { tree: tree, sub: 0, cost: tree.p };
+          }
         }
-        // ...or the full search again, looking only for plans cheaper than it: it finds the best one, or proves
-        // there is none
-        if (status !== 'proven') {
-          try {
-            const r2 = solveCore(base, rates, level, owned, ctx, level, lvTargets, false, ub);
-            const p2 = choose(r2.F[level], target);
-            if (p2) { pick = p2; capped = owned; built = null; status = 'exact'; } else status = 'proven';
-          } catch (err) { if (!(err instanceof BudgetExceeded)) throw err; }
+      } catch (err) { if (!(err instanceof BudgetExceeded)) throw err; }
+    }
+    let qk = null;
+    if (!built && owned.length && capsFor(QUICK_K).k < K) {   // two quick plans: counts handed out evenly, or the highest rows first
+      qk = quick(QUICK_K);
+      const q2 = quick(QUICK_K, true);
+      if (q2.built && (!qk.built || q2.built.cost < qk.built.cost)) qk = q2;
+    }
+    const ub = qk && qk.built ? qk.built.cost : Infinity;
+    if (built) { /* the unlimited plan fits: it is the best one */ }
+    else if (qk && ub === 0) { use(qk); status = 'proven'; }   // nothing is cheaper than free
+    else {
+      try {
+        const r = solveCore(base, rates, level, owned, ctx, level, lvTargets, false, ub), pk = choose(r.F[level], target);
+        if (pk) { res = r; pick = pk; capped = owned; }
+        else if (qk) use(qk);                 // nothing cheaper than the quick plan: it is the best one
+        else { res = r; pick = null; }                     // no plan at all
+      } catch (err) {
+        if (!(err instanceof BudgetExceeded)) throw err;
+        // Too big even so. Keep a quick plan (a bigger one if there was none yet) and try to prove it optimal.
+        status = 'capped';
+        if (!qk) qk = quick(K_START);
+        use(qk);
+        if (pick) {
+          const cost = built.cost;
+          if (cost === 0) status = 'proven';
+          else {
+            try {   // proven optimal if unlimited copies of every owned item could not do better
+              const rel = solveCore(base, rates, level, owned, ctx, level, [target], true), lb = choose(rel.F[level], target);
+              if (lb && lb.p >= cost) status = 'proven';
+            } catch (e2) { if (!(e2 instanceof BudgetExceeded)) throw e2; }
+            if (status !== 'proven' && cost < ub) {   // a new, better bound: the exact search once more with it
+              try {
+                const r2 = solveCore(base, rates, level, owned, ctx, level, lvTargets, false, cost), p2 = choose(r2.F[level], target);
+                if (p2) { res = r2; pick = p2; capped = owned; built = null; status = 'exact'; } else status = 'exact';
+              } catch (e3) { if (!(e3 instanceof BudgetExceeded)) throw e3; }
+            }
+          }
         }
       }
     }
@@ -608,7 +735,8 @@ function createSolver() {
 
     const ladder = [];
     for (let L = 2; L <= MAX_LEVEL; L++) {
-      const s = L <= lad.top ? choose(lad.F[L], chain[L]) : null;
+      // a rung the bounded search skipped (it costs at least the plan's bound) comes from the quick plan's search
+      const s = (L <= lad.top ? choose(lad.F[L], chain[L]) : null) || (qk && L <= qk.res.top ? choose(qk.res.F[L], chain[L]) : null);
       ladder.push({ level: L, cost: s ? s.p : null, standard: Math.pow(2, L - 1) });
     }
 

@@ -195,6 +195,16 @@ for (const [name, base, mults] of [['b20', [20], [M.combat]], ['ws', [10, 5], [M
   check('merge gaps: cost', rg.cost, 174);
   check('merge gaps: counts kept', ag.ownedUse.every((u, j) => u <= [25, 3][j]), true);
   check('merge gaps: every step recomputes', ag.steps.every(st => S.combine(st.base.s, st.mat.s, [M.combat]).join() === st.result.s.join() && st.base.L === st.L - 1 && st.mat.L <= st.base.L), true);
+  // a big typed inventory, searched without work limits (what the app runs in the background): the proven best
+  const cf2 = S.perfectChain([50, 10], [M.combat, M.combat], 10);
+  const typedReq = { base: [50, 10], rates: [M.combat, M.combat], level: 10, maxLevel: 10, target: cf2[10],
+    owned: [{ level: 4, stats: [cf2[4][0] - 2, cf2[4][1] - 1], qty: 12 }, { level: 4, stats: cf2[4], qty: 9 }, { level: 2, stats: cf2[2], qty: 14 }, { level: 3, stats: cf2[3], qty: 12 }] };
+  const rq = S.solve(typedReq), rx = S.solve(Object.assign({}, typedReq, { exhaustive: true }));
+  const ax = S.analyze(rx.plan, 4);
+  check('exhaustive: never worse than the quick plan', rx.cost <= rq.cost, true);
+  check('exhaustive: exact', rx.mode === 'exact' || rx.mode === 'proven', true);
+  check('exhaustive: counts kept', ax.ownedUse.every((u, j) => u <= typedReq.owned[j].qty), true);
+  check('exhaustive: every step recomputes', ax.steps.every(st => S.combine(st.base.s, st.mat.s, typedReq.rates).join() === st.result.s.join()), true);
   // nothing is computed above the item's max level
   check('max level respected', S.solve({ base: [94, 20], rates: [M.combat, M.crit], level: 5, maxLevel: 5, target: cf[5], owned: [] }).ladder.filter(r => r.level > 5).every(r => r.cost == null), true);
 }

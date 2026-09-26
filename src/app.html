@@ -2462,7 +2462,7 @@ __SOLVER_JS__
   /* ================= worker ================= */
   const Solver = (() => {
     const handlers = new Map();
-    let worker = null;
+    let worker = null, srcUrl = null;
     function dispatch(msg) {
       const h = handlers.get(msg.id);
       if (!h) return;
@@ -2471,10 +2471,26 @@ __SOLVER_JS__
     }
     try {
       const src = createSolver.toString() + ';const S=createSolver();self.onmessage=function(e){var d=e.data;try{if(d.type==="solve"){self.postMessage({id:d.id,ok:true,result:S.solve(d.req)});}else if(d.type==="batch"){for(var i=0;i<d.items.length;i++){var it=d.items[i];var c=null;try{c=S.cheapest(it.base,it.rates,it.level||10);}catch(err){}self.postMessage({id:d.id,ok:true,partial:true,key:it.key,cost:c});}self.postMessage({id:d.id,ok:true,done:true});}}catch(err){self.postMessage({id:d.id,ok:false,error:String(err&&err.message||err)});}};';
-      worker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+      srcUrl = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
+      worker = new Worker(srcUrl);
       worker.onmessage = e => dispatch(e.data);
       worker.onerror = () => { worker = null; };
     } catch (e) { worker = null; }
+    // The long search for a big inventory runs in a worker of its own, so it never holds up the next plan; a new
+    // plan (or leaving it) stops it.
+    let deepWorker = null;
+    function cancelDeep() { if (deepWorker) { deepWorker.terminate(); deepWorker = null; } }
+    function deep(req, handler) {
+      cancelDeep();
+      if (!srcUrl) return false;
+      try {
+        const w = deepWorker = new Worker(srcUrl);
+        w.onmessage = e => { if (deepWorker !== w) return; cancelDeep(); handler(e.data); };
+        w.onerror = () => { if (deepWorker === w) cancelDeep(); };
+        w.postMessage({ type: 'solve', id: 'deep', req: Object.assign({}, req, { exhaustive: true }) });
+        return true;
+      } catch (e) { deepWorker = null; return false; }
+    }
     function post(msg, handler) {
       handlers.set(msg.id, handler);
       if (worker) { worker.postMessage(msg); return; }
@@ -2493,7 +2509,7 @@ __SOLVER_JS__
         } catch (err) { dispatch({ id: msg.id, ok: false, error: String(err && err.message || err) }); }
       }, 0);
     }
-    return { post, hasWorker: () => !!worker };
+    return { post, deep, cancelDeep, hasWorker: () => !!worker };
   })();
 
   function scheduleSolve(delay) {
@@ -2508,6 +2524,7 @@ __SOLVER_JS__
     if (last && last.sig === sig) { renderResults(); return; }
     const id = ++solveSeq;
     solving = true;
+    Solver.cancelDeep();
     renderResults();
     Solver.post({ type: 'solve', id, req }, msg => {
       if (id !== solveSeq) return;
@@ -2516,6 +2533,21 @@ __SOLVER_JS__
       const res = msg.result;
       last = { item, req, sig, res, analysis: res.plan ? S.analyze(res.plan, req.owned.length) : null, alt: null };
       if (last.analysis && isBossItem(item)) last.analysis.gold = last.analysis.steps.reduce((t, st) => t + st.count * feeAt(item, st.L), 0);
+      // a very big inventory: this quick plan shows now, and the full search keeps going; its plan (the best one)
+      // replaces this one when it is done, if it is still the plan on screen
+      if (res.approximate && res.plan) {
+        last.deep = Solver.deep(req, dm => {
+          if (!last || last.sig !== sig) return;
+          last.deep = false;
+          const r2 = dm.ok && dm.result;
+          if (r2 && r2.ok && r2.plan && r2.cost <= last.res.cost) {
+            last.res = r2;
+            last.analysis = S.analyze(r2.plan, req.owned.length);
+            if (isBossItem(item)) last.analysis.gold = last.analysis.steps.reduce((t, st) => t + st.count * feeAt(item, st.L), 0);
+          }
+          renderResults();
+        });
+      }
       renderResults();
       // price the other safety setting so the Exact / Safe switch can show both costs
       const altModel = state.m === 'robust' ? 'exact' : 'robust';
@@ -4322,7 +4354,7 @@ __SOLVER_JS__
               ${ownedUsed ? `<span class="pill info">${ownedUsed} owned used</span>` : ''}
               ${state.m === 'robust' ? `<span class="pill gold">safe rounding</span>` : state.m !== 'exact' ? `<span class="pill gold">formula: ${esc(modelInfo.label)}</span>` : ''}
               ${res.overrideHits ? `<span class="pill info">${obs.length} observation${obs.length > 1 ? 's' : ''} applied</span>` : ''}
-              ${res.approximate ? `<span class="pill warn" title="Large inventory: search was capped, plan is valid but may not be the absolute optimum">approximate</span>` : ''}
+              ${res.approximate ? (last && last.deep ? `<span class="pill warn" title="A very big inventory: this plan is valid, and PORE is still looking for the best one">approximate · still searching</span>` : `<span class="pill warn" title="Large inventory: search was capped, plan is valid but may not be the absolute optimum">approximate</span>`) : ''}
             </div>
           </div>
           <div class="ring" aria-label="${pct}% saved">
