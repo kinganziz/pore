@@ -461,6 +461,9 @@
   .obs-form .obs-title { font-size: 13px; font-weight: 600; }
   .obs-form .obs-title small { display: block; color: var(--muted); font-weight: 500; }
   .obs-inputs { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+  .obs-inputs:has(.res-stat) { display: grid; grid-template-columns: auto 30px 50px 30px; justify-content: start; align-items: center; gap: 6px 0; }
+  .obs-inputs .res-stat { display: contents; }
+  .obs-inputs .res-stat > span { text-align: right; margin-right: 4px; font-size: 12px; color: var(--muted); font-weight: 600; }
   .res-stat { display: inline-flex; align-items: center; gap: 0; font-size: 12px; color: var(--muted); font-weight: 600; }
   .step-ic { width: 30px; height: 32px; padding: 0; border: 0; background: none; color: var(--soft); cursor: pointer; display: inline-grid; place-items: center; }
   .step-ic svg { width: 11px; height: 11px; display: block; }
@@ -861,15 +864,19 @@
   .g-forge { margin-top: 14px; padding: 14px 12px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); display: grid; gap: 12px; justify-items: center; }
   .gf-top { display: flex; flex-direction: column; align-items: center; gap: 6px; }
   .gf-hint { font-size: 11px; color: var(--muted); }
-  .gf-card.result.edit { width: 170px; }
+  .gf-card.result.edit { width: auto; min-width: 170px; padding-left: 12px; padding-right: 12px; }
   .gf-edit { align-items: center; }
-  .gf-edit { gap: 0 !important; }
-  .gf-edit small { min-width: 30px; text-align: right; margin-right: 2px; }
+  /* the stats line up in columns: name, -, value, + */
+  .gf-card.edit .gf-st { grid-template-columns: auto 30px 44px 30px; align-items: center; column-gap: 0; }
+  .gf-card.edit .gf-st > .gf-edit { display: contents; }
+  .gf-edit small { text-align: right; margin-right: 2px; }
   .gf-edit input { width: 44px; height: 30px; padding: 0; border: 0; border-bottom: 1px dashed var(--line-2); background: none; color: var(--text); font: inherit; font-weight: 700; text-align: center; -moz-appearance: textfield; }
   .gf-edit input::-webkit-inner-spin-button, .gf-edit input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
   .gf-edit input.changed { color: var(--gold); border-bottom-color: var(--gold); }
   .gf-card.changed { border-color: var(--gold); }
-  #guideBody:not(.edited) .when-edited, #guideBody.edited .when-same, #guideBody:not(.better) .when-better, #guideBody.better .when-worse { display: none; }
+  #guideBody:not(.edited) .when-edited, #guideBody.edited .when-same, #guideBody:not(.better) .when-better, #guideBody:not(.absorbs) .when-absorbs,
+  #guideBody:not(.better):not(.absorbs) .when-ok, #guideBody.better .when-worse, #guideBody.absorbs .when-worse { display: none; }
+  .g-absorb { margin: 0; font-size: 13px; color: var(--good); text-align: center; }
   .gf-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; max-width: 340px; margin-top: -6px; }
   .gf-slot { display: grid; justify-items: center; align-content: start; gap: 5px; }
   .gf-slot > small { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
@@ -3478,10 +3485,16 @@ function createSolver() {
       if (!msg.ok) { last = { item, req, sig, error: msg.error }; renderResults(); return; }
       const res = msg.result;
       last = { item, req, sig, res, analysis: res.plan ? S.analyze(res.plan, req.owned.length) : null, alt: null };
+      const pin = res.plan ? loadJSON(pinKey(), null) : null;
+      if (pin && pin.plan) {   // the plan you are following: the same steps with today's numbers, if it still gets there
+        const r = replay(item, pin.plan);
+        if (r && reachesTarget(item, r.root)) { last.res = Object.assign({}, res, { plan: r.plan, cost: pin.cost, approximate: false }); last.analysis = S.analyze(r.plan, req.owned.length); last.pinned = true; }
+        else unpinPlan();
+      }
       if (last.analysis && isBossItem(item)) last.analysis.gold = last.analysis.steps.reduce((t, st) => t + st.count * feeAt(item, st.L), 0);
       // a very big inventory: this quick plan shows now, and the full search keeps going; its plan (the best one)
       // replaces this one when it is done, if it is still the plan on screen
-      if (res.approximate && res.plan) {
+      if (res.approximate && res.plan && !last.pinned) {
         last.deep = Solver.deep(req, dm => {
           if (!last || last.sig !== sig) return;
           last.deep = false;
@@ -4136,7 +4149,18 @@ function createSolver() {
     if (input.closest('#guideBody')) {
       const all = Array.from(ui.guideBody.querySelectorAll('[data-guide-input]'));
       ui.guideBody.classList.toggle('edited', all.some(x => x.classList.contains('changed')));
-      ui.guideBody.classList.toggle('better', all.every(x => Math.round(Number(x.value)) >= Number(x.dataset.pred)));   // nothing lower
+      const vals = all.map(x => Math.round(Number(x.value))), better = all.every((x, i) => vals[i] >= Number(x.dataset.pred));   // nothing lower
+      ui.guideBody.classList.toggle('better', better);
+      // lower somewhere: does the rest of the plan still get there with it? (later refines often have a point to spare)
+      let absorbs = false;
+      const st = !better && last && last.res && last.res.plan && guideStep();
+      if (st && vals.every(v => v > 0)) {
+        const r = replay(last.item, last.res.plan, { baseL: st.base.L, base: st.base.s, matL: st.mat.L, mat: st.mat.s, actual: vals });
+        absorbs = !!r && reachesTarget(last.item, r.root);
+        const note = ui.guideBody.querySelector('.g-absorb');
+        if (note && r) note.innerHTML = `A point lower here, but the rest of the plan makes up for it: it still ends at ${chipHTML({ L: state.L, s: r.root, k: 0 }, last.item)}, your target. Nothing changes.`;
+      }
+      ui.guideBody.classList.toggle('absorbs', absorbs);
     }
   }
   function obsFormHTML(id, step, item) {
@@ -5823,6 +5847,7 @@ function createSolver() {
     renderResults();
   }
   function setDone(id, on) {
+    if (on) pinPlan();   // from the first tick on, this is the plan you follow
     const set = loadDone();
     if (set.has(id) !== !!on) invStep(id, on);
     if (on) set.add(id); else set.delete(id);
@@ -5884,8 +5909,10 @@ function createSolver() {
           ? `<button class="btn primary block" type="button" data-action="guide-skip">Already done ✓ · next step</button><button class="btn small ghost" type="button" data-action="guide-undo">Not done yet</button>`
           : `<button class="btn primary block when-same" type="button" data-action="guide-match">✓ Done, I got ${n} × ${rName}</button>` +
             `<button class="btn primary block when-edited when-better" type="button" data-action="guide-better">✓ Done: even better, keep my plan</button>` +
+            `<button class="btn primary block when-edited when-absorbs" type="button" data-action="guide-better">✓ Done: my plan still gets there</button>` +
+            `<p class="g-absorb when-edited when-absorbs"></p>` +
             `<button class="btn primary block when-edited when-worse" type="button" data-action="guide-save">Use the game's numbers &amp; re-plan</button>` +
-            `<button class="btn small when-edited when-better" type="button" data-action="guide-save">Re-plan anyway (maybe cheaper)</button>` +
+            `<button class="btn small when-edited when-ok" type="button" data-action="guide-save">Re-plan anyway (maybe cheaper)</button>` +
             `<button class="btn small ghost when-edited" type="button" data-action="stat-reset">Back to PORE's numbers</button>`) +
         `</div>` +
         `<div class="guide-nav"><button class="btn small ghost" type="button" data-action="guide-back">← Back</button><button class="btn small ghost" type="button" data-action="guide-skip">Skip →</button></div>`;
@@ -5911,6 +5938,22 @@ function createSolver() {
     return Array.from(pool.values()).filter(h => h.q > 0 && h.L >= 2);
   }
   // the old plan's final item when every refine gives what the game shows (recorded results included)
+  // The plan you follow is pinned (from the first tick): a recorded result then keeps the very same steps, their
+  // numbers worked out again, as long as it still reaches the target. Re-planning unpins it.
+  const pinKey = () => 'pore.pin.' + hashStr(doneSig());
+  function pinPlan() { if (last && last.res && last.res.plan && !loadJSON(pinKey(), null)) saveJSON(pinKey(), { cost: last.res.cost, plan: last.res.plan }); }
+  function unpinPlan() { if (last && last.req) try { localStorage.removeItem(pinKey()); } catch (e) { /* ignore */ } }
+  // a plan's numbers worked out again with the recorded results (plus one more refine's result, not saved yet)
+  function replay(item, plan, extra) {
+    try {
+      const ctx = S.makeCtx(state.m, overridesFor(item).concat(extra ? [extra] : []), item.stats.length);
+      S.perfectChain(item.stats.map(x => x.value), item.rates, 10, ctx);   // the Safe margin needs the perfect items
+      const nodes = plan.nodes.map(n => Object.assign({}, n, { s: n.s.slice() }));
+      for (const n of nodes) if (n.k === 2) n.s = S.combine(nodes[n.b].s, nodes[n.m].s, item.rates, ctx, nodes[n.b].L, nodes[n.m].L);
+      return { plan: Object.assign({}, plan, { nodes }), root: nodes[plan.root].s };
+    } catch (e) { return null; }
+  }
+  const reachesTarget = (item, v) => { const t = targetVector(item); return v.every((x, i) => t[i] == null || x >= t[i]); };
   function finishWith(item, plan) {
     try {
       const ctx = S.makeCtx(state.m, overridesFor(item), item.stats.length);
@@ -7135,7 +7178,7 @@ function createSolver() {
       }
       case 'owned-qty': { const o = state.o[Number(el.dataset.idx)]; if (!o) return; o.q = Math.max(1, Math.min(999, o.q + Number(el.dataset.delta))); haptic(); afterChange(); break; }
       case 'view': state.view = el.dataset.view; persist(); renderResults(); break;
-      case 'reset-progress': saveJSON(doneKey(), []); saveJSON(rbKey(), null); guide.rbFor = null; renderResults(); toast('Progress reset'); break;
+      case 'reset-progress': saveJSON(doneKey(), []); saveJSON(rbKey(), null); unpinPlan(); guide.rbFor = null; renderResults(); toast('Progress reset'); break;
       case 'charm': { const k = el.dataset.key; if (el.dataset.set === 'on') charmOff.delete(k); else if (el.dataset.set === 'off') charmOff.add(k); else if (charmOff.has(k)) charmOff.delete(k); else charmOff.add(k); saveJSON(STORAGE.charmoff, Array.from(charmOff)); haptic(); renderResults(); renderCharms(); if (!ui.guideSheet.hidden) renderGuide(); break; }
       case 'charm-all': charmOff.clear(); saveJSON(STORAGE.charmoff, []); haptic(); renderResults(); renderCharms(); if (!ui.guideSheet.hidden) renderGuide(); break;
       case 'share': share(); break;
@@ -7219,9 +7262,15 @@ function createSolver() {
         guide.replan = null;
         const st = guideStep(); if (!st || !last) return;
         if (act === 'guide-match') addObservation(last.item, st, st.result.s.slice());
-        if (act === 'guide-better') {   // recorded as it came out, the plan stays: later results may show a point more
+        let absorbed = false;
+        if (act === 'guide-better') {
           const actual = last.item.stats.map((x, k) => Math.round(Number((ui.guideBody.querySelector(`[data-guide-input="${k}"]`) || {}).value)));
-          addObservation(last.item, st, actual, true);
+          absorbed = actual.some((v, i) => v < st.result.s[i]);
+          if (!absorbed) addObservation(last.item, st, actual, true);   // a point more: recorded, the plan stays as it is
+          else {   // a point less the plan absorbs: recorded, and the same plan goes on with the numbers worked out again
+            pinPlan(); addObservation(last.item, st, actual);
+            carryDone = loadDone(); carryDone.add(stepId(Object.assign({}, st, { result: Object.assign({}, st.result, { s: actual }) })));
+          }
         }
         setDone(stepId(st), true); haptic(14);
         guide.i++; guide.other = false;
@@ -7232,8 +7281,9 @@ function createSolver() {
           fxAdd((act === 'guide-match' ? FXK.pop(btnAt, '#37d39a') : FXK.pop(btnAt)).concat(FXK.mini(btnAt)));
           if (levelDone) fxAdd(FXK.coins(btnAt));   // the level's last step
         }
+        if (absorbed) { carryDone.add(stepId(st)); guide.resync = true; last = null; renderItem(); renderTarget(); renderOwned(); persist(); scheduleSolve(0); }
         renderGuide(); guideTop();
-        toast(act === 'guide-better' ? 'Better than planned: your plan still works (later results may show a point more)' : guide.i >= guideSteps().length ? 'All done!' : levelDone ? `Level ${st.L} done!` : 'Nice! Next step');   // to untick: Back, then "Not done yet"
+        toast(absorbed ? 'Still on track: same plan, numbers updated' : act === 'guide-better' ? 'Better than planned: your plan still works (later results may show a point more)' : guide.i >= guideSteps().length ? 'All done!' : levelDone ? `Level ${st.L} done!` : 'Nice! Next step');   // to untick: Back, then "Not done yet"
         break;
       }
       case 'guide-save': {
@@ -7242,6 +7292,7 @@ function createSolver() {
         const actual = item.stats.map((x, k) => Math.round(Number((ui.guideBody.querySelector(`[data-guide-input="${k}"]`) || {}).value)));
         if (actual.some(v => !(v > 0))) { toast('Enter every stat'); return; }
         const snap = undoPoint();
+        unpinPlan();   // a re-plan: the plan found now is the one to follow
         const before = planLeft(item), oldPlan = last.res.plan;
         addObservation(item, st, actual);
         const keep = finishWith(item, oldPlan);
