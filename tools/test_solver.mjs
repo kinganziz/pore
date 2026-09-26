@@ -112,6 +112,37 @@ for (const [name, base, mults] of [['b20', [20], [M.combat]], ['ws', [10, 5], [M
   }
 }
 
+// Safe's margin: 1 less per stat when neither item is perfect (brute force over every tree up to level 5)
+{
+  const rates = [{ num: 1, den: 4 }, { num: 1, den: 4 }];
+  const ctx = S.makeCtx('robust', [], 2), chain = S.perfectChain([35, 50], rates, 6, ctx);
+  check('margin: perfect + imperfect unchanged', S.combine([82, 120], [79, 116], rates, ctx, 5, 5).join('/'), S.combine([82, 120], [79, 116], rates, S.makeCtx('robust', [], 2), 5, 5).join('/'));   // a ctx without the chain: no margin
+  check('margin: imperfect pair 1 lower', S.combine([79, 116], [79, 116], rates, ctx, 5, 5).join('/'), '97/144');
+  const memo = new Map();
+  function trees(L) {
+    if (memo.has(L)) return memo.get(L);
+    let out;
+    if (L === 1) out = [{ c: 1, s: [35, 50] }];
+    else {
+      const seen = new Map();
+      for (const x of trees(L - 1)) for (let m = 1; m < L; m++) for (const y of trees(m)) {
+        const s = S.combine(x.s, y.s, rates, ctx, L - 1, m), c = x.c + y.c, key = s.join() + '|' + c;
+        if (!seen.has(key)) seen.set(key, { c, s });
+      }
+      out = Array.from(seen.values());
+    }
+    memo.set(L, out);
+    return out;
+  }
+  for (const L of [4, 5]) for (const k of [0, 2, 4, 6]) {
+    const target = chain[L].map(v => v - k);
+    let best = null;
+    for (const t of trees(L)) if (t.s.every((v, i) => v >= target[i]) && (best === null || t.c < best)) best = t.c;
+    const r = S.solve({ base: [35, 50], rates, level: L, target, owned: [], model: 'robust' });
+    check(`margin brute P${L}-${k}`, r.cost, best);
+  }
+}
+
 // ---- formula variants & observation overrides ----
 {
   const rates = [{ num: 1, den: 4, f64: 0.25, dec: 0.25 }];

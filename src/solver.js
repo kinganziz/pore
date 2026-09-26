@@ -89,8 +89,10 @@ function createSolver() {
       fn: perStat((b, m, r) => Math.floor((b * r.den + Math.max(1 * r.den, m * r.num)) / r.den)) },
   };
   const ROBUST_SET = ['exact', 'v1f64', 'v1f32', 'dec64', 'dec32', 'main64', 'main32'];
-  MODELS.robust = { label: 'Safe: lowest of all plausible variants', group: 'safe',
-    desc: 'Plans with, per stat, the lowest result any plausible variant predicts, so a refine can never come up short at a rounding boundary. Costs a few more items.',
+  // margin: the game keeps values its screen doesn't show, and two imperfect items came out 1 lower than the formula
+  // (79/116 + 79/116 -> 98/144 instead of 98/145). Safe plans for 1 less per stat whenever neither item is perfect.
+  MODELS.robust = { label: 'Safe: lowest of all plausible variants', group: 'safe', margin: true,
+    desc: 'Plans with, per stat, the lowest result any plausible variant predicts, and 1 less per stat when neither item is perfect, so a refine can never come up short. Costs a few more items.',
     fn: (b, m, r) => { let out = null; for (const k of ROBUST_SET) { const v = MODELS[k].fn(b, m, r); out = out ? out.map((x, i) => Math.min(x, v[i])) : v; } return out; } };
 
   function normRate(r) {
@@ -112,7 +114,8 @@ function createSolver() {
     }
     // sep: the model adds a gain that depends on the material alone (integer base + floor(...)), so materials that
     // add the same gains are interchangeable. Recorded results (overrides) are per recipe and switch this off.
-    return { model: model.fn, name: model.fn === MODELS.exact.fn ? 'exact' : modelName, overrides: map, hits: 0, sep: !!model.sep && !map };
+    return { model: model.fn, name: model.fn === MODELS.exact.fn ? 'exact' : modelName, overrides: map, hits: 0, sep: !!model.sep && !map,
+      margin: !!model.margin, chain: null };   // chain: the perfect items, set by perfectChain (the margin needs them)
   }
 
   function combine(base, mat, rates, ctx, baseL, matL) {
@@ -120,7 +123,13 @@ function createSolver() {
       const hit = ctx.overrides.get(recipeKey(baseL, base, matL, mat));
       if (hit) { ctx.hits++; return hit.slice(); }
     }
-    return (ctx ? ctx.model : MODELS.exact.fn)(base, mat, rates);
+    const out = (ctx ? ctx.model : MODELS.exact.fn)(base, mat, rates);
+    if (ctx && ctx.margin && ctx.chain) {
+      const pb = ctx.chain[baseL], pm = ctx.chain[matL];
+      const perfect = (s, p) => !!p && s.every((v, i) => v === p[i]);
+      if (!perfect(base, pb) && !perfect(mat, pm)) for (let i = 0; i < out.length; i++) out[i] = Math.max(base[i], out[i] - 1);
+    }
+    return out;
   }
 
   function predict(modelName, base, mat, rates) {
@@ -131,6 +140,7 @@ function createSolver() {
     const rr = rates.map(normRate);
     const chain = [null, base.slice()];
     for (let L = 2; L <= (maxLevel || MAX_LEVEL); L++) chain[L] = combine(chain[L - 1], chain[L - 1], rr, ctx, L - 1, L - 1);
+    if (ctx && ctx.margin && (!ctx.chain || ctx.chain.length < chain.length)) ctx.chain = chain;
     return chain;
   }
 

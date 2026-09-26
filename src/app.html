@@ -2038,7 +2038,7 @@
         <li><b>⚠ test this</b> marks a refine the game might land one point off. Do those first.</li>
       </ul>
       <h3>If a result comes out different</h3>
-      <p>Tap the pencil on that step and enter what you got. PORE re-plans the rest around it. The <b>Safe</b> switch plans with a little margin, so no refine can come up short.</p>
+      <p>Tap the pencil on that step and enter what you got. PORE re-plans the rest around it. The <b>Safe</b> switch plans with a little margin, so no refine can come up short. The game keeps small values its screen doesn't show, so two items that are both below perfect can land one point lower than expected; Safe counts on that.</p>
       <h3>Items you already have</h3>
       <p>Add refined copies you own and PORE uses them for free wherever they fit. Counts you enter in Inventory show whether you can do a plan right now.</p>
       <h3>Good to know</h3>
@@ -4876,7 +4876,7 @@ __SOLVER_JS__
     'Got a different number in-game? Tap the pencil on that step and PORE re-plans from it.',
     '"Copy link" shares your plan exactly as you see it: item, target, charms and progress.',
     'Sort the item list by "Cheapest P10" to find the easiest items to max.',
-    '"Safe" rounding avoids refines that could land one point short in-game.',
+    '"Safe" plans for one point less whenever neither item is perfect, so no refine comes up short in-game.',
     'Just-in-time order lists every refine in the order you can do it, nothing wasted.',
   ];
   let tipIndex = Math.floor(Math.random() * TIPS.length);
@@ -6124,7 +6124,7 @@ __SOLVER_JS__
         if (!MODEL_KEYS.has(m) || m === state.m) return;
         state.m = m; last = null; haptic();
         renderItem(); afterChange();
-        toast(m === 'exact' ? 'Exact formula' : m === 'robust' ? 'Safe rounding: boundary refines avoided' : `Formula: ${(S.models.find(x => x.key === m) || {}).label}`);
+        toast(m === 'exact' ? 'Exact formula' : m === 'robust' ? 'Safe: planned with a one-point margin' : `Formula: ${(S.models.find(x => x.key === m) || {}).label}`);
         break;
       }
       case 'owned-add': { const item = resolveItem(); if (!item) return; state.o.push({ L: Math.max(2, Math.min(9, state.L - 3)), s: {}, q: 1 }); afterChange(); break; }
