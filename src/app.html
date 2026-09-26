@@ -4923,7 +4923,7 @@ __SOLVER_JS__
   let carryDone = null;
   // subs: rebuild flows (a lost item made again), newest last; paused: rebuilds left half way, by the item they make.
   // Both are saved per plan (rbFor: the plan they were loaded for).
-  const guide = { i: -1, other: false, resync: false, subs: [], paused: {}, rbFor: null };
+  const guide = { i: -1, other: false, resync: false, subs: [], paused: {}, rbFor: null, replan: null };   // replan: what changed after the game's numbers
   function guideSteps() { return last && last.analysis ? last.analysis.steps.slice().sort((x, y) => x.L - y.L) : []; }
   function guideFirstOpen() {
     const steps = guideSteps(), done = loadDone();
@@ -4962,7 +4962,15 @@ __SOLVER_JS__
     if (ui.guideSheet.hidden) return;
     const item = last && last.item, a = last && last.analysis;
     if (!item || !a || !last.res) { ui.guideBody.innerHTML = anzSays('One moment, working out the plan…'); return; }
-    if (guide.resync) { guide.resync = false; guide.i = guideFirstOpen(); }
+    if (guide.resync) {
+      guide.resync = false; guide.i = guideFirstOpen();
+      const r = guide.replan;
+      if (r) {
+        const steps = guideSteps(), k = steps.findIndex(x => x.base.L === r.base.L && sameVec(x.base.s, r.base.s) && x.mat.L === r.mat.L && sameVec(x.mat.s, r.mat.s));
+        guide.i = k >= 0 ? k : Math.max(0, guide.i);
+        r.note = replanNote(item, a) + (k >= 0 ? '' : ' The new plan doesn\'t use this refine any more.');
+      }
+    }
     rbLoad(item);   // this plan's rebuilds
     if (guide.subs.length) { ui.guideBody.innerHTML = rebuildHTML(item); return; }
     const steps = guideSteps(), done = loadDone(), n = steps.length;
@@ -4990,7 +4998,8 @@ __SOLVER_JS__
       const risky = !obsForFormula(item).some(o => fKey(o.rates, o.baseL, o.base, o.matL, o.mat) === fKey(item.rates, st.base.L, st.base.s, st.mat.L, st.mat.s)) && isRisky(item, st);
       const rName = nodeName(st.result, item), bName = nodeName(st.base, item), mName = nodeName(st.mat, item);
       const uses = sameNode(st.base, st.mat) ? `${n * 2} × ${bName}` : `${n} × ${bName} and ${n} × ${mName}`;
-      const say = `${guide.i === steps.length - 1 ? 'Last one! ' : ''}Next, make <b>${n} × ${rName}</b>.` +
+      const note = guide.replan && guide.replan.note ? guide.replan.note + '<br><br>' : '';
+      const say = note + `${guide.i === steps.length - 1 ? 'Last one! ' : ''}Next, make <b>${n} × ${rName}</b>.` +
         (risky ? `<span class="talk-warn">⚠ Watch this one: the game could give one point more or less. Tell me what you got.</span>` : '');
       const makeBtn = guideMakeBtn;
       const recipe = forgeHTML(st, item, makeBtn, null, !isDone) + `<div class="g-count">Do it <b>${n}×</b>: uses ${uses}, makes ${n} × ${rName}</div>`;
@@ -4999,7 +5008,7 @@ __SOLVER_JS__
         (isDone
           ? `<button class="btn primary block" type="button" data-action="guide-skip">Already done ✓ · next step</button><button class="btn small ghost" type="button" data-action="guide-undo">Not done yet</button>`
           : `<button class="btn primary block when-same" type="button" data-action="guide-match">✓ Done, I got ${n} × ${rName}</button>` +
-            `<button class="btn primary block when-edited" type="button" data-action="guide-save">Save the game's numbers &amp; re-plan</button>` +
+            `<button class="btn primary block when-edited" type="button" data-action="guide-save">Use the game's numbers &amp; re-plan</button>` +
             `<button class="btn small ghost when-edited" type="button" data-action="stat-reset">Back to PORE's numbers</button>`) +
         `</div>` +
         `<div class="guide-nav"><button class="btn small ghost" type="button" data-action="guide-back">← Back</button><button class="btn small ghost" type="button" data-action="guide-skip">Skip →</button></div>`;
@@ -5008,6 +5017,59 @@ __SOLVER_JS__
     ui.guideBody.classList.remove('edited');
   }
   function guideStep() { const steps = guideSteps(); return steps[guide.i]; }
+  // what the plan still asks for: refines not ticked yet and the base items they use
+  function planLeft(item) {
+    const done = loadDone(), open = guideSteps().filter(st => !done.has(stepId(st)));
+    return { steps: open.length, base: open.reduce((t, st) => t + stepNeeds(st, item).base, 0) };
+  }
+  // the items in your hands now: the plan's owned items and everything the ticked refines made, less what they used
+  function holdingsNow() {
+    const pool = new Map(), done = loadDone();
+    const add = (L, v, n) => { const k = L + '|' + v.join(','); const h = pool.get(k) || { L: L, s: v.slice(), q: 0 }; h.q += n; pool.set(k, h); };
+    last.req.owned.forEach(o => add(o.level, o.stats, o.qty));
+    for (const st of guideSteps()) if (done.has(stepId(st))) {
+      for (const nd of [st.base, st.mat]) if (!(nd.L === 1 && nd.k !== 1)) add(nd.L, nd.s, -st.count);
+      add(st.result.L, st.result.s, st.count);
+    }
+    return Array.from(pool.values()).filter(h => h.q > 0 && h.L >= 2);
+  }
+  // the old plan's final item when every refine gives what the game shows (recorded results included)
+  function finishWith(item, plan) {
+    try {
+      const ctx = S.makeCtx(state.m, overridesFor(item), item.stats.length);
+      S.perfectChain(item.stats.map(x => x.value), item.rates, 10, ctx);   // the Safe margin needs the perfect items
+      const nodes = plan.nodes.map(n => Object.assign({}, n));
+      for (const n of nodes) if (n.k === 2) n.s = S.combine(nodes[n.b].s, nodes[n.m].s, item.rates, ctx, nodes[n.b].L, nodes[n.m].L);
+      return nodes[plan.root].s.slice();
+    } catch (e) { return null; }
+  }
+  // the plan's owned items in short: "8 × P5, 20 × L5 and 1 × L4", highest first
+  function heldText(item) {
+    const by = new Map();
+    for (const o of state.o) { const k = nodeName({ L: o.L, s: ownedVector(item, o) }, item); by.set(k, (by.get(k) || 0) + o.q); }
+    const parts = Array.from(by.entries()).sort((x, y) => +y[0].slice(1) - +x[0].slice(1) || (x[0] < y[0] ? 1 : -1)).map(([k, n]) => `${n} × ${k}`);
+    return parts.length > 1 ? parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length - 1] : parts[0] || 'nothing';
+  }
+  // after a re-plan: what changed, anz says it on the refine you were at
+  function replanNote(item, a) {
+    const r = guide.replan, now = planLeft(item);
+    const nd = (L, v) => ({ L: L, s: v, k: 0 });
+    const spare = state.o.map((o, j) => ({ o, left: o.q - (a.ownedUse[j] || 0) })).filter(x => x.left > 0);
+    const fin = v => chipHTML({ L: state.L, s: v, k: 0 }, item);
+    if (r.kept) return `Now finishing at ${fin(r.keep)}: ${now.steps} refine step${now.steps === 1 ? '' : 's'} and ${fmt(now.base)} base item${now.base === 1 ? '' : 's'} left.`;
+    let t = `The game shows <b>${r.actual.join('/')}</b> for this refine (I had ${r.pred.join('/')}). ` +
+      (r.held ? `I re-planned from what you have now (${heldText(item)}), so nothing you made is wasted. ` : `I re-planned with it. `);
+    const d = [];
+    if (now.steps !== r.before.steps) d.push(`${now.steps} refine steps left (was ${r.before.steps})`);
+    if (now.base !== r.before.base) d.push(`${fmt(now.base)} base items to gather (was ${fmt(r.before.base)})`);
+    t += d.length ? `What changed: ${d.join(', ')}.` : 'Same number of steps and base items.';
+    if (r.keep && (now.base > r.before.base || now.steps > r.before.steps))
+      t += `<span class="talk-warn">That's because ${fin(targetVector(item))} needs perfect items all the way. Or keep going and finish at ${fin(r.keep)}: ` +
+        `at most ${fmt(r.before.base)} base item${r.before.base === 1 ? '' : 's'} left to gather.</span>` +
+        `<button class="btn small block" type="button" data-action="replan-keep">Finish at ${r.keep.join('/')} instead</button>`;
+    if (spare.length) t += `<span class="talk-warn">Not needed any more: ${spare.map(x => `${x.left} × ${chipHTML(nd(x.o.L, ownedVector(item, x.o)), item)}`).join(', ')}. Keep ${spare.length === 1 && spare[0].left === 1 ? 'it' : 'them'} for another plan.</span>`;
+    return t;
+  }
   // a new step starts at the top of the guide: its progress, what anz says, the recipe
   function guideTop() { ui.guideBody.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' }); }
   function nodeName(nd, item) { return `${isPerfectNode(nd, item.chain) ? 'P' : 'L'}${nd.L}`; }
@@ -5473,12 +5535,15 @@ __SOLVER_JS__
   // Undo: a snapshot of the ticks and recorded results taken just before a change; the toast offers to put it back.
   function undoPoint() {
     const key = last && last.sig ? doneKey() : null;
-    return { key, done: key ? loadJSON(key, []) : null, obs: JSON.stringify(observations), inv: JSON.stringify(inv), cstock: JSON.stringify(charmStock) };
+    return { key, done: key ? loadJSON(key, []) : null, obs: JSON.stringify(observations), inv: JSON.stringify(inv), cstock: JSON.stringify(charmStock), o: JSON.stringify(state.o), t: JSON.stringify(state.t) };
   }
   function toastUndo(msg, snap) {
     toast(`${msg} · tap to undo`, () => {
       ui.toast.classList.remove('show'); ui.toast.onclick = null;
-      const obsChanged = snap.obs !== JSON.stringify(observations);
+      const obsChanged = snap.obs !== JSON.stringify(observations) || (snap.o != null && snap.o !== JSON.stringify(state.o)) || (snap.t != null && snap.t !== JSON.stringify(state.t));
+      if (snap.o != null) state.o = JSON.parse(snap.o);
+      if (snap.t != null) state.t = JSON.parse(snap.t);
+      guide.replan = null;
       if (snap.key) saveJSON(snap.key, snap.done);
       if (snap.inv) { inv = JSON.parse(snap.inv); invSave(); charmStock = JSON.parse(snap.cstock); saveJSON(STORAGE.cstock, charmStock); invPull(); renderCharms(); }   // what the ticks used comes back
       observations = JSON.parse(snap.obs); saveJSON(STORAGE.obs, observations);
@@ -6222,9 +6287,18 @@ __SOLVER_JS__
         renderItem(); break;
       }
       case 'close-guide': closeGuide(); break;
-      case 'guide-next': guide.i++; guide.other = false; renderGuide(); guideTop(); break;
-      case 'guide-back': guide.i--; guide.other = false; renderGuide(); guideTop(); break;
-      case 'guide-skip': guide.i++; guide.other = false; renderGuide(); guideTop(); break;
+      case 'replan-keep': {
+        const r = guide.replan, item = last && last.item; if (!r || !r.keep || !item) break;
+        const snap = undoPoint();
+        item.stats.forEach((x, i) => { if (r.keep[i] < item.chain[state.L][i]) state.t[x.name] = r.keep[i]; });
+        r.kept = true; guide.resync = true; last = null; haptic(10);
+        renderItem(); renderTarget(); renderOwned(); persist(); scheduleSolve(0); renderGuide(); guideTop();
+        toastUndo(`Aiming for ${r.keep.join('/')}`, snap);
+        break;
+      }
+      case 'guide-next': guide.replan = null; guide.i++; guide.other = false; renderGuide(); guideTop(); break;
+      case 'guide-back': guide.replan = null; guide.i--; guide.other = false; renderGuide(); guideTop(); break;
+      case 'guide-skip': guide.replan = null; guide.i++; guide.other = false; renderGuide(); guideTop(); break;
       case 'guide-undo': { const st = guideStep(); if (st) setDone(stepId(st), false); renderGuide(); break; }
       case 'guide-other': guide.other = !guide.other; renderGuide(); break;
       case 'guide-make': rebuildStart(el.dataset.side); rbSave(); haptic(6); renderGuide(); guideTop(); break;
@@ -6245,6 +6319,7 @@ __SOLVER_JS__
         rbSave(); renderGuide(); if (act !== 'rb-undo') guideTop(); break;
       }
       case 'guide-done': case 'guide-match': {
+        guide.replan = null;
         const st = guideStep(); if (!st || !last) return;
         if (act === 'guide-match') addObservation(last.item, st, st.result.s.slice());
         setDone(stepId(st), true); haptic(14);
@@ -6266,13 +6341,18 @@ __SOLVER_JS__
         const actual = item.stats.map((x, k) => Math.round(Number((ui.guideBody.querySelector(`[data-guide-input="${k}"]`) || {}).value)));
         if (actual.some(v => !(v > 0))) { toast('Enter every stat'); return; }
         const snap = undoPoint();
+        const before = planLeft(item), oldPlan = last.res.plan;
         addObservation(item, st, actual);
-        carryDone = loadDone(); carryDone.add(stepId(st));
-        carryDone.add(stepId(Object.assign({}, st, { result: Object.assign({}, st.result, { s: actual }) })));   // the same refine, now with the real result
+        const keep = finishWith(item, oldPlan);
+        // refines already done become items you have: the new plan starts from them instead of making them again
+        const held = loadDone().size ? holdingsNow() : null;
+        if (held) state.o = held.map(h => ({ L: h.L, q: h.q, s: Object.fromEntries(item.stats.map((x, i) => [x.name, h.s[i]])) }));
+        guide.replan = { before, pred: st.result.s.slice(), actual, base: { L: st.base.L, s: st.base.s.slice() }, mat: { L: st.mat.L, s: st.mat.s.slice() }, held: !!held,
+          keep: keep && !keep.every((v, i) => { const t = targetVector(item)[i]; return t == null || v >= t; }) ? keep : null };
         guide.other = false; guide.resync = true; last = null; haptic(14);
         renderItem(); renderTarget(); renderOwned(); persist(); scheduleSolve(0);
         renderGuide(); guideTop();
-        toastUndo(sameVec(actual, st.result.s) ? 'Recorded: matched ✓' : 'Got it, re-planning from your result', snap);
+        toastUndo('Re-planned with the game\'s numbers', snap);
         break;
       }
       case 'obs-match': {
