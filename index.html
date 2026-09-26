@@ -845,14 +845,7 @@
   .g-in { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-width: 0; }
   .g-make { border: 0; padding: 3px 9px; border-radius: 999px; background: rgba(255, 255, 255, .07); color: var(--soft); font: inherit; font-size: 12px; cursor: pointer; }
   .g-make.on, .g-make:hover { color: var(--gold); background: rgba(255, 210, 60, .12); }
-  .g-makebox { margin-top: 10px; padding: 12px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line-2); display: grid; gap: 8px; }
-  .g-make-h { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-weight: 700; }
-  .g-makebox p { margin: 0; font-size: 13px; color: var(--soft); line-height: 1.4; } .g-mk-sum b { color: var(--gold); }
-  .g-mk-list { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
-  .g-mk-r { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; } .g-mk-r > span { color: var(--muted); }
-  .g-mk-list small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
-  .g-mk-warn { color: var(--warn) !important; }
-  .chip.mini { padding-right: 4px; }
+  .guide-progress.rebuild span:first-child { color: var(--gold); } .guide-progress.rebuild .fill { background: var(--gold); }
   /* a guide step as the game's refine screen */
   .g-forge { margin-top: 14px; padding: 14px 12px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); display: grid; gap: 12px; justify-items: center; }
   .gf-top { display: flex; justify-content: center; }
@@ -5729,7 +5722,7 @@ function createSolver() {
   // Walks the batch steps from the lowest level up (every step's inputs exist by the time it comes up),
   // sharing progress with the crafting guide and results with the in-game record.
   let carryDone = null;
-  const guide = { i: -1, other: false, resync: false, make: null, makeStep: null };   // make: 'base' or 'mat' (how to make one more)
+  const guide = { i: -1, other: false, resync: false, subs: [] };   // subs: rebuild flows (a lost item made again), newest last
   function guideSteps() { return last && last.analysis ? last.analysis.steps.slice().sort((x, y) => x.L - y.L) : []; }
   function guideFirstOpen() {
     const steps = guideSteps(), done = loadDone();
@@ -5769,6 +5762,8 @@ function createSolver() {
     const item = last && last.item, a = last && last.analysis;
     if (!item || !a || !last.res) { ui.guideBody.innerHTML = anzSays('One moment, working out the plan…'); return; }
     if (guide.resync) { guide.resync = false; guide.i = guideFirstOpen(); }
+    if (guide.subs.length && guide.subs[0].itemKey !== item.key) guide.subs = [];   // another item: its rebuilds are gone
+    if (guide.subs.length) { ui.guideBody.innerHTML = rebuildHTML(item); return; }
     const steps = guideSteps(), done = loadDone(), n = steps.length;
     guide.i = Math.max(-1, Math.min(guide.i, n));
     const doneCount = steps.filter(st => done.has(stepId(st))).length;
@@ -5796,14 +5791,12 @@ function createSolver() {
       const uses = sameNode(st.base, st.mat) ? `${n * 2} × ${bName}` : `${n} × ${bName} and ${n} × ${mName}`;
       const say = `${guide.i === steps.length - 1 ? 'Last one! ' : ''}Next, make <b>${n} × ${rName}</b>.` +
         (risky ? `<span class="talk-warn">⚠ Watch this one: the game could give one point more or less. Tell me what you got.</span>` : '');
-      const sid = stepId(st);
-      if (guide.makeStep !== sid) { guide.make = null; guide.makeStep = sid; }   // a new step starts with the box closed
-      const makeBtn = (nd, side) => nd.L >= 2 ? `<button class="g-make ${guide.make === side ? 'on' : ''}" type="button" data-action="guide-make" data-side="${side}" aria-expanded="${guide.make === side}">${side === 'mat' ? 'Lost it? Make one' : 'Need one? Make it'}</button>` : '';
+      const makeBtn = guideMakeBtn;
       const recipe = forgeHTML(st, item, makeBtn) + `<div class="g-count">Do it <b>${n}×</b>: uses ${uses}, makes ${n} × ${rName}</div>`;
       const inputs = item.stats.map((x, k) => `<label>${x.short}<input class="num small" type="number" inputmode="numeric" min="1" step="1" value="${st.result.s[k]}" data-guide-input="${k}"></label>`).join('');
       const other = guide.other ? `<div class="guide-other"><div class="obs-title">What did the game give you?</div><div class="obs-inputs">${inputs}</div>` +
         `<div class="btn-row"><button class="btn small primary" type="button" data-action="guide-save">Save &amp; re-plan</button><button class="btn small ghost" type="button" data-action="guide-other">Cancel</button></div></div>` : '';
-      body = anzSays(say) + recipe + (guide.make ? makeOneHTML(item, guide.make === 'mat' ? st.mat : st.base) : '') + sharedTagHTML(sharedBases(a.steps)(st), item) + guideHowTo(st) + verdictHTML(item, st) +
+      body = anzSays(say) + recipe + sharedTagHTML(sharedBases(a.steps)(st), item) + guideHowTo(st) + verdictHTML(item, st) +
         `<div class="guide-actions">` +
         (isDone
           ? `<button class="btn primary block" type="button" data-action="guide-skip">Already done ✓ · next step</button><button class="btn small ghost" type="button" data-action="guide-undo">Not done yet</button>`
@@ -5828,8 +5821,8 @@ function createSolver() {
       `<span class="gf-st">${nd.s.map((v, i) => `<span><small>${item.stats[i].short}</small><b>${v}</b></span>`).join('')}</span>` +
       (nd.k === 1 ? '<i class="gf-own">yours</i>' : '') + `</div>`;
   }
-  function forgeHTML(st, item, makeBtn) {
-    const n = st.count, c = charmFor(st), combo = c.combo, base = S.SUCCESS[st.L];
+  function forgeHTML(st, item, makeBtn, cIn) {
+    const n = st.count, c = cIn || charmFor(st), combo = c.combo, base = S.SUCCESS[st.L];
     const prod = combo ? combo.prod : 1, chance = base * prod / n;
     const charms = !combo ? `<p class="gf-none talk-warn">Needs ×${compactFactor(c.F)}: switch on more charms</p>`
       : !combo.cnt ? '<p class="gf-none">No charms needed</p>'
@@ -5844,35 +5837,60 @@ function createSolver() {
       (n > 1 ? `<span>÷</span><div><small>Items</small><b>${n}</b></div>` : '') + `<span>=</span><div><small>Success chance</small><b class="gf-res">${pct(chance)}</b></div></div>` +
       `<div class="gf-fee">Refine · <b>${feeText(item, feeAt(item, st.L))}</b>${n > 1 ? ` each, ${n} at once` : ''}</div></div>`;
   }
-  // How to make one more of a step's item (the base, or the material a failed refine took): the cheapest way from base
-  // items to an item of that level with at least its stats, with the charms for 100% and the fees, refine by refine.
+  // Lost an item (a failed refine takes the right-hand one) or missing one? A rebuild flow makes that exact item again:
+  // the cheapest way from base items to an item of that level with at least its stats, step by step on the same
+  // refine screen, then back to where you were. A rebuild can start another one (an item lost on the way).
   // Owned items are left out: the plan already counts on them.
+  const guideMakeBtn = (nd, side) => nd.L >= 2 ? `<button class="g-make" type="button" data-action="guide-make" data-side="${side}">${side === 'mat' ? 'Lost it? Make one' : 'Need one? Make it'}</button>` : '';
   const makeCache = new Map();
-  function makeOneHTML(item, nd) {
+  function makePlan(item, nd) {
     const key = [item.key, state.m, nd.L, nd.s.join(',')].join('|');
-    let m = makeCache.get(key);
-    if (!m) {
-      let res = null;
-      try { res = S.solve({ base: item.stats.map(x => x.value), rates: item.rates, level: nd.L, maxLevel: nd.L, target: nd.s, owned: [], model: state.m, overrides: item.overrides }); } catch (e) { res = null; }
-      m = res && res.ok ? { res: res, a: S.analyze(res.plan, 0) } : null;
-      if (makeCache.size > 50) makeCache.clear();
-      makeCache.set(key, m);
+    if (makeCache.has(key)) return makeCache.get(key);
+    let res = null;
+    try { res = S.solve({ base: item.stats.map(x => x.value), rates: item.rates, level: nd.L, maxLevel: nd.L, target: nd.s, owned: [], model: state.m, overrides: item.overrides }); } catch (e) { res = null; }
+    const a = res && res.ok ? S.analyze(res.plan, 0) : null;
+    const m = a ? { a: a, gold: a.steps.reduce((t, x) => t + x.count * feeAt(item, x.L), 0) } : null;
+    if (makeCache.size > 50) makeCache.clear();
+    makeCache.set(key, m);
+    return m;
+  }
+  const rebuildCharm = st => { const F = batchCharm(st.L, st.count); return { F: F, combo: bestCombo(F), short: false }; };
+  function rebuildHTML(item) {
+    const r = guide.subs[guide.subs.length - 1], steps = r.steps, n = steps.length;
+    r.i = Math.max(-1, Math.min(r.i, n));
+    const what = nodeName(r.nd, item), doneN = r.done.size;
+    const head = `<div class="guide-progress rebuild"><span>${r.i < 0 ? `Making ${what}` : r.i >= n ? `${what} ready` : `Making ${what} · step ${r.i + 1} of ${n}`}</span><span>${doneN}/${n} done</span>` +
+      `<div class="track"><div class="fill" style="width:${n ? (doneN / n) * 100 : 0}%"></div></div></div>`;
+    const leave = label => `<button class="btn small ghost" type="button" data-action="rb-leave">${label}</button>`;
+    let body;
+    if (r.i < 0) {
+      body = anzSays(`${r.side === 'mat' ? 'Lost your' : 'No'} ${chipHTML(r.nd, item)}? Let's make a new one: <b>${fmt(r.a.p1)}</b> base item${r.a.p1 === 1 ? '' : 's'}, ` +
+        `${n} refine step${n === 1 ? '' : 's'} and about ${feeText(item, r.gold)}. Then we go back to ${r.backTo}.`) +
+        `<div class="guide-actions"><button class="btn primary block" type="button" data-action="rb-go">Let's go</button>${leave(`Not now, back to ${r.backTo}`)}</div>`;
+    } else if (r.i >= n) {
+      body = anzSays(`Your new ${chipHTML(r.nd, item)} is ready. Back to ${r.backTo}!`) +
+        `<div class="guide-actions"><button class="btn primary block" type="button" data-action="rb-leave">Back to ${r.backTo}</button>` +
+        `<button class="btn small ghost" type="button" data-action="rb-back">Back</button></div>`;
+    } else {
+      const st = steps[r.i], c = rebuildCharm(st), k = st.count, rName = nodeName(st.result, item), bName = nodeName(st.base, item), mName = nodeName(st.mat, item);
+      const uses = sameNode(st.base, st.mat) ? `${k * 2} × ${bName}` : `${k} × ${bName} and ${k} × ${mName}`;
+      body = anzSays(`${r.i === n - 1 ? 'Last one! ' : ''}Next, make <b>${k} × ${rName}</b>.`) +
+        forgeHTML(st, item, guideMakeBtn, c) + `<div class="g-count">Do it <b>${k}×</b>: uses ${uses}, makes ${k} × ${rName}</div>` + guideHowTo(st, c) +
+        `<div class="guide-actions">` + (r.done.has(r.i)
+          ? `<button class="btn primary block" type="button" data-action="rb-skip">Already done ✓ · next step</button>`
+          : `<button class="btn primary block" type="button" data-action="rb-done">✓ Done, I got ${k} × ${rName}</button>`) + `</div>` +
+        `<div class="guide-nav"><button class="btn small ghost" type="button" data-action="rb-back">← Back</button>${leave(`Back to ${r.backTo}`)}<button class="btn small ghost" type="button" data-action="rb-skip">Skip →</button></div>`;
     }
-    const title = `Make 1 × ${chipHTML(nd, item)}`;
-    if (!m) return `<div class="g-makebox"><div class="g-make-h">${title}</div><p>This one cannot be made from base items with these stats. Use another ${nodeName(nd, item)} you have, or re-plan from what you hold now.</p></div>`;
-    const gold = m.a.steps.reduce((t, x) => t + x.count * feeAt(item, x.L), 0);
-    const rows = m.a.steps.map(x => {
-      const c = bestCombo(batchCharm(x.L, x.count));
-      const charm = !c ? 'needs more charms than you switched on' : !c.cnt ? 'no charm needed' : comboText(c);
-      const tag = nd => `<span class="chip mini lv${nd.L} ${isPerfectNode(nd, item.chain) ? 'perfect' : ''}" title="${nd.s.map((v, i) => `${v} ${item.stats[i].short}`).join(' · ')}"><b>${lvTag(nd.L, isPerfectNode(nd, item.chain) ? 'P' : 'L')}</b></span>`;
-      return `<li><div class="g-mk-r"><b>${x.count}×</b>${tag(x.base)}<span>+</span>${tag(x.mat)}<span>→</span>${chipHTML(x.result, item)}</div>` +
-        `<small>${charm} · ${feeText(item, feeAt(item, x.L) * x.count)}</small></li>`;
-    }).join('');
-    return `<div class="g-makebox"><div class="g-make-h">${title}</div>` +
-      `<p class="g-mk-sum"><b>${fmt(m.a.p1)}</b> base item${m.a.p1 === 1 ? '' : 's'} · ${m.a.refines} refine${m.a.refines === 1 ? '' : 's'} · ${feeText(item, gold)}</p>` +
-      `<ol class="g-mk-list">${rows}</ol>` +
-      `<p class="g-mk-warn">A refine without enough charms can fail, and then the item on the right is lost. Use the charms shown for 100%.</p>` +
-      `<p class="g-mk-back">When you have it, come back to this step.</p></div>`;
+    return head + body;
+  }
+  function rebuildStart(side) {
+    const item = last && last.item; if (!item) return;
+    const top = guide.subs[guide.subs.length - 1];
+    const st = top ? top.steps[top.i] : guideStep(); if (!st) return;
+    const nd = side === 'mat' ? st.mat : st.base, m = makePlan(item, nd);
+    if (!m) { toast(`A ${nodeName(nd, item)} like this cannot be made from base items`); return; }
+    guide.subs.push({ itemKey: item.key, nd: nd, side: side, steps: m.a.steps, a: m.a, gold: m.gold, i: -1, done: new Set(),
+      backTo: top ? `making ${nodeName(top.nd, item)}` : `step ${guide.i + 1}` });
   }
   // Which item goes where: the result is the left item plus a gain from the right one, and a failed refine loses the
   // right one. The plan puts the lower item there whenever it can, so a failure costs as little as possible.
@@ -5883,8 +5901,8 @@ function createSolver() {
     if (lower) return `Put ${tag(st.base)} on the left and ${tag(st.mat)} on the right: if a refine fails, only the item on the right is lost, and that is the lower one.`;
     return `Keep ${tag(st.base)} on the left and ${tag(st.mat)} on the right even though the right one is stronger: that order gives this result. A failed refine would lose it, so use the charms for 100%.`;
   }
-  function guideHowTo(st) {
-    const L = st.L, n = st.count, c = charmFor(st), lines = [sidesLine(st, last && last.item)];
+  function guideHowTo(st, cIn) {
+    const L = st.L, n = st.count, c = cIn || charmFor(st), lines = [sidesLine(st, last && last.item)];
     if (!c.combo) lines.push(`For 100% this needs <b>×${compactFactor(c.F)}</b>, more than the charms you switched on can make. Switch on more charms, or accept a lower chance.`);
     else if (!c.combo.cnt) lines.push(n > 1 ? `Refine all <b>${n}</b> at once: 100% success, no charm needed.` : 'Success is 100% here: no charm needed.');
     else {
@@ -6965,7 +6983,16 @@ function createSolver() {
       case 'guide-skip': guide.i++; guide.other = false; renderGuide(); guideTop(); break;
       case 'guide-undo': { const st = guideStep(); if (st) setDone(stepId(st), false); renderGuide(); break; }
       case 'guide-other': guide.other = !guide.other; renderGuide(); break;
-      case 'guide-make': guide.make = guide.make === el.dataset.side ? null : el.dataset.side; haptic(6); renderGuide(); break;
+      case 'guide-make': rebuildStart(el.dataset.side); haptic(6); renderGuide(); guideTop(); break;
+      case 'rb-go': case 'rb-skip': case 'rb-back': case 'rb-done': case 'rb-leave': {
+        const r = guide.subs[guide.subs.length - 1]; if (!r) break;
+        if (act === 'rb-go') r.i = 0;
+        else if (act === 'rb-skip') r.i++;
+        else if (act === 'rb-back') r.i = Math.max(-1, r.i - 1);
+        else if (act === 'rb-done') { r.done.add(r.i); r.i++; haptic(14); fxAdd(FXK.pop(fxAt(el)).concat(FXK.mini(fxAt(el)))); toast(r.i >= r.steps.length ? 'Made it!' : 'Nice! Next step'); }
+        else { guide.subs.pop(); toast(guide.subs.length ? 'Back to the other item' : 'Back to your plan'); }
+        renderGuide(); guideTop(); break;
+      }
       case 'guide-done': case 'guide-match': {
         const st = guideStep(); if (!st || !last) return;
         if (act === 'guide-match') addObservation(last.item, st, st.result.s.slice());
