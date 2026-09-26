@@ -59,13 +59,13 @@ const cp = S.perfectChain([94, 20, 14], [M.combat, M.crit, M.combat]);
 run('Purpurite + 1xP7 + 2xP5', [94, 20, 14], [M.combat, M.crit, M.combat], 280, [
   { level: 7, stats: cp[7], qty: 1 }, { level: 5, stats: cp[5], qty: 2 }]);
 
-// large lattice -> capped exact DP + greedy substitution must stay feasible and beat from-scratch
+// a big inventory (30 P2, 20 P3, 9 P4): solved exactly (57, the same as an unlimited plain search), merges and all
 {
   const owned = [{ level: 3, stats: c20[3], qty: 20 }, { level: 4, stats: c20[4], qty: 9 }, { level: 2, stats: c20[2], qty: 30 }];
   const r = S.solve({ base: [20], mults: [M.combat], level: 10, target: c20[10], owned });
   const a = S.analyze(r.plan, owned.length);
-  console.log(`capped mode: mode=${r.mode} K=${r.K} substituted=${r.substituted} cost=${r.cost} use=${a.ownedUse} ms=${r.ms}`);
-  if (r.mode !== 'capped' || r.cost >= 200 || a.p1 !== r.cost) { failures++; console.log('FAIL capped mode'); }
+  console.log(`big inventory: mode=${r.mode} K=${r.K} cost=${r.cost} use=${a.ownedUse} ms=${r.ms}`);
+  if (r.mode !== 'exact' || r.cost !== 57 || a.p1 !== r.cost) { failures++; console.log('FAIL big inventory'); }
   a.ownedUse.forEach((n, j) => { if (n > owned[j].qty) { failures++; console.log(`FAIL capped: owned ${j} used ${n} > qty ${owned[j].qty}`); } });
   for (const st of a.steps) {
     const s = S.combine(st.base.s, st.mat.s, [M.combat]);
@@ -188,6 +188,13 @@ for (const [name, base, mults] of [['b20', [20], [M.combat]], ['ws', [10, 5], [M
   const as = S.analyze(rs.plan, 2);
   check('identical rows: cost', rs.cost, 0);
   check('identical rows: uses split 5 + 3', as.ownedUse.join('+'), '5+3');
+  // perfect items of the rows below merge into the missing ones: 25 P2 and 3 P5 (174, as a plain unlimited search)
+  const c20b = S.perfectChain([20], [M.combat], 10);
+  const rg = S.solve({ base: [20], rates: [M.combat], level: 10, maxLevel: 10, target: c20b[10], owned: [{ level: 2, stats: c20b[2], qty: 25 }, { level: 5, stats: c20b[5], qty: 3 }] });
+  const ag = S.analyze(rg.plan, 2);
+  check('merge gaps: cost', rg.cost, 174);
+  check('merge gaps: counts kept', ag.ownedUse.every((u, j) => u <= [25, 3][j]), true);
+  check('merge gaps: every step recomputes', ag.steps.every(st => S.combine(st.base.s, st.mat.s, [M.combat]).join() === st.result.s.join() && st.base.L === st.L - 1 && st.mat.L <= st.base.L), true);
   // nothing is computed above the item's max level
   check('max level respected', S.solve({ base: [94, 20], rates: [M.combat, M.crit], level: 5, maxLevel: 5, target: cf[5], owned: [] }).ladder.filter(r => r.level > 5).every(r => r.cost == null), true);
 }
