@@ -842,6 +842,46 @@
   .g-recipe > div:not(.g-count) { display: grid; grid-template-columns: 64px minmax(0, 1fr); align-items: center; gap: 8px; }
   .g-recipe .chip { justify-self: start; }
   .g-lab { color: var(--muted); font-size: 13px; text-align: right; }
+  .g-in { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-width: 0; }
+  .g-make { border: 0; padding: 3px 9px; border-radius: 999px; background: rgba(255, 255, 255, .07); color: var(--soft); font: inherit; font-size: 12px; cursor: pointer; }
+  .g-make.on, .g-make:hover { color: var(--gold); background: rgba(255, 210, 60, .12); }
+  .g-makebox { margin-top: 10px; padding: 12px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line-2); display: grid; gap: 8px; }
+  .g-make-h { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-weight: 700; }
+  .g-makebox p { margin: 0; font-size: 13px; color: var(--soft); line-height: 1.4; } .g-mk-sum b { color: var(--gold); }
+  .g-mk-list { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
+  .g-mk-r { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; } .g-mk-r > span { color: var(--muted); }
+  .g-mk-list small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .g-mk-warn { color: var(--warn) !important; }
+  .chip.mini { padding-right: 4px; }
+  /* a guide step as the game's refine screen */
+  .g-forge { margin-top: 14px; padding: 14px 12px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); display: grid; gap: 12px; justify-items: center; }
+  .gf-top { display: flex; justify-content: center; }
+  .gf-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; max-width: 340px; margin-top: -6px; }
+  .gf-slot { display: grid; justify-items: center; align-content: start; gap: 5px; }
+  .gf-slot > small { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+  .gf-card { position: relative; width: 104px; padding: 12px 8px 9px; border-radius: 14px; background: rgba(0, 0, 0, .38); border: 1px solid var(--line-2); display: grid; justify-items: center; gap: 6px; overflow: hidden; }
+  .gf-card.result { width: 118px; }
+  .gf-lv { position: absolute; top: 3px; right: 8px; z-index: 1; font-family: var(--display); font-weight: 800; font-size: 17px; color: #fff; text-shadow: 2px 2px 0 rgba(0, 0, 0, .7); }
+  .gf-ic .pixel { width: 56px; height: 56px; display: block; }
+  .gf-card.result .gf-ic .pixel { width: 64px; height: 64px; }
+  .gf-st { display: grid; gap: 1px; font-size: 13px; } .gf-st > span { display: flex; justify-content: center; gap: 6px; } .gf-st small { color: var(--muted); }
+  .gf-own { position: absolute; top: 5px; left: 7px; font-style: normal; font-size: 10px; color: var(--gold); }
+  /* perfect items shine, like in the game */
+  .gf-card.shine { border-color: rgba(255, 215, 90, .55); box-shadow: 0 0 16px rgba(255, 210, 80, .22);
+    background: radial-gradient(circle at 88% 8%, rgba(170, 110, 255, .55), transparent 58%), radial-gradient(circle at 10% 95%, rgba(110, 240, 170, .28), transparent 55%), rgba(0, 0, 0, .38); }
+  .gf-card.shine::after { content: ''; position: absolute; inset: -40%; pointer-events: none; background: linear-gradient(115deg, transparent 42%, rgba(255, 255, 255, .26) 50%, transparent 58%); animation: gf-sheen 3.4s ease-in-out infinite; }
+  @keyframes gf-sheen { 0%, 55% { transform: translateX(-55%); } 100% { transform: translateX(55%); } }
+  @media (prefers-reduced-motion: reduce) { .gf-card.shine::after { animation: none; opacity: 0; } }
+  .gf-charms { display: grid; justify-items: center; gap: 6px; padding: 8px 14px; border-radius: 12px; border: 1px solid var(--line-2); min-width: 60%; }
+  .gf-charms > div { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+  .gf-h { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+  .gf-charm { display: grid; justify-items: center; gap: 1px; } .gf-charm .pixel { width: 28px; height: 28px; } .gf-charm b { font-size: 12px; } .gf-charm small { color: var(--gold); font-size: 12px; }
+  .gf-none { margin: 0; font-size: 13px; color: var(--soft); }
+  .gf-chance { display: flex; align-items: flex-end; justify-content: center; gap: 8px; flex-wrap: wrap; }
+  .gf-chance > div { display: grid; justify-items: center; } .gf-chance small { font-size: 11px; color: var(--muted); } .gf-chance b { font-size: 19px; }
+  .gf-chance > span { color: var(--gold); padding-bottom: 2px; }
+  .gf-chance.ok .gf-res { color: var(--good); } .gf-chance.low .gf-res { color: var(--warn); }
+  .gf-fee { font-size: 13px; color: var(--muted); } .gf-fee b { color: var(--gold); }   /* just the level: the rows above show what each one is */
   .g-count { margin-top: 2px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); text-align: center; }
   .g-count b { color: var(--text); }
   .g-how { margin-top: 12px; padding: 12px; border-radius: 14px; background: color-mix(in srgb, var(--accent) 8%, var(--surface)); border: 1px solid var(--line); font-size: 14px; }
@@ -4854,7 +4894,7 @@ __SOLVER_JS__
   // Walks the batch steps from the lowest level up (every step's inputs exist by the time it comes up),
   // sharing progress with the crafting guide and results with the in-game record.
   let carryDone = null;
-  const guide = { i: -1, other: false, resync: false };
+  const guide = { i: -1, other: false, resync: false, make: null, makeStep: null };   // make: 'base' or 'mat' (how to make one more)
   function guideSteps() { return last && last.analysis ? last.analysis.steps.slice().sort((x, y) => x.L - y.L) : []; }
   function guideFirstOpen() {
     const steps = guideSteps(), done = loadDone();
@@ -4921,15 +4961,14 @@ __SOLVER_JS__
       const uses = sameNode(st.base, st.mat) ? `${n * 2} × ${bName}` : `${n} × ${bName} and ${n} × ${mName}`;
       const say = `${guide.i === steps.length - 1 ? 'Last one! ' : ''}Next, make <b>${n} × ${rName}</b>.` +
         (risky ? `<span class="talk-warn">⚠ Watch this one: the game could give one point more or less. Tell me what you got.</span>` : '');
-      const recipe = `<div class="g-recipe">` +
-        `<div><span class="g-lab">Refine</span>${chipHTML(st.base, item, 'base')}</div>` +
-        `<div><span class="g-lab">with</span>${chipHTML(st.mat, item)}</div>` +
-        `<div><span class="g-lab">to get</span>${chipHTML(st.result, item, 'result')}</div>` +
-        `<div class="g-count">Do it <b>${n}×</b>: uses ${uses}, makes ${n} × ${rName}</div></div>`;
+      const sid = stepId(st);
+      if (guide.makeStep !== sid) { guide.make = null; guide.makeStep = sid; }   // a new step starts with the box closed
+      const makeBtn = (nd, side) => nd.L >= 2 ? `<button class="g-make ${guide.make === side ? 'on' : ''}" type="button" data-action="guide-make" data-side="${side}" aria-expanded="${guide.make === side}">${side === 'mat' ? 'Lost it? Make one' : 'Need one? Make it'}</button>` : '';
+      const recipe = forgeHTML(st, item, makeBtn) + `<div class="g-count">Do it <b>${n}×</b>: uses ${uses}, makes ${n} × ${rName}</div>`;
       const inputs = item.stats.map((x, k) => `<label>${x.short}<input class="num small" type="number" inputmode="numeric" min="1" step="1" value="${st.result.s[k]}" data-guide-input="${k}"></label>`).join('');
       const other = guide.other ? `<div class="guide-other"><div class="obs-title">What did the game give you?</div><div class="obs-inputs">${inputs}</div>` +
         `<div class="btn-row"><button class="btn small primary" type="button" data-action="guide-save">Save &amp; re-plan</button><button class="btn small ghost" type="button" data-action="guide-other">Cancel</button></div></div>` : '';
-      body = anzSays(say) + recipe + sharedTagHTML(sharedBases(a.steps)(st), item) + guideHowTo(st) + verdictHTML(item, st) +
+      body = anzSays(say) + recipe + (guide.make ? makeOneHTML(item, guide.make === 'mat' ? st.mat : st.base) : '') + sharedTagHTML(sharedBases(a.steps)(st), item) + guideHowTo(st) + verdictHTML(item, st) +
         `<div class="guide-actions">` +
         (isDone
           ? `<button class="btn primary block" type="button" data-action="guide-skip">Already done ✓ · next step</button><button class="btn small ghost" type="button" data-action="guide-undo">Not done yet</button>`
@@ -4945,8 +4984,72 @@ __SOLVER_JS__
   function guideTop() { ui.guideBody.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' }); }
   function nodeName(nd, item) { return `${isPerfectNode(nd, item.chain) ? 'P' : 'L'}${nd.L}`; }
   function sameNode(x, y) { return x.L === y.L && x.k === y.k && sameVec(x.s, y.s); }
+  // A step drawn like the game's refine screen: the result on top, the left and right items under it (a perfect item
+  // shines, as in the game), the charms to put in, and base chance × charm factor = success chance.
+  function forgeCard(nd, item, role) {
+    const perfect = isPerfectNode(nd, item.chain);
+    return `<div class="gf-card ${role} ${perfect ? 'shine' : ''}" title="${perfect ? 'Perfect' : 'Not perfect'} ${nodeName(nd, item)}">` +
+      `<span class="gf-lv">${ROMAN[nd.L] || nd.L}</span><span class="gf-ic">${iconSVG(item.key)}</span>` +
+      `<span class="gf-st">${nd.s.map((v, i) => `<span><small>${item.stats[i].short}</small><b>${v}</b></span>`).join('')}</span>` +
+      (nd.k === 1 ? '<i class="gf-own">yours</i>' : '') + `</div>`;
+  }
+  function forgeHTML(st, item, makeBtn) {
+    const n = st.count, c = charmFor(st), combo = c.combo, base = S.SUCCESS[st.L];
+    const prod = combo ? combo.prod : 1, chance = base * prod / n;
+    const charms = !combo ? `<p class="gf-none talk-warn">Needs ×${compactFactor(c.F)}: switch on more charms</p>`
+      : !combo.cnt ? '<p class="gf-none">No charms needed</p>'
+      : CHARMS.filter(x => combo.use[x.key]).map(x => `<span class="gf-charm" title="${esc(x.name)}">${iconSVG(x.key)}<b>${combo.use[x.key] > 1 ? combo.use[x.key] + '×' : ''}</b><small>×${x.factor}</small></span>`).join('');
+    const pct = v => (Math.round(v * 10) / 10).toFixed(1) + '%';
+    return `<div class="g-forge">` +
+      `<div class="gf-top">${forgeCard(st.result, item, 'result')}</div>` +
+      `<div class="gf-row"><div class="gf-slot">${forgeCard(st.base, item, 'left')}<small>left</small>${makeBtn(st.base, 'base')}</div>` +
+      `<div class="gf-slot">${forgeCard(st.mat, item, 'right')}<small>right</small>${makeBtn(st.mat, 'mat')}</div></div>` +
+      `<div class="gf-charms"><span class="gf-h">Charms</span><div>${charms}</div></div>` +
+      `<div class="gf-chance ${chance >= 100 ? 'ok' : 'low'}"><div><small>Base chance</small><b>${base}%</b></div><span>×</span><div><small>Charm factor</small><b>${fmt(prod)}</b></div>` +
+      (n > 1 ? `<span>÷</span><div><small>Items</small><b>${n}</b></div>` : '') + `<span>=</span><div><small>Success chance</small><b class="gf-res">${pct(chance)}</b></div></div>` +
+      `<div class="gf-fee">Refine · <b>${feeText(item, feeAt(item, st.L))}</b>${n > 1 ? ` each, ${n} at once` : ''}</div></div>`;
+  }
+  // How to make one more of a step's item (the base, or the material a failed refine took): the cheapest way from base
+  // items to an item of that level with at least its stats, with the charms for 100% and the fees, refine by refine.
+  // Owned items are left out: the plan already counts on them.
+  const makeCache = new Map();
+  function makeOneHTML(item, nd) {
+    const key = [item.key, state.m, nd.L, nd.s.join(',')].join('|');
+    let m = makeCache.get(key);
+    if (!m) {
+      let res = null;
+      try { res = S.solve({ base: item.stats.map(x => x.value), rates: item.rates, level: nd.L, maxLevel: nd.L, target: nd.s, owned: [], model: state.m, overrides: item.overrides }); } catch (e) { res = null; }
+      m = res && res.ok ? { res: res, a: S.analyze(res.plan, 0) } : null;
+      if (makeCache.size > 50) makeCache.clear();
+      makeCache.set(key, m);
+    }
+    const title = `Make 1 × ${chipHTML(nd, item)}`;
+    if (!m) return `<div class="g-makebox"><div class="g-make-h">${title}</div><p>This one cannot be made from base items with these stats. Use another ${nodeName(nd, item)} you have, or re-plan from what you hold now.</p></div>`;
+    const gold = m.a.steps.reduce((t, x) => t + x.count * feeAt(item, x.L), 0);
+    const rows = m.a.steps.map(x => {
+      const c = bestCombo(batchCharm(x.L, x.count));
+      const charm = !c ? 'needs more charms than you switched on' : !c.cnt ? 'no charm needed' : comboText(c);
+      const tag = nd => `<span class="chip mini lv${nd.L} ${isPerfectNode(nd, item.chain) ? 'perfect' : ''}" title="${nd.s.map((v, i) => `${v} ${item.stats[i].short}`).join(' · ')}"><b>${lvTag(nd.L, isPerfectNode(nd, item.chain) ? 'P' : 'L')}</b></span>`;
+      return `<li><div class="g-mk-r"><b>${x.count}×</b>${tag(x.base)}<span>+</span>${tag(x.mat)}<span>→</span>${chipHTML(x.result, item)}</div>` +
+        `<small>${charm} · ${feeText(item, feeAt(item, x.L) * x.count)}</small></li>`;
+    }).join('');
+    return `<div class="g-makebox"><div class="g-make-h">${title}</div>` +
+      `<p class="g-mk-sum"><b>${fmt(m.a.p1)}</b> base item${m.a.p1 === 1 ? '' : 's'} · ${m.a.refines} refine${m.a.refines === 1 ? '' : 's'} · ${feeText(item, gold)}</p>` +
+      `<ol class="g-mk-list">${rows}</ol>` +
+      `<p class="g-mk-warn">A refine without enough charms can fail, and then the item on the right is lost. Use the charms shown for 100%.</p>` +
+      `<p class="g-mk-back">When you have it, come back to this step.</p></div>`;
+  }
+  // Which item goes where: the result is the left item plus a gain from the right one, and a failed refine loses the
+  // right one. The plan puts the lower item there whenever it can, so a failure costs as little as possible.
+  function sidesLine(st, item) {
+    const tag = nd => `<b>${nodeName(nd, item)}</b>`;
+    if (st.mat.L === st.base.L && sameVec(st.mat.s, st.base.s)) return 'Both items are the same, so either one can go on the left.';
+    const lower = st.mat.L < st.base.L || st.mat.s.every((v, i) => v <= st.base.s[i]);
+    if (lower) return `Put ${tag(st.base)} on the left and ${tag(st.mat)} on the right: if a refine fails, only the item on the right is lost, and that is the lower one.`;
+    return `Keep ${tag(st.base)} on the left and ${tag(st.mat)} on the right even though the right one is stronger: that order gives this result. A failed refine would lose it, so use the charms for 100%.`;
+  }
   function guideHowTo(st) {
-    const L = st.L, n = st.count, c = charmFor(st), lines = [];
+    const L = st.L, n = st.count, c = charmFor(st), lines = [sidesLine(st, last && last.item)];
     if (!c.combo) lines.push(`For 100% this needs <b>×${compactFactor(c.F)}</b>, more than the charms you switched on can make. Switch on more charms, or accept a lower chance.`);
     else if (!c.combo.cnt) lines.push(n > 1 ? `Refine all <b>${n}</b> at once: 100% success, no charm needed.` : 'Success is 100% here: no charm needed.');
     else {
@@ -6027,6 +6130,7 @@ __SOLVER_JS__
       case 'guide-skip': guide.i++; guide.other = false; renderGuide(); guideTop(); break;
       case 'guide-undo': { const st = guideStep(); if (st) setDone(stepId(st), false); renderGuide(); break; }
       case 'guide-other': guide.other = !guide.other; renderGuide(); break;
+      case 'guide-make': guide.make = guide.make === el.dataset.side ? null : el.dataset.side; haptic(6); renderGuide(); break;
       case 'guide-done': case 'guide-match': {
         const st = guideStep(); if (!st || !last) return;
         if (act === 'guide-match') addObservation(last.item, st, st.result.s.slice());
