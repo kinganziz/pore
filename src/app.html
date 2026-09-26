@@ -2637,6 +2637,8 @@ __SOLVER_JS__
     const req = buildRequest(item);
     const sig = planSignature(item, req);
     if (last && last.sig === sig) { renderResults(); return; }
+    if (warmHint && !warmHint.sig) warmHint.sig = sig;
+    if (warmHint && warmHint.sig === sig && warmHint.hint) req.hint = warmHint.hint; else warmHint = null;
     const id = ++solveSeq;
     solving = true;
     Solver.cancelDeep();
@@ -5115,6 +5117,14 @@ __SOLVER_JS__
     const done = loadDone(), open = guideSteps().filter(st => !done.has(stepId(st)));
     return { steps: open.length, base: open.reduce((t, st) => t + stepNeeds(st, item).base, 0) };
   }
+  // the plan you follow as a starting point for a re-plan: every ticked refine becomes an item you have (the planner
+  // matches it to your items by level and stats), the rest stays as planned
+  let warmHint = null;
+  function planHint(plan) {
+    if (!plan || !last || !last.analysis) return null;
+    const done = loadDone(), doneNode = new Set(last.analysis.steps.filter(st => done.has(stepId(st))).map(st => st.id));
+    return { root: plan.root, nodes: plan.nodes.map(n => doneNode.has(n.id) ? { L: n.L, k: 1, s: n.s.slice(), b: -1, m: -1 } : { L: n.L, k: n.k, s: n.s.slice(), b: n.b, m: n.m }) };
+  }
   // the items in your hands now: the plan's owned items and everything the ticked refines made, less what they used
   function holdingsNow() {
     const pool = new Map(), done = loadDone();
@@ -6535,6 +6545,7 @@ __SOLVER_JS__
         const keep = finishWith(item, oldPlan);
         // refines already done become items you have: the new plan starts from them instead of making them again
         const held = loadDone().size ? holdingsNow() : null;
+        warmHint = { hint: planHint(oldPlan), sig: null };   // the next plan starts from this one
         if (held) state.o = held.map(h => ({ L: h.L, q: h.q, s: Object.fromEntries(item.stats.map((x, i) => [x.name, h.s[i]])) }));
         guide.replan = { before, pred: st.result.s.slice(), actual, base: { L: st.base.L, s: st.base.s.slice() }, mat: { L: st.mat.L, s: st.mat.s.slice() }, held: !!held,
           keep: keep && !keep.every((v, i) => { const t = targetVector(item)[i]; return t == null || v >= t; }) ? keep : null };

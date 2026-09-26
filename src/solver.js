@@ -199,7 +199,7 @@ function createSolver() {
   // Keep non-dominated states. Dominance: cost <=, usage no worse (uLeq, default: <= for every owned row),
   // stats >= (all). uW orders ties so that a dominating state tends to come first.
   // the work counter of the running search: it gives up (BudgetExceeded) past workLimit
-  let work = 0, workLimit = Infinity, boundless = false;   // boundless: a solve with req.exhaustive (no work limits)
+  let work = 0, workLimit = Infinity, boundless = false, subBudget = 0;   // subBudget: a small search inside a bigger one   // boundless: a solve with req.exhaustive (no work limits)
   function spend(n) { work += n; if (work > workLimit) throw new BudgetExceeded('too much work'); }
 
   // Keep non-dominated states. Dominance: cost <=, stats >= (all), inventory use no worse (inv.leq: owned rows count
@@ -339,7 +339,7 @@ function createSolver() {
     const n = base.length;
     const hasU = owned.length > 0 && !free;   // free: owned items unlimited (at 0 or at the given prices), no counts kept
     if (cap == null) cap = Infinity;          // cap: only plans cheaper than this are wanted (branch and bound)
-    work = 0; workLimit = owned.length && !boundless ? WORK_BUDGET : Infinity;   // any search with owned items is bounded
+    work = 0; workLimit = subBudget || (owned.length && !boundless ? WORK_BUDGET : Infinity);   // any search with owned items is bounded
     let tick = 0;
     const zeroU = hasU ? owned.map(() => 0) : null;
 
@@ -619,7 +619,7 @@ function createSolver() {
   }
 
   // Greedily replace the most expensive sub-trees with leftover owned items that dominate them.
-  function substitute(root, owned, leftover, rates, ctx) {
+  function substitute(root, owned, leftover, rates, ctx, goal) {
     const all = [];
     (function collect(nd, role) { nd.role = role; all.push(nd); if (nd.k === 2) { collect(nd.b, 'base'); collect(nd.m, 'mat'); } })(root, 'root');
     all.sort((a, b) => b.p - a.p);
@@ -630,21 +630,31 @@ function createSolver() {
       while (leftover[j] > 0) {
         let target = null;
         for (const nd of all) {
-          if (nd.dead || nd.k !== 2 || nd.p <= 0) continue;
+          if (nd.dead || nd.noSub || nd.k !== 2 || nd.p <= 0) continue;
           if (!geq(o.stats, nd.s)) continue;
           if (nd.role === 'mat' ? o.level > nd.baseLevel : o.level !== nd.L) continue;
           target = nd; break;
         }
         if (!target) break;
-        (function kill(nd) { nd.dead = true; if (nd.k === 2) { kill(nd.b); kill(nd.m); } })(target);
-        saved += target.p;
-        target.dead = false;
+        // a stronger item gives at least as much, except where a recorded result says otherwise: the swap is kept only
+        // if the plan still gets there with every result worked out again
+        const was = { k: target.k, j: target.j, p: target.p, b: target.b, m: target.m, s: target.s };
         target.k = 1; target.j = j; target.p = 0; target.b = null; target.m = null; target.s = o.stats.slice();
+        const keep = new Map();
+        (function fix(nd) { if (nd.k === 2) { fix(nd.b); fix(nd.m); keep.set(nd, nd.s); nd.s = combine(nd.b.s, nd.m.s, rates, ctx, nd.b.L, nd.m.L); } })(root);
+        if (goal && !meets(root.s, goal)) {
+          for (const [nd, v] of keep) nd.s = v;
+          Object.assign(target, was);
+          target.noSub = true;   // not this one again
+          continue;
+        }
+        (function kill(nd) { nd.dead = true; if (nd.k === 2) { kill(nd.b); kill(nd.m); } })(was.b ? { k: 2, b: was.b, m: was.m } : { k: 0 });
+        saved += was.p;
+        target.dead = false;
         leftover[j]--;
       }
     }
-    // recompute cost and stats bottom-up: a replaced sub-plan is at least as good, so results can only rise
-    (function fix(nd) { if (nd.k === 2) { fix(nd.b); fix(nd.m); nd.p = nd.b.p + nd.m.p; if (saved) nd.s = combine(nd.b.s, nd.m.s, rates, ctx, nd.b.L, nd.m.L); } })(root);
+    (function fix(nd) { if (nd.k === 2) { fix(nd.b); fix(nd.m); nd.p = nd.b.p + nd.m.p; nd.s = combine(nd.b.s, nd.m.s, rates, ctx, nd.b.L, nd.m.L); } })(root);
     return saved;
   }
 
@@ -732,7 +742,7 @@ function createSolver() {
       let sub = 0;
       if (rows !== owned) {
         const used = usageOf(serializeTree(tree), owned.length);
-        sub = substitute(tree, owned, owned.map((o, j) => o.qty - used[j]), rates, ctx);
+        sub = substitute(tree, owned, owned.map((o, j) => o.qty - used[j]), rates, ctx, target);
       }
       return { tree: tree, sub: sub, cost: tree.p };
     }
@@ -761,6 +771,128 @@ function createSolver() {
         const r = solveCore(base, rates, level, rows, ctx, level, lvTargets), pk = choose(r.F[level], target);
         return { res: r, pick: pk, rows: rows, built: pk ? build(pk, rows) : null };
       } catch (err) { if (!(err instanceof BudgetExceeded)) throw err; return null; }
+    }
+    // Warm start (req.hint: the plan you were following, its done refines turned into owned items): replayed with the
+    // recorded results; if it still gets there it is a plan as it is, else the cheapest single change that makes it
+    // get there (a sub-plan made again to the stats its place needs: the one that fell short, or the item it is
+    // combined with, made stronger), repeated while needed. Its cost bounds the exact search.
+    function warmStart(hint) {
+      if (!hint || !Array.isArray(hint.nodes) || hint.root == null) return null;
+      const H = hint.nodes;
+      const mk = id => {
+        const h = H[id]; if (!h) throw new Error('hint');
+        if (h.k === 0) return { L: 1, p: 1, s: base.slice(), k: 0, j: -1, b: null, m: null, dead: false };
+        if (h.k === 1) { const j = rowOf.get((h.L | 0) + ':' + h.s.map(Number).join(',')); if (j == null) throw new Error('hint'); return { L: h.L, p: 0, s: owned[j].stats.slice(), k: 1, j: j, b: null, m: null, dead: false }; }
+        return { L: h.L, p: 0, s: null, k: 2, j: -1, b: mk(h.b), m: mk(h.m), dead: false, want: h.s.map(Number) };   // want: its stats in that plan
+      };
+      let root;
+      try { root = mk(hint.root); } catch (e) { return null; }
+      if (root.L !== level) return null;
+      const nOw = owned.length;
+      const fix = nd => {   // stats, cost and owned use, worked out again from the leaves
+        if (nd.k === 0) { nd.u = new Array(nOw).fill(0); return; }
+        if (nd.k === 1) { nd.u = new Array(nOw).fill(0); nd.u[nd.j] = 1; return; }
+        fix(nd.b); fix(nd.m);
+        nd.s = combine(nd.b.s, nd.m.s, rates, ctx, nd.b.L, nd.m.L); nd.p = nd.b.p + nd.m.p; nd.u = nd.b.u.map((v, j) => v + nd.m.u[j]);
+      };
+      const fitsQty = u => u.every((v, j) => v <= owned[j].qty);
+      const ok = () => meets(root.s, target) && fitsQty(root.u);
+      fix(root);
+      if (ok()) return { tree: root, sub: 0, cost: root.p };
+      if (!ctx.sep) return null;   // the repair works out what each place needs from separable gains
+      const tEnd = now() + (boundless ? 3000 : 400);   // a first answer must come fast: the repair stops in time
+      const zero = base.map(() => 0), gain = v => ctx.model(zero, v, rates);
+      const ginv = (i, v) => {   // the smallest stat whose gain reaches v
+        const one = x => { const vec = zero.slice(); vec[i] = x; return gain(vec)[i]; };
+        if (!(v > one(0))) return 0;
+        let lo = 0, hi = 1;
+        while (one(hi) < v) { hi *= 2; if (hi > 1e9) return Infinity; }
+        while (hi - lo > 1) { const mid = Math.floor((lo + hi) / 2); if (one(mid) >= v) hi = mid; else lo = mid; }
+        return hi;
+      };
+      const keyOf = nd => nd.key || (nd.key = nd.k === 2 ? '2:' + nd.L + ':' + keyOf(nd.b) + '|' + keyOf(nd.m) : nd.k + ':' + nd.L + ':' + nd.j);
+      for (let round = 0; round < 6; round++) {
+        // what every place needs so that the top gets there (the rest as it is)
+        const places = [];
+        (function need(nd, r, parent, side) {
+          nd.req = r; places.push({ nd: nd, parent: parent, side: side });
+          if (nd.k !== 2) return;
+          const gm = gain(nd.m.s);
+          need(nd.b, r.map((v, i) => v == null ? null : v - gm[i]), nd, 'b');
+          need(nd.m, r.map((v, i) => v == null ? null : ginv(i, v - nd.b.s[i])), nd, 'm');
+        })(root, target.slice(), null, null);
+        const short = places.filter(x => !meets(x.nd.s, x.nd.req));
+        // first: a refine that no longer gives what the plan counted on (its inputs still do) made again to those stats
+        const causes = new Map();
+        for (const x of places) {
+          const nd = x.nd;
+          if (nd.k !== 2 || !nd.want || meets(nd.s, nd.want)) continue;
+          const kidOk = c => c.k !== 2 || !c.want || meets(c.s, c.want);
+          if (!kidOk(nd.b) || !kidOk(nd.m)) continue;
+          const k = keyOf(nd);
+          let c = causes.get(k); if (!c) { c = { L: nd.L, req: nd.want.slice(), at: [] }; causes.set(k, c); }
+          c.at.push({ nd: nd, parent: x.parent });
+        }
+        // then: a bigger sub-plan around it made again to what the plan counted on (its items free for a new layout)
+        const parentOf = new Map();
+        for (const x of places) if (x.parent) parentOf.set(x.nd, x.parent);
+        for (const c of Array.from(causes.values())) for (const a of c.at) {
+          let A = a.parent;
+          while (A && A !== root) {
+            const P = parentOf.get(A);
+            const k = 'up:' + keyOf(A);
+            let e = causes.get(k); if (!e) { e = { L: A.L, req: A.want.slice(), at: [] }; causes.set(k, e); }
+            if (!e.at.some(z => z.nd === A)) e.at.push({ nd: A, parent: P });
+            A = P;
+          }
+        }
+        // candidates: a place that falls short made again, or the item it is combined with made stronger; the same
+        // sub-plan in several places is changed in all of them at once, to the most any of them needs
+        const cands = new Map();
+        const add = (nd, r, parent) => {
+          const k = keyOf(nd) + '@' + (parent ? keyOf(parent) : 'root');
+          let c = cands.get(k);
+          if (!c) { c = { L: nd.L, req: r.slice(), at: [] }; cands.set(k, c); }
+          else c.req = c.req.map((v, i) => v == null ? r[i] : r[i] == null ? v : Math.max(v, r[i]));
+          c.at.push({ nd: nd, parent: parent });
+        };
+        for (const x of short) {
+          add(x.nd, x.nd.req, x.parent);
+          if (x.parent) {
+            const A = x.parent, rA = A.req;
+            if (x.side === 'b') add(A.m, rA.map((v, i) => v == null ? null : ginv(i, v - x.nd.s[i])), A);
+            else { const g = gain(x.nd.s); add(A.b, rA.map((v, i) => v == null ? null : v - g[i]), A); }
+          }
+        }
+        let best = null;
+        for (const c of Array.from(causes.values()).concat(Array.from(cands.values()))) {   // the likeliest changes first
+          if (now() > tEnd) break;
+          const mult = c.at.length;
+          const u = root.u.slice();
+          for (const a of c.at) for (let j = 0; j < nOw; j++) u[j] -= a.nd.u[j];
+          const sub = owned.map((o, j) => ({ level: o.level, stats: o.stats, qty: Math.max(0, Math.floor((o.qty - u[j]) / mult)) }));
+          let r = null, pk = null;
+          const keepW = work, keepL = workLimit;
+          subBudget = WORK_BUDGET / 4;
+          try { r = solveCore(base, rates, c.L, sub, ctx, c.L, [c.req, c.req]); pk = choose(r.F[c.L], c.req); }
+          catch (err) { if (!(err instanceof BudgetExceeded)) throw err; }
+          finally { subBudget = 0; work = keepW; workLimit = keepL; }
+          if (!pk) continue;
+          const cost = root.p + mult * pk.p - c.at.reduce((t, a) => t + a.nd.p, 0);
+          if (!best || cost < best.cost) best = { c: c, pk: pk, sub: sub, cost: cost };
+        }
+        if (!best || now() > tEnd && !best) return null;
+        for (const a of best.c.at) {   // each place gets a sub-plan of its own (merges made real from the rows it may use)
+          const t = expand(best.pk, best.pk.L);
+          realize(t, best.sub, chainTop, rates, ctx);
+          if (!a.parent) root = t; else if (a.parent.b === a.nd) a.parent.b = t; else a.parent.m = t;
+        }
+        (function clear(nd) { nd.key = null; if (nd.k === 2) { clear(nd.b); clear(nd.m); } })(root);
+        fix(root);
+        if (ok()) return { tree: root, sub: 0, cost: root.p };
+        if (now() > tEnd) return null;
+      }
+      return null;
     }
     const use = qk => { res = qk.res; pick = qk.pick; capped = qk.rows; built = qk.built; };
     // A big inventory: first a quick plan; its cost bounds the exact search (branch and bound), which then skips
@@ -791,6 +923,13 @@ function createSolver() {
       if (epsUse) {   // a third: the rows the unlimited plan used, as many as it used (or you have)
         const q3 = quickCaps(owned.map((o, j) => Math.min(o.qty, epsUse[j])));
         if (q3 && q3.built && (!qk.built || q3.built.cost < qk.built.cost)) qk = q3;
+      }
+    }
+    if (req.hint && owned.length) {   // the plan you were following, repaired: often the best one already
+      const hk = warmStart(req.hint);
+      if (hk && (!qk || !qk.built || hk.cost < qk.built.cost)) {
+        const r0 = qk ? qk.res : solveCore(base, rates, level, [], ctx, level, lvTargets);   // for the ladder and sizes
+        qk = { res: r0, pick: { L: level, p: hk.cost, s: hk.tree.s }, rows: owned, built: hk };
       }
     }
     const ub = qk && qk.built ? qk.built.cost : Infinity;

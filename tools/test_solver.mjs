@@ -123,6 +123,17 @@ for (const [name, base, mults] of [['b20', [20], [M.combat]], ['ws', [10, 5], [M
   for (const [b, m, want] of seen) check(`game ${b.join('/')} + ${m.join('/')}`, S.predict('exact', b, m, rates).join('/'), want);
 }
 
+// A leftover owned item swapped in must not make the plan miss its target: here the swap would recreate a refine
+// recorded as coming out lower (the swap is undone). Also the warm start: the plan you follow as a starting point.
+{
+  const bad = {"req":{"base":[94,20,14],"rates":[{"num":1,"den":4},{"num":1,"den":6},{"num":1,"den":4}],"level":10,"maxLevel":10,"target":[687,70,95],"owned":[{"level":3,"stats":[140,26,20],"qty":8},{"level":4,"stats":[181,30,26],"qty":25},{"level":4,"stats":[175,30,25],"qty":6},{"level":4,"stats":[169,29,24],"qty":4},{"level":4,"stats":[163,29,23],"qty":6},{"level":5,"stats":[227,35,32],"qty":4}],"model":"exact","overrides":[{"baseL":4,"base":[181,30,26],"matL":4,"mat":[181,30,26],"actual":[226,35,31]}],"quick":true},"hint":{"nodes":[{"L":1,"k":0,"s":[94,20,14],"b":-1,"m":-1},{"L":2,"k":1,"s":[117,23,17],"b":-1,"m":-1},{"L":3,"k":1,"s":[146,26,21],"b":-1,"m":-1},{"L":4,"k":1,"s":[182,30,26],"b":-1,"m":-1},{"L":3,"k":1,"s":[140,26,20],"b":-1,"m":-1},{"L":4,"k":1,"s":[181,30,26],"b":-1,"m":-1},{"L":5,"k":1,"s":[227,35,32],"b":-1,"m":-1},{"L":4,"k":1,"s":[175,30,25],"b":-1,"m":-1},{"L":5,"k":2,"s":[224,35,32],"b":5,"m":7},{"L":6,"k":2,"s":[283,40,40],"b":6,"m":8},{"L":5,"k":2,"s":[226,35,32],"b":5,"m":5},{"L":5,"k":2,"s":[216,34,31],"b":5,"m":4},{"L":6,"k":2,"s":[280,40,39],"b":10,"m":11},{"L":7,"k":2,"s":[353,46,49],"b":9,"m":12},{"L":4,"k":1,"s":[169,29,24],"b":-1,"m":-1},{"L":5,"k":2,"s":[204,33,29],"b":14,"m":4},{"L":6,"k":2,"s":[277,40,39],"b":10,"m":15},{"L":7,"k":2,"s":[352,46,49],"b":9,"m":16},{"L":8,"k":2,"s":[441,53,61],"b":13,"m":17},{"L":4,"k":1,"s":[163,29,23],"b":-1,"m":-1},{"L":5,"k":2,"s":[221,34,31],"b":5,"m":19},{"L":6,"k":2,"s":[281,40,39],"b":10,"m":20},{"L":5,"k":2,"s":[223,34,32],"b":5,"m":14},{"L":5,"k":2,"s":[186,32,26],"b":19,"m":0},{"L":6,"k":2,"s":[269,39,38],"b":22,"m":23},{"L":7,"k":2,"s":[348,46,48],"b":21,"m":24},{"L":8,"k":2,"s":[440,53,61],"b":13,"m":25},{"L":9,"k":2,"s":[551,61,76],"b":18,"m":26},{"L":5,"k":2,"s":[210,34,30],"b":7,"m":4},{"L":6,"k":2,"s":[256,39,36],"b":28,"m":23},{"L":7,"k":2,"s":[344,46,48],"b":12,"m":29},{"L":8,"k":2,"s":[439,53,61],"b":13,"m":30},{"L":6,"k":2,"s":[278,39,40],"b":22,"m":22},{"L":7,"k":2,"s":[342,45,49],"b":32,"m":29},{"L":6,"k":2,"s":[262,39,37],"b":11,"m":23},{"L":6,"k":2,"s":[209,35,29],"b":23,"m":0},{"L":7,"k":2,"s":[314,44,44],"b":34,"m":35},{"L":8,"k":2,"s":[420,52,60],"b":33,"m":36},{"L":9,"k":2,"s":[544,61,76],"b":31,"m":37},{"L":10,"k":2,"s":[687,71,95],"b":27,"m":38}],"root":39}};
+  const r = S.solve(Object.assign({}, bad.req, { quick: true }));
+  check('leftover swap keeps the target', r.plan.nodes[r.plan.root].s.every((v, i) => bad.req.target[i] == null || v >= bad.req.target[i]), true);
+  const w = S.solve(Object.assign({}, bad.req, { quick: true, hint: bad.hint }));
+  check('warm start: a plan that gets there', w.plan.nodes[w.plan.root].s.every((v, i) => bad.req.target[i] == null || v >= bad.req.target[i]), true);
+  check('warm start: never dearer', w.cost <= r.cost, true);
+}
+
 // Safe's margin: 1 less per stat when neither item is perfect (brute force over every tree up to level 5)
 {
   const rates = [{ num: 1, den: 4 }, { num: 1, den: 4 }];
